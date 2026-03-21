@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  DEVELOPER
+}
+
+enum UserStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  INACTIVE
+}
+
+enum PlanType {
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum IssueSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IssueStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum IssueSource {
+  MANUAL
+  GITHUB
+  SDK
+  AI
+}
+
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  plan      PlanType  @default(BASIC)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  users     User[]
+  projects  Project[]
+}
+
+model User {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  passwordHash   String
+  role           Role
+  status         UserStatus   @default(PENDING_APPROVAL)
+  orgId          String?
+  organization   Organization? @relation(fields: [orgId], references: [id])
+  projectId      String?
+  project        Project?      @relation("ManagedBy", fields: [projectId], references: [id])
+  teamId         String?
+  team           Team?         @relation("TeamMembers", fields: [teamId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  assignedIssues Issue[]      @relation("AssignedTo")
+}
+
+model Project {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  techStack   String[]
+  orgId       String
+  organization Organization @relation(fields: [orgId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  teams       Team[]
+  issues      Issue[]
+  managers    User[]       @relation("ManagedBy")
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  issues    Issue[]
+  members   User[]   @relation("TeamMembers")
+}
+
+model Issue {
+  id                  String        @id @default(cuid())
+  title               String
+  description         String
+  source              IssueSource   @default(MANUAL)
+  severity            IssueSeverity @default(LOW)
+  priority            String?
+  status              IssueStatus   @default(OPEN)
+ 
+  projectId           String
+  project             Project       @relation(fields: [projectId], references: [id])
+  
+  assignedToId        String?
+  assignedTo          User?         @relation("AssignedTo", fields: [assignedToId], references: [id])
+  
+  teamId              String?
+  team                Team?         @relation(fields: [teamId], references: [id])
+  
+  logs                Json?         
+  
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  acceptedAt          DateTime?
+  resolvedAt          DateTime?
+  
+  responseSlaDeadline DateTime?
+  resolutionSlaDeadline DateTime?
+  responseBreached    Boolean       @default(false)
+  resolutionBreached  Boolean       @default(false)
+}
