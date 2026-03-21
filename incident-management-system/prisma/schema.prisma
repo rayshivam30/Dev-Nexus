@@ -63,6 +63,14 @@ model User {
   passwordHash   String
   role           Role
   status         UserStatus   @default(PENDING_APPROVAL)
+  name           String?
+  bio            String?
+  image          String?
+  phoneNumber    String?
+  location       String?
+  githubUrl      String?
+  linkedinUrl    String?
+  skills         String[]
   orgId          String?
   organization   Organization? @relation(fields: [orgId], references: [id])
   projectId      String?

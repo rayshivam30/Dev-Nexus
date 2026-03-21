@@ -38,14 +38,8 @@ export default function LoginPage() {
       // Also save to cookie if we want server-rendering to see it easily
       document.cookie = `incident_token=${data.token}; path=/; max-age=604800`;
 
-      // Redirect to the correct dashboard based on role
-      const roleDashboard: Record<string, string> = {
-        ADMIN: "/dashboard/admin",
-        MANAGER: "/dashboard/manager",
-        DEVELOPER: "/dashboard/developer",
-      };
-      const destination = roleDashboard[data.user.role] || "/dashboard";
-      router.push(destination);
+      // Redirect to the profile setup page first
+      router.push("/dashboard/profile?source=login");
       router.refresh();
     } catch (err: any) {
       setError(err.message);
