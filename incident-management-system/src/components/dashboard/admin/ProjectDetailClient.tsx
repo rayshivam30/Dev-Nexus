@@ -34,6 +34,9 @@ interface Project {
   description?: string | null;
   managers: Manager[];
   teams: Team[];
+  _count?: { issues: number };
+  plan?: string;
+  issues?: any[];
 }
 
 export function ProjectDetailClient({ project }: { project: Project }) {
@@ -43,7 +46,7 @@ export function ProjectDetailClient({ project }: { project: Project }) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
 
-  const totalIssues = project.teams.reduce((acc, t) => acc + t._count.issues, 0);
+  const totalIssues = project._count?.issues || 0;
 
   async function handleGenerateInvite(e: React.FormEvent) {
     e.preventDefault();
@@ -88,11 +91,18 @@ export function ProjectDetailClient({ project }: { project: Project }) {
         
         <div className="relative z-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold tracking-wider uppercase">
-                Project Details
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold tracking-wider uppercase">
+                  Project Details
+                </div>
+                {project.plan && (
+                  <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-500 text-xs font-bold tracking-wider uppercase">
+                    {project.plan} PLAN
+                  </div>
+                )}
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground bg-clip-text">
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground bg-clip-text mt-2">
                 {project.name}
               </h1>
               <p className="text-lg text-foreground/60 max-w-2xl leading-relaxed">
@@ -235,6 +245,33 @@ export function ProjectDetailClient({ project }: { project: Project }) {
               </div>
             )}
           </div>
+
+          {/* Unassigned Issues Section */}
+          {project.issues && project.issues.length > 0 && (
+            <div className="rounded-3xl border border-border bg-card p-8 space-y-6">
+              <h2 className="text-2xl font-bold flex items-center gap-3">
+                <Layers className="w-6 h-6 text-amber-500" /> Unassigned Project Issues
+              </h2>
+              <div className="space-y-4">
+                {project.issues.map((issue: any) => (
+                  <div key={issue.id} className="p-4 rounded-xl border border-border bg-accent/5 hover:bg-accent/10 transition-colors flex justify-between items-center group">
+                    <div className="flex-1 pr-4">
+                      <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{issue.title}</p>
+                      <p className="text-xs text-foreground/50 mt-1">{new Date(issue.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex gap-2 text-[10px] font-bold uppercase tracking-wider shrink-0">
+                      <span className={`px-2 py-1 rounded-md border ${issue.severity === 'CRITICAL' || issue.severity === 'HIGH' ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-amber-500/10 border-amber-500/20 text-amber-500'}`}>
+                        {issue.severity}
+                      </span>
+                      <span className="px-2 py-1 rounded-md bg-foreground/10 border border-border text-foreground/70 hidden sm:inline-block">
+                        {issue.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {/* ── Right column: Assign Manager Form ── */}

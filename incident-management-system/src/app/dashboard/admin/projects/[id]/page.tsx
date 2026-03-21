@@ -11,12 +11,18 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
   const project = await prisma.project.findUnique({
     where: { id },
     include: {
+      _count: { select: { issues: { where: { status: { not: 'RESOLVED' } } } } },
       managers: { select: { id: true, email: true, status: true } },
       teams: {
         include: {
           _count: { select: { issues: true } },
           members: { select: { id: true, email: true, status: true } },
         }
+      },
+      issues: {
+        where: { teamId: null, assignedToId: null, status: { not: 'RESOLVED' } },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, title: true, severity: true, status: true, createdAt: true }
       }
     }
   });

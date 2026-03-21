@@ -34,11 +34,11 @@ export default async function AdminDashboardPage() {
     }) as any,
     prisma.project.findMany({
       include: {
-        _count: { select: { teams: true } },
-        teams: {
-          include: {
-            _count: { select: { issues: { where: { status: { not: 'RESOLVED' } } } } }
-          }
+        _count: { 
+          select: { 
+            teams: true,
+            issues: { where: { status: { not: 'RESOLVED' } } }
+          } 
         }
       }
     }),
@@ -62,7 +62,7 @@ export default async function AdminDashboardPage() {
   });
 
   const activeProjects: ProjectStats[] = projectsRaw.map(p => {
-    const issuesCount = p.teams.reduce((acc, t) => acc + t._count.issues, 0);
+    const issuesCount = p._count.issues || 0;
     const slaPercentage = issuesCount === 0 ? 100 : Math.max(50, 100 - (issuesCount * 2));
     const colorClass = slaPercentage > 90 ? "text-emerald-500" : slaPercentage > 75 ? "text-amber-500" : "text-destructive";
     return {
