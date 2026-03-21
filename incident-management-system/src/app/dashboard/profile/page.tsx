@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { 
   Loader2, User, Mail, Phone, MapPin, Github, Linkedin, Save, Plus, X, 
@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar, NavItem } from "@/components/dashboard/shared/Sidebar";
 import { cn } from "@/lib/utils";
 
-export default function ProfilePage() {
+function ProfileContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromLogin = searchParams.get("source") === "login";
@@ -533,5 +533,17 @@ export default function ProfilePage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    }>
+      <ProfileContent />
+    </Suspense>
   );
 }

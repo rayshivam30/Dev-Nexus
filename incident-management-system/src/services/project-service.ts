@@ -1,11 +1,25 @@
 import { prisma } from "@/lib/db";
+import { PlanType } from "@prisma/client";
+import crypto from "crypto";
 
-export async function createProject(name: string, orgId: string, description?: string) {
+export async function createProject(
+  name: string, 
+  orgId: string, 
+  description?: string,
+  plan?: PlanType,
+  githubRepoUrl?: string
+) {
+  const projectPlan = plan || "BASIC";
+  const sdkApiKey = projectPlan === "ADVANCED" ? `devnexus_sk_${crypto.randomUUID()}` : null;
+
   return await prisma.project.create({
     data: {
       name,
       orgId,
       description: description || "",
+      plan: projectPlan,
+      githubRepoUrl: githubRepoUrl || null,
+      sdkApiKey
     },
   });
 }

@@ -21,6 +21,7 @@ enum UserStatus {
 
 enum PlanType {
   BASIC
+  ADVANCED
   PRO
   ENTERPRISE
 }
@@ -84,18 +85,23 @@ model User {
 }
 
 model Project {
-  id          String       @id @default(cuid())
-  name        String
-  description String?
-  techStack   String[]
-  orgId       String
-  organization Organization @relation(fields: [orgId], references: [id])
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                   String       @id @default(cuid())
+  name                 String
+  description          String?
+  techStack            String[]
+  orgId                String
+  organization         Organization @relation(fields: [orgId], references: [id])
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
 
-  teams       Team[]
-  issues      Issue[]
-  managers    User[]       @relation("ManagedBy")
+  plan                 PlanType     @default(BASIC)
+  githubRepoUrl        String?
+  githubInstallationId String?
+  sdkApiKey            String?      @unique
+
+  teams                Team[]
+  issues               Issue[]
+  managers             User[]       @relation("ManagedBy")
 }
 
 model Team {
