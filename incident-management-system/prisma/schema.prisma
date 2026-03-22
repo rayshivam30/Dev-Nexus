@@ -47,6 +47,12 @@ enum IssueSource {
   AI
 }
 
+enum EnvironmentType {
+  PRODUCTION
+  STAGING
+  DEVELOPMENT
+}
+
 model Organization {
   id        String    @id @default(cuid())
   name      String
@@ -82,6 +88,8 @@ model User {
   updatedAt      DateTime     @updatedAt
 
   assignedIssues Issue[]      @relation("AssignedTo")
+  activities     IssueActivity[]
+  comments       IssueComment[]
 }
 
 model Project {
@@ -145,4 +153,31 @@ model Issue {
   resolutionSlaDeadline DateTime?
   responseBreached    Boolean       @default(false)
   resolutionBreached  Boolean       @default(false)
+
+  environment         EnvironmentType @default(PRODUCTION)
+  rootCause           String?
+
+  activities          IssueActivity[]
+  comments            IssueComment[]
+}
+
+model IssueActivity {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  createdAt DateTime @default(now())
+}
+
+model IssueComment {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -38,15 +38,30 @@ export function ManagerIssuesClient({ initialIssues, teams, allDevelopers }: Man
     }
   }
 
+  async function handleStatusChange(issueId: string, newStatus: string, rootCause?: string) {
+    try {
+      const token = localStorage.getItem("incident_token") || "";
+      const res = await fetch(`/api/issues/${issueId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus, rootCause: rootCause || undefined }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      router.refresh();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Issues</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Issues</h1>
         <p className="text-foreground/60 mt-1">All issues within your project's teams.</p>
       </div>
 
       {initialIssues.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-12 text-center text-foreground/50">
+        <div className="rounded-xl border border-border bg-card p-12 text-center text-foreground/50 italic">
           No issues found in this project yet.
         </div>
       ) : (
@@ -67,6 +82,7 @@ export function ManagerIssuesClient({ initialIssues, teams, allDevelopers }: Man
           teams={teams}
           developers={allDevelopers}
           onAssignSubmit={handleAssignSubmit}
+          onStatusChange={handleStatusChange}
           isAssigning={isAssigning}
         />
       )}

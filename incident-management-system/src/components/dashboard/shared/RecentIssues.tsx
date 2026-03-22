@@ -3,9 +3,11 @@
 export interface Issue {
   id: string;
   title: string;
-  rootCause: string;
+  rootCause?: string;
   description: string;
   severity: "Low" | "Medium" | "High" | "Critical" | string;
+  priority?: string;
+  environment?: string;
   timeAgo: string;
   status?: string;
   logs?: any;
@@ -14,6 +16,8 @@ export interface Issue {
   projectId?: string;
   assignedToEmail?: string;
   resolvedAt?: string;
+  team?: { id?: string; name: string };
+  assignedTo?: { id?: string; email: string; name?: string | null };
 }
 
 interface RecentIssuesProps {

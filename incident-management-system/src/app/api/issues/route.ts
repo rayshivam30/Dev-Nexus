@@ -3,13 +3,13 @@ import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { createIssue } from "@/services/issue-service";
 
 export const POST = withAuth(async (req, { decoded, body }) => {
-  const { title, description, severity, projectId, teamId, assignedToId } = body;
+  const { title, description, severity, priority, environment, projectId, teamId, assignedToId } = body;
 
   if (!title || !description || !severity || !projectId) {
     return apiError("Title, description, severity, and projectId are required", 400);
   }
 
-  // Cross-entity validation logic (best kept in route or higher-level service)
+  // Validation
   if (teamId) {
     const team = await prisma.team.findUnique({ where: { id: teamId } });
     if (!team) return apiError("Invalid team", 400);
@@ -23,10 +23,13 @@ export const POST = withAuth(async (req, { decoded, body }) => {
       title,
       description,
       severity,
+      priority,
+      environment,
       projectId,
       teamId,
       assignedToId,
-      role: decoded.role 
+      role: decoded.role,
+      userId: decoded.userId
     });
 
     return apiResponse("Issue created successfully", { issue }, 201);

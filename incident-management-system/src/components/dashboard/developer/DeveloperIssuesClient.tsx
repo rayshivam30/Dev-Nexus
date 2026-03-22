@@ -12,14 +12,14 @@ export function DeveloperIssuesClient({ issues }: DeveloperIssuesClientProps) {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
 
-  async function handleStatusChange(issueId: string, newStatus: string) {
+  async function handleStatusChange(issueId: string, newStatus: string, rootCause?: string) {
     setStatusUpdating(true);
     try {
       const token = localStorage.getItem("incident_token") || "";
       const res = await fetch(`/api/issues/${issueId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, rootCause: rootCause || undefined }),
       });
       if (!res.ok) throw new Error("Failed to update status");
       window.location.reload();
@@ -67,9 +67,14 @@ export function DeveloperIssuesClient({ issues }: DeveloperIssuesClientProps) {
               <div className="space-y-1 flex-1">
                 <p className="font-medium text-foreground">{issue.title}</p>
                 <p className="text-sm text-foreground/50 line-clamp-1">{issue.description}</p>
-                {issue.teamName && (
-                  <p className="text-xs text-foreground/40">Team: <span className="text-foreground/60">{issue.teamName}</span></p>
-                )}
+                <div className="flex gap-2 text-[10px] mt-1">
+                  {issue.teamName && (
+                    <span className="text-foreground/40">Team: <span className="text-foreground/60">{issue.teamName}</span></span>
+                  )}
+                  {issue.rootCause && (
+                    <span className="text-emerald-500/80 italic">· Resolved with Root Cause</span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className={`text-xs px-2 py-1 rounded border font-medium ${severityColor[issue.severity || ""] ?? ""}`}>
@@ -89,7 +94,7 @@ export function DeveloperIssuesClient({ issues }: DeveloperIssuesClientProps) {
                 )}
                 {issue.status === "IN_PROGRESS" && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleStatusChange(issue.id, "RESOLVED"); }}
+                    onClick={(e) => { e.stopPropagation(); setSelectedIssue(issue); }} // Open modal to show resolution flow
                     disabled={statusUpdating}
                     className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-md text-sm font-medium transition disabled:opacity-50"
                   >
@@ -107,6 +112,7 @@ export function DeveloperIssuesClient({ issues }: DeveloperIssuesClientProps) {
           issue={selectedIssue}
           onClose={() => setSelectedIssue(null)}
           allowAssign={false}
+          onStatusChange={handleStatusChange}
         />
       )}
     </div>

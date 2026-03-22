@@ -1,17 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { Issue } from "@/components/dashboard/shared/RecentIssues";
 import { IssueDetailModal } from "@/components/dashboard/shared/IssueDetailModal";
 import { TeamData, DeveloperData } from "@/components/dashboard/shared/CreateIssueModal";
 
 interface AdminIssuesClientProps {
-  issues: any[];
+  issues: Issue[];
   teams: TeamData[];
   developers: DeveloperData[];
 }
 
 export function AdminIssuesClient({ issues, teams, developers }: AdminIssuesClientProps) {
-  const [selectedIssue, setSelectedIssue] = useState<any | null>(null);
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
 
   async function handleAssignSubmit(teamId: string, devId: string) {
@@ -37,6 +38,22 @@ export function AdminIssuesClient({ issues, teams, developers }: AdminIssuesClie
     }
   }
 
+  async function handleStatusChange(issueId: string, newStatus: string, rootCause?: string) {
+    try {
+      const token = localStorage.getItem("incident_token") || "";
+      const res = await fetch(`/api/issues/${issueId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus, rootCause: rootCause || undefined }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      // Note: Modal will refresh its own data, but we refresh page to update list
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  }
+
   return (
     <>
       <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
@@ -49,12 +66,15 @@ export function AdminIssuesClient({ issues, teams, developers }: AdminIssuesClie
             <div className="space-y-1 flex-1 min-w-0">
               <p className="font-medium text-foreground truncate">{issue.title}</p>
               <p className="text-sm text-foreground/50 line-clamp-1">{issue.description}</p>
-              <p className="text-xs text-foreground/40">
-                Team: <span className="text-foreground/60">{issue.team?.name || "—"}</span>
-                {issue.assignedTo && (
-                  <> · <span className="text-foreground/60">{issue.assignedTo.email}</span></>
-                )}
-              </p>
+              <div className="flex gap-2 text-[10px] mt-1">
+                 <span className="text-foreground/40">Team: <span className="text-foreground/80">{issue.team?.name || "—"}</span></span>
+                 {issue.assignedTo?.email && (
+                  <span className="text-foreground/40">· <span className="text-foreground/80">{issue.assignedTo.email}</span></span>
+                 )}
+                 {issue.environment && (
+                  <span className="text-blue-500/80">· {issue.environment}</span>
+                 )}
+              </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className={`text-xs px-2 py-1 rounded border font-medium ${
@@ -71,7 +91,7 @@ export function AdminIssuesClient({ issues, teams, developers }: AdminIssuesClie
                 issue.status === 'IN_PROGRESS' ? 'text-amber-400 bg-amber-400/10' :
                 'text-emerald-400 bg-emerald-400/10'
               }`}>
-                {issue.status.replace("_", " ")}
+                {issue.status?.replace("_", " ")}
               </span>
             </div>
           </div>
@@ -86,6 +106,7 @@ export function AdminIssuesClient({ issues, teams, developers }: AdminIssuesClie
           teams={teams}
           developers={developers}
           onAssignSubmit={handleAssignSubmit}
+          onStatusChange={handleStatusChange}
           isAssigning={isAssigning}
         />
       )}

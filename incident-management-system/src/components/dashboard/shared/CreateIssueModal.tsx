@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, AlertCircle } from "lucide-react";
 
 export interface ProjectData { id: string; name: string; }
 export interface TeamData { id: string; name: string; projectId: string; }
@@ -33,6 +33,8 @@ export function CreateIssueModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [severity, setSeverity] = useState("LOW");
+  const [priority, setPriority] = useState("MEDIUM");
+  const [environment, setEnvironment] = useState("PRODUCTION");
   
   const [selectedProjectId, setSelectedProjectId] = useState(fixedProjectId || "");
   const [selectedTeamId, setSelectedTeamId] = useState(fixedTeamId || "");
@@ -56,7 +58,6 @@ export function CreateIssueModal({
   if (!isOpen) return null;
 
   const projectRequired = !fixedProjectId && projects && projects.length > 0;
-  const teamOptional = !fixedTeamId && teams && teams.length > 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -81,6 +82,8 @@ export function CreateIssueModal({
           title,
           description,
           severity,
+          priority,
+          environment,
           projectId: selectedProjectId,
           teamId: selectedTeamId || undefined,
           assignedToId: selectedDeveloperId || undefined
@@ -103,109 +106,152 @@ export function CreateIssueModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-background border border-border rounded-xl shadow-lg w-full max-w-md p-6 space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center border-b border-border pb-4">
-          <h2 className="text-xl font-semibold">Create Manual Issue</h2>
+          <div className="space-y-1">
+            <h2 className="text-xl font-semibold">Create Manual Issue</h2>
+            <p className="text-[10px] text-foreground/40 font-mono uppercase tracking-widest">Incident Management System</p>
+          </div>
           <button onClick={onClose} className="text-foreground/50 hover:text-foreground">
             <X className="w-5 h-5" />
           </button>
         </div>
         
         {error && (
-          <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-            {error}
+          <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" /> {error}
           </div>
         )}
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Issue Title <span className="text-red-500">*</span></label>
-            <input 
-              required 
-              value={title} 
-              onChange={e=>setTitle(e.target.value)} 
-              className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all" 
-              placeholder="E.g., Database connection timeout" 
-            />
-          </div>
-          
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Description <span className="text-red-500">*</span></label>
-            <textarea 
-              required
-              value={description} 
-              onChange={e=>setDescription(e.target.value)} 
-              rows={3}
-              className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all resize-none" 
-              placeholder="Detailed description of the problem..." 
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Severity <span className="text-red-500">*</span></label>
-            <select 
-              value={severity} 
-              onChange={e=>setSeverity(e.target.value)}
-              className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
-            >
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-              <option value="CRITICAL">Critical</option>
-            </select>
-          </div>
-
-          {!fixedProjectId && projects && projects.length > 0 && (
-            <div className="space-y-1 border-t border-border pt-4">
-              <label className="text-sm font-medium">Project <span className="text-red-500">*</span></label>
-              <select 
-                value={selectedProjectId} 
-                onChange={e=>{
-                  setSelectedProjectId(e.target.value);
-                  setSelectedTeamId("");
-                  setSelectedDeveloperId("");
-                }}
-                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
-                required
-              >
-                <option value="">-- Select Project --</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-bold uppercase tracking-widest text-foreground/40">Basic Information</label>
+              <div className="space-y-3 p-3 rounded-lg border border-border/50 bg-foreground/[0.02]">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Issue Title <span className="text-red-500">*</span></label>
+                  <input 
+                    required 
+                    value={title} 
+                    onChange={e=>setTitle(e.target.value)} 
+                    className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all" 
+                    placeholder="E.g., Database connection timeout" 
+                  />
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Description <span className="text-red-500">*</span></label>
+                  <textarea 
+                    required
+                    value={description} 
+                    onChange={e=>setDescription(e.target.value)} 
+                    rows={3}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all resize-none" 
+                    placeholder="Detailed description of the problem..." 
+                  />
+                </div>
+              </div>
             </div>
-          )}
 
-          {!fixedTeamId && teams && teams.length > 0 && (
-            <div className="space-y-1 pt-2">
-              <label className="text-sm font-medium">Assign to Team</label>
-              <select 
-                value={selectedTeamId} 
-                onChange={e=>{
-                  setSelectedTeamId(e.target.value);
-                  setSelectedDeveloperId("");
-                }}
-                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
-                disabled={!fixedProjectId && projects && projects.length > 0 && !selectedProjectId}
-              >
-                <option value="">-- Select Team (Optional) --</option>
-                {filteredTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
+            <div className="space-y-1">
+              <label className="text-xs font-bold uppercase tracking-widest text-foreground/40">Metadata & Urgency</label>
+              <div className="grid grid-cols-2 gap-4 p-3 rounded-lg border border-border/50 bg-foreground/[0.02]">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Severity <span className="text-red-500">*</span></label>
+                  <select 
+                    value={severity} 
+                    onChange={e=>setSeverity(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
+                  >
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="CRITICAL">Critical</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Priority <span className="text-red-500">*</span></label>
+                  <select 
+                    value={priority} 
+                    onChange={e=>setPriority(e.target.value)}
+                    className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
+                  >
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="URGENT">Urgent</option>
+                  </select>
+                </div>
+                <div className="col-span-2 space-y-1">
+                    <label className="text-sm font-medium">Environment <span className="text-red-500">*</span></label>
+                    <select 
+                      value={environment} 
+                      onChange={e=>setEnvironment(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
+                    >
+                      <option value="PRODUCTION">Production</option>
+                      <option value="STAGING">Staging</option>
+                      <option value="DEVELOPMENT">Development</option>
+                    </select>
+                </div>
+              </div>
             </div>
-          )}
 
-          {developers && developers.length > 0 && (
-            <div className="space-y-1 pt-2">
-              <label className="text-sm font-medium">Assign to Developer</label>
-              <select 
-                value={selectedDeveloperId} 
-                onChange={e=>setSelectedDeveloperId(e.target.value)}
-                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
-                disabled={(!fixedTeamId && teams && teams.length > 0 && !selectedTeamId)}
-              >
-                <option value="">-- Unassigned --</option>
-                {filteredDevelopers.map(d => <option key={d.id} value={d.id}>{d.name || d.email}</option>)}
-              </select>
+            <div className="space-y-1">
+              <label className="text-xs font-bold uppercase tracking-widest text-foreground/40">Assignment</label>
+              <div className="space-y-3 p-3 rounded-lg border border-border/50 bg-foreground/[0.02]">
+                {!fixedProjectId && projects && projects.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Project <span className="text-red-500">*</span></label>
+                    <select 
+                      value={selectedProjectId} 
+                      onChange={e=>{
+                        setSelectedProjectId(e.target.value);
+                        setSelectedTeamId("");
+                        setSelectedDeveloperId("");
+                      }}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
+                      required
+                    >
+                      <option value="">-- Select Project --</option>
+                      {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Team</label>
+                    <select 
+                      value={selectedTeamId} 
+                      onChange={e=>{
+                        setSelectedTeamId(e.target.value);
+                        setSelectedDeveloperId("");
+                      }}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
+                      disabled={!fixedProjectId && projects && projects.length > 0 && !selectedProjectId}
+                    >
+                      <option value="">-- Optional --</option>
+                      {filteredTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Developer</label>
+                    <select 
+                      value={selectedDeveloperId} 
+                      onChange={e=>setSelectedDeveloperId(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
+                      disabled={!selectedTeamId}
+                    >
+                      <option value="">-- Unassigned --</option>
+                      {filteredDevelopers.map(d => <option key={d.id} value={d.id}>{d.name || d.email}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
 
-          <div className="pt-4 flex justify-end gap-3">
+          <div className="pt-4 flex justify-end gap-3 border-t border-border mt-6">
             <button 
               type="button" 
               onClick={onClose} 
@@ -221,7 +267,7 @@ export function CreateIssueModal({
                 !description.trim() ||
                 (projectRequired && !selectedProjectId)
               } 
-              className="px-4 py-2 bg-foreground text-background font-medium rounded-md flex items-center justify-center min-w-[120px] hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="px-4 py-2 bg-foreground text-background font-medium rounded-md flex items-center justify-center min-w-[120px] hover:opacity-90 transition-opacity disabled:opacity-50 shadow-lg shadow-foreground/5"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Issue"}
             </button>

@@ -3,12 +3,13 @@ import { verifyToken, JwtPayload } from "@/lib/jwt";
 
 export type ApiHandler = (
   req: NextRequest,
-  params: { decoded: JwtPayload; body?: any }
+  context: { decoded: JwtPayload; body?: any; params: any }
 ) => Promise<NextResponse>;
 
 export function withAuth(handler: ApiHandler, allowedRoles?: string[]) {
-  return async (req: NextRequest) => {
+  return async (req: NextRequest, context?: { params: any }) => {
     try {
+      const params = context?.params;
       const authHeader = req.headers.get("Authorization");
       if (!authHeader?.startsWith("Bearer ")) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -37,7 +38,7 @@ export function withAuth(handler: ApiHandler, allowedRoles?: string[]) {
         }
       }
 
-      return await handler(req, { decoded, body });
+      return await handler(req, { decoded, body, params });
     } catch (error) {
       console.error("API Error:", error);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
