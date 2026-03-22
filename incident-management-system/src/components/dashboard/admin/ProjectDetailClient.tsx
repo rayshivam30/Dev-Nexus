@@ -37,6 +37,8 @@ interface DetailedProject {
   _count?: { issues: number };
   plan?: string;
   sdkApiKey?: string | null;
+  githubRepoUrl?: string | null;
+  isSdkConnected?: boolean;
   issues?: any[];
 }
 
@@ -259,7 +261,7 @@ export function ProjectDetailClient({ project: initialProject }: { project: any 
                   <div key={issue.id} className="p-4 rounded-xl border border-border bg-accent/5 hover:bg-accent/10 transition-colors flex justify-between items-center group">
                     <div className="flex-1 pr-4">
                       <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{issue.title}</p>
-                      <p className="text-xs text-foreground/50 mt-1">{new Date(issue.createdAt).toLocaleDateString()}</p>
+                      <p suppressHydrationWarning className="text-xs text-foreground/50 mt-1">{new Date(issue.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div className="flex gap-2 text-[10px] font-bold uppercase tracking-wider shrink-0">
                       <span className={`px-2 py-1 rounded-md border ${issue.severity === 'CRITICAL' || issue.severity === 'HIGH' ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-amber-500/10 border-amber-500/20 text-amber-500'}`}>
@@ -373,7 +375,6 @@ export function ProjectDetailClient({ project: initialProject }: { project: any 
             </p>
           </div>
 
-          {/* ── SDK Integration Section (Only for Advanced Plan) ── */}
           {project.plan === "ADVANCED" && project.sdkApiKey && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
@@ -381,18 +382,79 @@ export function ProjectDetailClient({ project: initialProject }: { project: any 
               transition={{ delay: 0.8 }}
               className="rounded-3xl border border-purple-500/20 bg-purple-500/5 p-8 space-y-6"
             >
-              <div className="space-y-2">
-                <h3 className="text-xl font-bold text-purple-500 flex items-center gap-2">
-                  <ShieldCheck className="w-6 h-6" /> SDK Integration
-                </h3>
-                <p className="text-sm text-foreground/60 leading-relaxed">
-                  Connect your applications to DevNexus for automated issue tracking.
-                </p>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-xl font-bold text-purple-500 flex items-center gap-2">
+                    <ShieldCheck className="w-6 h-6" /> SDK Integration
+                  </h3>
+                  <p className="text-sm text-foreground/60 leading-relaxed">
+                    Automated error tracking for your production applications.
+                  </p>
+                </div>
+                <div className={`px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest ${
+                  project.isSdkConnected 
+                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" 
+                    : "bg-amber-500/10 border-amber-500/20 text-amber-500 animate-pulse"
+                }`}>
+                  {project.isSdkConnected ? "Live Ingestion Active" : "Waiting for first event..."}
+                </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-purple-500/50 ml-1">Your SDK API Key</label>
+              <div className="space-y-6">
+                {/* Step 0: Install */}
+                <div className="space-y-3">
+                   <p className="text-xs font-bold flex items-center gap-2">
+                     <span className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] text-purple-500">0</span>
+                     Install Package
+                   </p>
+                    <div className="space-y-2">
+                      <div className="relative group">
+                        <div className="p-3 pr-12 rounded-xl bg-black/40 border border-purple-500/10 font-mono text-[11px] text-purple-300">
+                          npm install @devnexus/sdk
+                        </div>
+                        <button 
+                          onClick={() => { navigator.clipboard.writeText('npm install @devnexus/sdk'); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-purple-500/10 rounded-lg transition-colors text-purple-500/40"
+                        >
+                          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <div className="text-[10px] text-amber-500/80 italic ml-7 space-y-2">
+                        <p>Note: For local testing, use the standalone SDK path:</p>
+                        <code className="text-foreground/40 block bg-black/20 p-2 rounded font-mono">npm install ../sdk</code>
+                        <p className="text-[9px] text-foreground/30">Or use absolute path:</p>
+                        <code className="text-foreground/20 block bg-black/10 p-1 rounded font-mono">npm install "C:\Users\91626\OneDrive\Desktop\DevNexus\sdk"</code>
+                      </div>
+                    </div>
+                </div>
+
+                {/* Step 1: Initialize */}
+                <div className="space-y-3">
+                   <p className="text-xs font-bold flex items-center gap-2">
+                     <span className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] text-purple-500">1</span>
+                     Initialize SDK
+                   </p>
+                    <div suppressHydrationWarning className="p-3 rounded-xl bg-black/40 border border-purple-500/10 font-mono text-[10px] overflow-x-auto text-purple-300">
+{`import { DevNexus } from '@devnexus/sdk';
+
+DevNexus.init({ 
+  apiKey: '${project.sdkApiKey}',
+  baseUrl: '${typeof window !== 'undefined' ? window.location.origin : ''}/api/ingest',
+  autoCapture: true 
+});`}
+                    </div>
+                   <p className="text-[10px] text-foreground/40 mt-1 ml-7 flex items-start gap-2">
+                     <Plus className="w-3 h-3 mt-0.5 shrink-0" />
+                     Paste this in your entry file (e.g. <code className="text-purple-400">layout.tsx</code>, <code className="text-purple-400">index.js</code>, or <code className="text-purple-400">main.ts</code>) to start tracking errors globally.
+                   </p>
+                </div>
+
+                {/* API Key Section */}
+                <div className="pt-4 border-t border-purple-500/10 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-purple-500/50">Project API Key</label>
+                    <span className="text-[10px] text-foreground/30 italic">Keep this secret</span>
+                  </div>
                   <div className="relative group">
                     <input 
                       readOnly 
@@ -408,33 +470,18 @@ export function ProjectDetailClient({ project: initialProject }: { project: any 
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                   <div>
-                     <p className="text-xs font-bold mb-2 flex items-center gap-2">
-                       <span className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Frontend Integration
-                     </p>
-                     <div className="p-3 rounded-xl bg-black/20 border border-purple-500/10 font-mono text-[10px] overflow-x-auto text-purple-300">
-{`window.onerror = (msg, url, line, col, error) => {
-  fetch('/api/ingest', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ${project.sdkApiKey}', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: msg, stack: error?.stack, browserInfo: navigator.userAgent })
-  });
-};`}
-                     </div>
-                   </div>
-
-                   <div>
-                     <p className="text-xs font-bold mb-2 flex items-center gap-2">
-                       <span className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Backend (Node.js)
-                     </p>
-                     <div className="p-3 rounded-xl bg-black/20 border border-purple-500/10 font-mono text-[10px] overflow-x-auto text-purple-300">
-{`process.on('unhandledRejection', (reason, promise) => {
-  // Post error to DevNexus Ingest API...
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});`}
-                     </div>
-                   </div>
+                <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex items-start gap-3">
+                  <Plus className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-foreground/60 leading-relaxed italic">
+                      "Once integrated, unhandled errors in your app will automatically create <strong>High Severity</strong> issues in DevNexus."
+                    </p>
+                    {project.githubRepoUrl && (
+                      <p className="text-[10px] text-purple-400 font-bold flex items-center gap-1.5">
+                        <Check className="w-3 h-3" /> GitHub Sync Active: SDK issues will be mirrored to your repository.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>

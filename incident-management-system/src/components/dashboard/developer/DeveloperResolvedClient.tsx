@@ -50,7 +50,7 @@ export function DeveloperResolvedClient({ resolvedIssues }: DeveloperResolvedCli
                   <span className="text-xs text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded font-medium">
                     RESOLVED
                   </span>
-                  <span className="text-xs text-foreground/40 font-mono">{resolvedAt}</span>
+                  <span suppressHydrationWarning className="text-xs text-foreground/40 font-mono">{resolvedAt}</span>
                 </div>
               </div>
             );

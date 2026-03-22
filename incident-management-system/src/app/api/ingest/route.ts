@@ -3,11 +3,28 @@ import { prisma } from "@/lib/db";
 import { IssueSource, IssueSeverity } from "@prisma/client";
 import { calculateSLADeadlines } from "@/services/issue-service";
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    },
+  });
+}
+
 export async function POST(req: Request) {
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized: Missing SDK API Key" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized: Missing SDK API Key" }, { status: 401, headers: corsHeaders });
     }
 
     const apiKey = authHeader.split(" ")[1];
@@ -18,26 +35,40 @@ export async function POST(req: Request) {
     });
 
     if (!project) {
-      return NextResponse.json({ error: "Unauthorized: Invalid SDK API Key" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized: Invalid SDK API Key" }, { status: 401, headers: corsHeaders });
     }
 
     const payload = await req.json();
-    const { message, stack, browserInfo, osInfo } = payload;
+    const { 
+      message, 
+      stack, 
+      browserInfo, 
+      osInfo, 
+      severity: severityOverride, 
+      tags,
+      source: customSource,
+      metadata
+    } = payload;
 
     if (!message) {
-      return NextResponse.json({ error: "Bad Request: Error message is required" }, { status: 400 });
+      return NextResponse.json({ error: "Bad Request: Error message is required" }, { status: 400, headers: corsHeaders });
     }
 
-    const severity = IssueSeverity.HIGH;
+    // Determine severity (allow override from SDK)
+    let severity: IssueSeverity = IssueSeverity.HIGH;
+    if (severityOverride && Object.values(IssueSeverity).includes(severityOverride as IssueSeverity)) {
+      severity = severityOverride as IssueSeverity;
+    }
+
     const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(project.id, severity, project.plan);
 
     // Create Issue
     const issue = await prisma.issue.create({
       data: {
-        title: `SDK Error: ${message.substring(0, 100)}`,
-        description: `An unhandled exception was caught by the SDK.\n\nStack Trace:\n${stack || "Not provided"}`,
+        title: message.length > 100 ? `${message.substring(0, 97)}...` : message,
+        description: `Source: ${customSource || 'SDK'}\n\nStack Trace:\n${stack || "Not provided"}`,
         projectId: project.id,
-        source: IssueSource.SDK,
+        source: (customSource as IssueSource) || IssueSource.SDK,
         severity,
         responseSlaDeadline,
         resolutionSlaDeadline,
@@ -45,14 +76,20 @@ export async function POST(req: Request) {
           browser: browserInfo,
           os: osInfo,
           rawMessage: message,
-          stackTrace: stack
+          stackTrace: stack,
+          tags: tags || {},
+          metadata: metadata || {}
         }
       }
     });
 
-    return NextResponse.json({ success: true, issueId: issue.id }, { status: 201 });
+    return NextResponse.json({ 
+      success: true, 
+      issueId: issue.id,
+      message: "Issue reported successfully" 
+    }, { status: 201, headers: corsHeaders });
   } catch (error) {
     console.error("SDK Ingest API Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500, headers: corsHeaders });
   }
 }

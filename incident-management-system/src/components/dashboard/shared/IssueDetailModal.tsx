@@ -212,7 +212,7 @@ export function IssueDetailModal({
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold">{comment.user?.name || comment.user?.email}</span>
-                      <span className="text-[10px] text-foreground/40">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                      <span suppressHydrationWarning className="text-[10px] text-foreground/40">{new Date(comment.createdAt).toLocaleDateString()}</span>
                     </div>
                     <div className="text-sm text-foreground/70 bg-foreground/5 px-4 py-2.5 rounded-2xl rounded-tl-none border border-border/20">
                       {comment.text}
@@ -302,7 +302,7 @@ export function IssueDetailModal({
                             )
                           )}
                         </span>
-                        <span className="text-[10px] text-foreground/30">{new Date(issue.responseSlaDeadline).toLocaleTimeString()}</span>
+                        <span suppressHydrationWarning className="text-[10px] text-foreground/30">{new Date(issue.responseSlaDeadline).toLocaleTimeString()}</span>
                       </div>
                     </div>
                   )}
@@ -332,7 +332,7 @@ export function IssueDetailModal({
                             )
                           )}
                         </span>
-                        <span className="text-[10px] text-foreground/30">{new Date(issue.resolutionSlaDeadline).toLocaleTimeString()}</span>
+                        <span suppressHydrationWarning className="text-[10px] text-foreground/30">{new Date(issue.resolutionSlaDeadline).toLocaleTimeString()}</span>
                       </div>
                     </div>
                   )}
