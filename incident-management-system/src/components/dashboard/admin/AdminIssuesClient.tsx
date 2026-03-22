@@ -24,7 +24,10 @@ export function AdminIssuesClient({ issues, teams, developers }: AdminIssuesClie
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ teamId: teamId || undefined, assignedToId: devId || undefined, status: "ASSIGNED" }),
       });
-      if (!res.ok) throw new Error("Failed to assign issue");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to assign issue");
+      }
       setSelectedIssue(null);
       window.location.reload();
     } catch (err: any) {

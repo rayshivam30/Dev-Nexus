@@ -107,7 +107,7 @@ export function IssueDetailModal({
                     className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-foreground"
                   >
                     <option value="">Select a team...</option>
-                    {teams.map((t) => (
+                    {teams.filter(t => t.projectId === issue.projectId).map((t) => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                   </select>

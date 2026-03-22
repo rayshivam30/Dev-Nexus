@@ -11,6 +11,7 @@ export interface Issue {
   logs?: any;
   teamName?: string;
   teamId?: string;
+  projectId?: string;
   assignedToEmail?: string;
   resolvedAt?: string;
 }

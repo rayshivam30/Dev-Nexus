@@ -29,6 +29,7 @@ export default async function AdminIssuesPage() {
 
   const mappedIssues = issues.map(issue => ({
     ...issue,
+    projectId: issue.projectId,
     teamName: (issue as any).team?.name || "—",
     assignedToEmail: (issue as any).assignedTo?.email || "—",
     timeAgo: formatTimeAgo(new Date(issue.createdAt))

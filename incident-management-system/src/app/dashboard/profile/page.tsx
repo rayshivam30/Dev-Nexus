@@ -44,7 +44,6 @@ function ProfileContent() {
           { href: "/dashboard/admin", icon: LayoutDashboard, label: "Overview" },
           { href: "/dashboard/admin/issues", icon: AlertCircle, label: "Issues" },
           { href: "/dashboard/admin/projects", icon: FolderKanban, label: "Projects" },
-          { href: "/dashboard/admin/settings", icon: Settings, label: "Settings" },
         ];
       case "MANAGER":
         return [
