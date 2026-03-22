@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { IssueSource, IssueSeverity } from "@prisma/client";
+import { calculateSLADeadlines } from "@/services/issue-service";
 
 export async function POST(req: Request) {
   try {
@@ -27,6 +28,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Bad Request: Error message is required" }, { status: 400 });
     }
 
+    const severity = IssueSeverity.HIGH;
+    const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(project.id, severity, project.plan);
+
     // Create Issue
     const issue = await prisma.issue.create({
       data: {
@@ -34,7 +38,9 @@ export async function POST(req: Request) {
         description: `An unhandled exception was caught by the SDK.\n\nStack Trace:\n${stack || "Not provided"}`,
         projectId: project.id,
         source: IssueSource.SDK,
-        severity: IssueSeverity.HIGH, // Defaulting SDK exceptions to HIGH
+        severity,
+        responseSlaDeadline,
+        resolutionSlaDeadline,
         logs: {
           browser: browserInfo,
           os: osInfo,

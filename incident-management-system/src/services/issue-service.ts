@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { EnvironmentType, IssueStatus } from "@prisma/client";
+import { EnvironmentType, IssueStatus, IssueSeverity, PlanType } from "@prisma/client";
 
 export async function createIssue(data: {
   title: string;
@@ -18,6 +18,14 @@ export async function createIssue(data: {
     projectId, teamId, assignedToId, role, userId 
   } = data;
 
+  // Calculate SLA deadlines if project is on ADVANCED plan
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { plan: true }
+  });
+
+  const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(projectId, severity, project?.plan);
+
   const issueData: any = {
     title,
     description,
@@ -26,7 +34,9 @@ export async function createIssue(data: {
     environment: environment || "PRODUCTION",
     projectId,
     source: "MANUAL",
-    status: "OPEN" 
+    status: "OPEN",
+    responseSlaDeadline,
+    resolutionSlaDeadline
   };
 
   if (teamId) issueData.teamId = teamId;
@@ -35,6 +45,7 @@ export async function createIssue(data: {
     if (role === "MANAGER" || role === "ADMIN") {
       issueData.assignedToId = assignedToId;
       issueData.status = "ASSIGNED";
+      issueData.acceptedAt = new Date();
     } else {
       issueData.logs = { suggestedAssigneeId: assignedToId };
     }
@@ -74,6 +85,10 @@ export async function updateIssue(id: string, data: {
 
   if (status === "RESOLVED") {
     updateData.resolvedAt = new Date();
+  }
+
+  if ((status === "ASSIGNED" || status === "IN_PROGRESS" || assignedToId) && !oldIssue.acceptedAt) {
+    updateData.acceptedAt = new Date();
   }
 
   const updatedIssue = await prisma.issue.update({
@@ -157,4 +172,46 @@ export async function getIssuesByProject(projectId: string) {
     },
     orderBy: { createdAt: 'desc' }
   });
+}
+
+/**
+ * Helper to calculate SLA deadlines based on project plan and issue severity.
+ * Rules (Applied only for ADVANCED plans):
+ * - CRITICAL: 1h Response, 4h Resolution
+ * - HIGH: 4h Response, 24h Resolution
+ * - MEDIUM: 8h Response, 3 days Resolution
+ * - LOW: 24h Response, 7 days Resolution
+ */
+export async function calculateSLADeadlines(projectId: string, severity: IssueSeverity, plan?: PlanType) {
+  if (plan !== "ADVANCED") {
+    return { responseSlaDeadline: null, resolutionSlaDeadline: null };
+  }
+
+  const now = new Date();
+  let responseHours = 24;
+  let resolutionHours = 24 * 7;
+
+  switch (severity) {
+    case "CRITICAL":
+      responseHours = 1;
+      resolutionHours = 4;
+      break;
+    case "HIGH":
+      responseHours = 4;
+      resolutionHours = 24;
+      break;
+    case "MEDIUM":
+      responseHours = 8;
+      resolutionHours = 24 * 3;
+      break;
+    case "LOW":
+      responseHours = 24;
+      resolutionHours = 24 * 7;
+      break;
+  }
+
+  const responseSlaDeadline = new Date(now.getTime() + responseHours * 60 * 60 * 1000);
+  const resolutionSlaDeadline = new Date(now.getTime() + resolutionHours * 60 * 60 * 1000);
+
+  return { responseSlaDeadline, resolutionSlaDeadline };
 }

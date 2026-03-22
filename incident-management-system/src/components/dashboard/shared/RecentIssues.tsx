@@ -1,5 +1,7 @@
 "use client";
 
+import { AlertCircle, AlertTriangle, Clock, MoreHorizontal, User } from "lucide-react";
+
 export interface Issue {
   id: string;
   title: string;
@@ -16,6 +18,11 @@ export interface Issue {
   projectId?: string;
   assignedToEmail?: string;
   resolvedAt?: string;
+  acceptedAt?: string;
+  responseSlaDeadline?: string;
+  resolutionSlaDeadline?: string;
+  responseBreached?: boolean;
+  resolutionBreached?: boolean;
   team?: { id?: string; name: string };
   assignedTo?: { id?: string; email: string; name?: string | null };
 }
@@ -55,6 +62,16 @@ export function RecentIssues({ issues, onAssignClick, onStatusChange, onRowClick
             
             <div className="flex items-center gap-4 shrink-0">
               <div className="flex flex-col items-end space-y-1 text-xs">
+                {/* SLA Breach Badge */}
+                {!issue.resolvedAt && (
+                  (issue.responseSlaDeadline && new Date(issue.responseSlaDeadline) < new Date() && issue.status === "OPEN") ||
+                  (issue.resolutionSlaDeadline && new Date(issue.resolutionSlaDeadline) < new Date() && issue.status !== "RESOLVED")
+                ) && (
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                    <AlertTriangle className="w-3 h-3" /> SLA Breach
+                  </span>
+                )}
+                
                 <span className={`px-2 py-1 rounded border font-medium ${
                   issue.severity === 'Critical' || issue.severity === 'CRITICAL' ? 'bg-destructive/20 text-destructive border-destructive/20' : 'bg-amber-500/20 text-amber-500 border-amber-500/20'
                 }`}>

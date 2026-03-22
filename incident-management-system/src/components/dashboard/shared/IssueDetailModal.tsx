@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Loader2, Send, Clock, MessageSquare, ShieldAlert, Globe, BarChart2 } from "lucide-react";
+import { X, Loader2, Send, Clock, MessageSquare, ShieldAlert, Globe, BarChart2, Timer, AlertTriangle } from "lucide-react";
 import { Issue } from "./RecentIssues";
 
 export interface TeamData { id: string; name: string; projectId: string; }
@@ -269,6 +269,76 @@ export function IssueDetailModal({
                 <span className="font-bold tracking-tight truncate max-w-[140px] text-right">{issue?.assignedTo?.email || initialIssue.assignedToEmail || "None"}</span>
               </div>
             </div>
+
+            {/* SLA Section */}
+            {(issue?.responseSlaDeadline || issue?.resolutionSlaDeadline) && (
+              <div className="space-y-4 pt-4 border-t border-border/30">
+                <h4 className="text-xs font-bold uppercase tracking-[2px] text-purple-500 flex items-center gap-2">
+                  <Timer className="w-4 h-4" /> SLA Status
+                </h4>
+                <div className="space-y-3">
+                  {issue.responseSlaDeadline && (
+                    <div className={`p-3 rounded-xl border space-y-1 ${
+                      issue.status !== "OPEN" 
+                        ? (new Date(issue.responseSlaDeadline) > new Date(issue.acceptedAt || Date.now()) ? "bg-emerald-500/5 border-emerald-500/10" : "bg-red-500/5 border-red-500/10")
+                        : "bg-purple-500/5 border-purple-500/10"
+                    }`}>
+                      <p className="text-[10px] text-purple-500/60 uppercase font-bold tracking-wider">Response SLA</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold">
+                          {issue.status !== "OPEN" ? (
+                            new Date(issue.responseSlaDeadline) > new Date(issue.acceptedAt || Date.now()) ? (
+                              <span className="text-emerald-500 flex items-center gap-1">Met</span>
+                            ) : (
+                              <span className="text-red-500 flex items-center gap-1">Breached</span>
+                            )
+                          ) : (
+                            new Date(issue.responseSlaDeadline) < new Date() ? (
+                              <span className="text-red-500 flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" /> Breached
+                              </span>
+                            ) : (
+                              formatTimeRemaining(issue.responseSlaDeadline)
+                            )
+                          )}
+                        </span>
+                        <span className="text-[10px] text-foreground/30">{new Date(issue.responseSlaDeadline).toLocaleTimeString()}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {issue.resolutionSlaDeadline && (
+                    <div className={`p-3 rounded-xl border space-y-1 ${
+                      issue.status === "RESOLVED"
+                        ? (new Date(issue.resolutionSlaDeadline) > new Date(issue.resolvedAt || Date.now()) ? "bg-emerald-500/5 border-emerald-500/10" : "bg-red-500/5 border-red-500/10")
+                        : "bg-purple-500/5 border-purple-500/10"
+                    }`}>
+                      <p className="text-[10px] text-purple-500/60 uppercase font-bold tracking-wider">Resolution SLA</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold">
+                          {issue.status === "RESOLVED" ? (
+                            new Date(issue.resolutionSlaDeadline) > new Date(issue.resolvedAt || Date.now()) ? (
+                              <span className="text-emerald-500 flex items-center gap-1">Met</span>
+                            ) : (
+                              <span className="text-red-500 flex items-center gap-1">Breached</span>
+                            )
+                          ) : (
+                            new Date(issue.resolutionSlaDeadline) < new Date() ? (
+                              <span className="text-red-500 flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" /> Breached
+                              </span>
+                            ) : (
+                              formatTimeRemaining(issue.resolutionSlaDeadline)
+                            )
+                          )}
+                        </span>
+                        <span className="text-[10px] text-foreground/30">{new Date(issue.resolutionSlaDeadline).toLocaleTimeString()}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Assignment Section */}
@@ -361,4 +431,16 @@ export function IssueDetailModal({
       </div>
     </div>
   );
+}
+function formatTimeRemaining(deadlineStr: string) {
+  const diff = new Date(deadlineStr).getTime() - Date.now();
+  if (diff <= 0) return "Overdue";
+  
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (hours > 24) {
+    return `${Math.floor(hours / 24)}d ${hours % 24}h remaining`;
+  }
+  return `${hours}h ${mins}m remaining`;
 }

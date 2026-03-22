@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { IssueSource, IssueSeverity } from "@prisma/client";
+import { calculateSLADeadlines } from "@/services/issue-service";
 
 export async function POST(req: Request) {
   try {
@@ -21,13 +22,18 @@ export async function POST(req: Request) {
 
     // 1. CI/CD Failures (workflow_run)
     if (event === "workflow_run" && payload.action === "completed" && payload.workflow_run?.conclusion === "failure") {
+      const severity = IssueSeverity.HIGH;
+      const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(project.id, severity, project.plan);
+
       await prisma.issue.create({
         data: {
           title: `CI/CD Failure: ${payload.workflow_run.name}`,
           description: `Workflow run failed for branch ${payload.workflow_run.head_branch}. View details: ${payload.workflow_run.html_url}`,
           projectId: project.id,
           source: IssueSource.GITHUB,
-          severity: IssueSeverity.HIGH,
+          severity,
+          responseSlaDeadline,
+          resolutionSlaDeadline,
           logs: payload.workflow_run,
         }
       });
@@ -36,16 +42,19 @@ export async function POST(req: Request) {
 
     // 2. Merge Conflicts (pull_request)
     if (event === "pull_request" && payload.pull_request) {
-      // Note: GitHub Webhooks might not instantly report 'dirty' mergeable_state upon open.
-      // But if it is dirty, we can flag it.
       if (payload.pull_request.mergeable_state === "dirty") {
+        const severity = IssueSeverity.MEDIUM;
+        const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(project.id, severity, project.plan);
+
         await prisma.issue.create({
           data: {
             title: `Merge Conflict in PR #${payload.pull_request.number}`,
             description: `PR "${payload.pull_request.title}" has merge conflicts. Please resolve them. View PR: ${payload.pull_request.html_url}`,
             projectId: project.id,
             source: IssueSource.GITHUB,
-            severity: IssueSeverity.MEDIUM,
+            severity,
+            responseSlaDeadline,
+            resolutionSlaDeadline,
             logs: payload.pull_request,
           }
         });

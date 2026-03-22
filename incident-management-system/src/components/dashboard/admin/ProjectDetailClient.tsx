@@ -28,7 +28,7 @@ interface Team {
   members: TeamMember[];
 }
 
-interface Project {
+interface DetailedProject {
   id: string;
   name: string;
   description?: string | null;
@@ -36,10 +36,12 @@ interface Project {
   teams: Team[];
   _count?: { issues: number };
   plan?: string;
+  sdkApiKey?: string | null;
   issues?: any[];
 }
 
-export function ProjectDetailClient({ project }: { project: Project }) {
+export function ProjectDetailClient({ project: initialProject }: { project: any }) {
+  const project = initialProject as DetailedProject;
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteLink, setInviteLink] = useState("");
@@ -169,7 +171,7 @@ export function ProjectDetailClient({ project }: { project: Project }) {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {project.managers.map((mgr) => (
+                {project.managers.map((mgr: Manager) => (
                   <div key={mgr.id} className="p-4 rounded-2xl border border-border bg-accent/5 hover:bg-accent/10 transition-all group">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -206,7 +208,7 @@ export function ProjectDetailClient({ project }: { project: Project }) {
               </div>
             ) : (
               <div className="space-y-4">
-                {project.teams.map((team) => (
+                {project.teams.map((team: Team) => (
                   <div key={team.id} className="rounded-2xl border border-border overflow-hidden">
                     <div className="flex justify-between items-center p-5 bg-accent/10 hover:bg-accent/15 transition-colors group/team">
                       <div className="flex items-center gap-3">
@@ -230,7 +232,7 @@ export function ProjectDetailClient({ project }: { project: Project }) {
                     </div>
                     
                     <div className="p-5 bg-background/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {team.members.map((m) => (
+                      {team.members.map((m: TeamMember) => (
                         <div key={m.id} className="flex items-center justify-between p-2 rounded-xl bg-card border border-border/50 text-xs">
                           <span className="text-foreground/70 truncate mr-2" title={m.email}>{m.email.split('@')[0]}</span>
                           <div className={`w-1.5 h-1.5 rounded-full ${m.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-foreground/20'}`} />
@@ -370,6 +372,73 @@ export function ProjectDetailClient({ project }: { project: Project }) {
               "Managers can see project-specific issues, manage their assigned teams, and invite developers to their teams."
             </p>
           </div>
+
+          {/* ── SDK Integration Section (Only for Advanced Plan) ── */}
+          {project.plan === "ADVANCED" && project.sdkApiKey && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.8 }}
+              className="rounded-3xl border border-purple-500/20 bg-purple-500/5 p-8 space-y-6"
+            >
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-purple-500 flex items-center gap-2">
+                  <ShieldCheck className="w-6 h-6" /> SDK Integration
+                </h3>
+                <p className="text-sm text-foreground/60 leading-relaxed">
+                  Connect your applications to DevNexus for automated issue tracking.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-purple-500/50 ml-1">Your SDK API Key</label>
+                  <div className="relative group">
+                    <input 
+                      readOnly 
+                      value={project.sdkApiKey} 
+                      className="w-full h-10 px-3 pr-10 bg-background/50 border border-purple-500/20 rounded-xl text-xs font-mono focus:outline-none" 
+                    />
+                    <button 
+                      onClick={() => { navigator.clipboard.writeText(project.sdkApiKey!); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-purple-500/10 rounded-lg transition-colors text-purple-500/40 hover:text-purple-500"
+                    >
+                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                   <div>
+                     <p className="text-xs font-bold mb-2 flex items-center gap-2">
+                       <span className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Frontend Integration
+                     </p>
+                     <div className="p-3 rounded-xl bg-black/20 border border-purple-500/10 font-mono text-[10px] overflow-x-auto text-purple-300">
+{`window.onerror = (msg, url, line, col, error) => {
+  fetch('/api/ingest', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ${project.sdkApiKey}', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: msg, stack: error?.stack, browserInfo: navigator.userAgent })
+  });
+};`}
+                     </div>
+                   </div>
+
+                   <div>
+                     <p className="text-xs font-bold mb-2 flex items-center gap-2">
+                       <span className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Backend (Node.js)
+                     </p>
+                     <div className="p-3 rounded-xl bg-black/20 border border-purple-500/10 font-mono text-[10px] overflow-x-auto text-purple-300">
+{`process.on('unhandledRejection', (reason, promise) => {
+  // Post error to DevNexus Ingest API...
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});`}
+                     </div>
+                   </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
       </div>
     </div>
