@@ -5,26 +5,26 @@ import { AlertCircle, AlertTriangle, Clock, MoreHorizontal, User } from "lucide-
 export interface Issue {
   id: string;
   title: string;
-  rootCause?: string;
+  rootCause?: string | null;
   description: string;
   severity: "Low" | "Medium" | "High" | "Critical" | string;
-  priority?: string;
-  environment?: string;
+  priority?: string | null;
+  environment?: string | null;
   timeAgo: string;
-  status?: string;
+  status?: string | null;
   logs?: any;
-  teamName?: string;
-  teamId?: string;
-  projectId?: string;
-  assignedToEmail?: string;
-  resolvedAt?: string;
-  acceptedAt?: string;
-  responseSlaDeadline?: string;
-  resolutionSlaDeadline?: string;
-  responseBreached?: boolean;
-  resolutionBreached?: boolean;
-  team?: { id?: string; name: string };
-  assignedTo?: { id?: string; email: string; name?: string | null };
+  teamName?: string | null;
+  teamId?: string | null;
+  projectId?: string | null;
+  assignedToEmail?: string | null;
+  resolvedAt?: Date | string | null;
+  acceptedAt?: Date | string | null;
+  responseSlaDeadline?: Date | string | null;
+  resolutionSlaDeadline?: Date | string | null;
+  responseBreached?: boolean | null;
+  resolutionBreached?: boolean | null;
+  team?: { id?: string | null; name: string } | null;
+  assignedTo?: { id?: string | null; email: string; name?: string | null } | null;
 }
 
 interface RecentIssuesProps {

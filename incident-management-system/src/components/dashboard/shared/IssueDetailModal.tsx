@@ -432,8 +432,9 @@ export function IssueDetailModal({
     </div>
   );
 }
-function formatTimeRemaining(deadlineStr: string) {
-  const diff = new Date(deadlineStr).getTime() - Date.now();
+function formatTimeRemaining(deadline: Date | string | null | undefined) {
+  if (!deadline) return "";
+  const diff = new Date(deadline).getTime() - Date.now();
   if (diff <= 0) return "Overdue";
   
   const hours = Math.floor(diff / (1000 * 60 * 60));
