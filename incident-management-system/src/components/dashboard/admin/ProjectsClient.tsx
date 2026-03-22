@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) {
@@ -14,6 +14,26 @@ export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) 
   const [plan, setPlan] = useState("BASIC");
   const [githubRepoUrl, setGithubRepoUrl] = useState("");
   const [createdSdkKey, setCreatedSdkKey] = useState<string | null>(null);
+  const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
+
+  async function handleDeleteProject(id: string) {
+    if (!confirm("Are you sure you want to delete this project? All associated teams and issues might be affected.")) return;
+    setDeleteLoadingId(id);
+    try {
+      const token = localStorage.getItem("incident_token") || "";
+      const res = await fetch(`/api/projects?id=${id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to delete project");
+      window.location.reload();
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setDeleteLoadingId(null);
+    }
+  }
 
 
   async function handleCreateProject(e: React.FormEvent) {
@@ -95,19 +115,37 @@ export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) 
           </div>
         ) : (
           initialProjects.map(p => (
-            <Link key={p.id} href={`/dashboard/admin/projects/${p.id}`} className="block p-6 border border-border rounded-xl bg-card hover:border-foreground/30 transition-colors group relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-foreground/20 group-hover:bg-foreground/50 transition-colors"></div>
-              <div className="flex justify-between items-start mb-4">
-                <div className="font-semibold text-lg text-foreground line-clamp-1">{p.name}</div>
+            <div key={p.id} className="block p-6 border border-border rounded-xl bg-card hover:border-foreground/30 transition-colors group relative overflow-hidden">
+              <Link href={`/dashboard/admin/projects/${p.id}`} className="absolute inset-0 z-0"></Link>
+              <div className="absolute top-0 left-0 w-1 h-full bg-foreground/20 group-hover:bg-foreground/50 transition-colors pointer-events-none z-10"></div>
+              
+              <div className="flex justify-between items-start mb-4 relative z-10 pointer-events-none">
+                <Link href={`/dashboard/admin/projects/${p.id}`} className="font-semibold text-lg text-foreground line-clamp-1 pointer-events-auto hover:underline">{p.name}</Link>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDeleteProject(p.id);
+                  }}
+                  disabled={deleteLoadingId === p.id}
+                  className="text-foreground/50 hover:text-red-500 transition-colors pointer-events-auto p-2 -mr-2 -mt-2 rounded-md disabled:opacity-50"
+                  title="Delete Project"
+                >
+                  {deleteLoadingId === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                </button>
               </div>
-              {p.description && (
-                <p className="text-sm text-foreground/70 mb-4 line-clamp-2">{p.description}</p>
-              )}
-              <div className="flex items-center gap-4 text-xs text-foreground/50 mt-auto pt-4 border-t border-border">
-                <span>{p.teams?.length || 0} Teams</span>
-                <span>{p.managers?.length || 0} Managers</span>
+              
+              <div className="relative z-10 pointer-events-none">
+                {p.description && (
+                  <p className="text-sm text-foreground/70 mb-4 line-clamp-2">{p.description}</p>
+                )}
+                <div className="flex items-center gap-4 text-xs text-foreground/50 mt-auto pt-4 border-t border-border">
+                  <span>{p.teams?.length || 0} Teams</span>
+                  <span>{p.managers?.length || 0} Managers</span>
+                </div>
               </div>
-            </Link>
+            </div>
           ))
         )}
       </div>

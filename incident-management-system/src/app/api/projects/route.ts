@@ -1,5 +1,5 @@
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
-import { createProject } from "@/services/project-service";
+import { createProject, deleteProject } from "@/services/project-service";
 import { PlanType } from "@prisma/client";
 
 export const POST = withAuth(async (req, { decoded, body }) => {
@@ -14,5 +14,20 @@ export const POST = withAuth(async (req, { decoded, body }) => {
   } catch (error) {
     console.error("Project creation error:", error);
     return apiError("Failed to create project", 500);
+  }
+}, ["ADMIN"]);
+
+export const DELETE = withAuth(async (req) => {
+  const url = new URL(req.url);
+  const id = url.searchParams.get("id");
+
+  if (!id) return apiError("Project ID is required", 400);
+
+  try {
+    await deleteProject(id);
+    return apiResponse("Project deleted successfully!");
+  } catch (error) {
+    console.error("Project deletion error:", error);
+    return apiError("Failed to delete project", 500);
   }
 }, ["ADMIN"]);

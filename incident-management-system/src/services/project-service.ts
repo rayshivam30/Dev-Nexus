@@ -32,6 +32,12 @@ export async function getProjectsByOrg(orgId: string) {
       _count: {
         select: { issues: true }
       }
-    }
+}
+  });
+}
+
+export async function deleteProject(id: string) {
+  return await prisma.project.delete({
+    where: { id }
   });
 }
