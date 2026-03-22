@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Github, Mail, Layout, Info, Layers, CheckCircle2, X, Copy, Check } from "lucide-react";
 import Link from "next/link";
 
 export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) {
@@ -151,97 +151,174 @@ export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) 
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-background border border-border rounded-xl shadow-lg w-full max-w-md p-6 space-y-6 animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center border-b border-border pb-4">
-              <h2 className="text-xl font-semibold">Create New Project</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-foreground/50 hover:text-foreground">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-background border border-border/50 rounded-[2rem] shadow-2xl w-full max-w-lg flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-border/50">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-foreground/5">
+                  <Layout className="w-5 h-5 text-foreground/70" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight">Create New Project</h2>
+                  <p className="text-xs text-foreground/50">Set up a new workspace for your team</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="p-2 rounded-full hover:bg-foreground/5 text-foreground/50 hover:text-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
             
-            <form onSubmit={handleCreateProject} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Project Name <span className="text-red-500">*</span></label>
-                <input 
-                  required 
-                  value={newProjectName} 
-                  onChange={e=>setNewProjectName(e.target.value)} 
-                  className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all" 
-                  placeholder="E.g., Core API Integration" 
-                />
-              </div>
-              
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Description (Optional)</label>
-                <textarea 
-                  value={newProjectDesc} 
-                  onChange={e=>setNewProjectDesc(e.target.value)} 
-                  rows={3}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all resize-none" 
-                  placeholder="Briefly describe the project..." 
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Select Plan <span className="text-red-500">*</span></label>
-                <div className="flex gap-4 mb-2">
-                  {["BASIC", "ADVANCED", "PRO"].map((p) => (
-                    <label key={p} className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="plan" 
-                        value={p} 
-                        checked={plan === p} 
-                        onChange={(e) => setPlan(e.target.value)} 
-                        className="accent-foreground"
-                      />
-                      <span className="text-sm">{p}</span>
+            <form onSubmit={handleCreateProject} className="p-6 pt-2 space-y-6 overflow-y-auto max-h-[80vh]">
+              <div className="space-y-4">
+                {/* Project Basics Section */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold flex items-center gap-2">
+                      <Layout className="w-4 h-4" />
+                      Project Name <span className="text-red-500">*</span>
                     </label>
-                  ))}
+                    <input 
+                      required 
+                      value={newProjectName} 
+                      onChange={e=>setNewProjectName(e.target.value)} 
+                      className="w-full px-4 py-2.5 bg-foreground/5 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/30 transition-all placeholder:text-foreground/30" 
+                      placeholder="E.g., Core API Integration" 
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold flex items-center gap-2">
+                      <Info className="w-4 h-4" />
+                      Description (Optional)
+                    </label>
+                    <textarea 
+                      value={newProjectDesc} 
+                      onChange={e=>setNewProjectDesc(e.target.value)} 
+                      rows={3}
+                      className="w-full px-4 py-2.5 bg-foreground/5 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/30 transition-all resize-none placeholder:text-foreground/30" 
+                      placeholder="Briefly describe the purpose of this project..." 
+                    />
+                  </div>
                 </div>
+
+                {/* Plan Selection Section */}
+                <div className="space-y-3 pt-2">
+                  <label className="text-sm font-semibold flex items-center gap-2">
+                    <Layers className="w-4 h-4" />
+                    Select Plan <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {[
+                      { id: "BASIC", name: "Basic", desc: "For small hobby projects", color: "bg-blue-500/10 text-blue-500" },
+                      { id: "ADVANCED", name: "Advanced", desc: "Best for growing teams", color: "bg-purple-500/10 text-purple-500" },
+                      { id: "PRO", name: "Pro", desc: "Enterprise scale power", color: "bg-amber-500/10 text-amber-500" }
+                    ].map((p) => (
+                      <div 
+                        key={p.id}
+                        onClick={() => setPlan(p.id)}
+                        className={`relative p-3 rounded-xl border-2 cursor-pointer transition-all duration-200 flex flex-col gap-1 ${
+                          plan === p.id 
+                            ? 'border-foreground bg-foreground/5 ring-4 ring-foreground/5' 
+                            : 'border-border/50 hover:border-foreground/20 hover:bg-foreground/[0.02]'
+                        } ${p.id === 'PRO' ? 'opacity-80' : ''}`}
+                      >
+                        {plan === p.id && p.id !== 'PRO' && (
+                          <div className="absolute top-2 right-2">
+                            <CheckCircle2 className="w-4 h-4 text-foreground" />
+                          </div>
+                        )}
+                        <div className="text-sm font-bold flex items-center justify-between">
+                          {p.name}
+                          {p.id === 'PRO' && (
+                            <span className="text-[8px] bg-foreground text-background px-1 rounded font-bold uppercase tracking-tighter">Coming Soon</span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-foreground/50 leading-tight">{p.id === 'PRO' ? "Unlocking Soon..." : p.desc}</div>
+                        <div className={`mt-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded w-fit ${p.color}`}>
+                          {p.id}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {plan === 'PRO' ? (
+                  <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 border-2 border-dashed border-border/50 rounded-[2rem] bg-foreground/[0.02] animate-in fade-in zoom-in-95 duration-500">
+                    <div className="p-4 rounded-full bg-amber-500/10">
+                      <Layers className="w-12 h-12 text-amber-500" />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-xl font-bold">Pro Plan is Coming Soon</h3>
+                      <p className="text-sm text-foreground/50 max-w-[240px]">
+                        We're putting the finishing touches on our Enterprise-grade features.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Integration & Invitations Section */}
+                    <div className="space-y-4 pt-2">
+                      {["BASIC", "ADVANCED"].includes(plan) && (
+                        <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                          <label className="text-sm font-semibold flex items-center gap-2">
+                            <Github className="w-4 h-4" />
+                            GitHub Repository URL <span className="text-red-500">*</span>
+                          </label>
+                          <input 
+                            type="url"
+                            required
+                            value={githubRepoUrl} 
+                            onChange={e=>setGithubRepoUrl(e.target.value)} 
+                            className="w-full px-4 py-2.5 bg-foreground/5 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/30 transition-all placeholder:text-foreground/30" 
+                            placeholder="https://github.com/org/repo" 
+                          />
+                          <p className="text-[10px] text-foreground/40 italic ml-1">Connect for automatic issue ingestion via Webhooks.</p>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold flex items-center gap-2">
+                          <Mail className="w-4 h-4" />
+                          Invite Manager (Optional)
+                        </label>
+                        <input 
+                          type="email"
+                          value={inviteManagerEmail} 
+                          onChange={e=>setInviteManagerEmail(e.target.value)} 
+                          className="w-full px-4 py-2.5 bg-foreground/5 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/30 transition-all placeholder:text-foreground/30" 
+                          placeholder="manager@example.com" 
+                        />
+                        <p className="text-[10px] text-foreground/40 italic ml-1">They'll get an invitation link to join as a Project Manager.</p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
-              {["BASIC", "ADVANCED"].includes(plan) && (
-                <div className="space-y-1 pb-2">
-                  <label className="text-sm font-medium">GitHub Repository URL (Optional)</label>
-                  <input 
-                    type="url"
-                    value={githubRepoUrl} 
-                    onChange={e=>setGithubRepoUrl(e.target.value)} 
-                    className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all" 
-                    placeholder="https://github.com/org/repo" 
-                  />
-                  <p className="text-xs text-foreground/50 mt-1">For automatic CI/CD issue ingestion via Webhooks.</p>
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Invite Manager (Optional)</label>
-                <input 
-                  type="email"
-                  value={inviteManagerEmail} 
-                  onChange={e=>setInviteManagerEmail(e.target.value)} 
-                  className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all" 
-                  placeholder="manager@example.com" 
-                />
-                <p className="text-xs text-foreground/50 mt-1">An invitation link will be sent assigning them as a Manager.</p>
-              </div>
-
-              <div className="pt-4 flex justify-end gap-3">
+              <div className="pt-6 flex flex-col sm:flex-row justify-end gap-3 border-t border-border/50">
                 <button 
                   type="button" 
                   onClick={() => setIsModalOpen(false)} 
-                  className="px-4 py-2 border border-border rounded-md font-medium hover:bg-accent/50 transition-colors"
+                  className="px-6 py-2.5 rounded-xl font-semibold text-sm hover:bg-foreground/5 transition-all text-foreground/60 hover:text-foreground"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  disabled={createProjectLoading || !newProjectName.trim()} 
-                  className="px-4 py-2 bg-foreground text-background font-medium rounded-md flex items-center justify-center min-w-[120px] hover:opacity-90 transition-opacity disabled:opacity-50"
+                  disabled={createProjectLoading || !newProjectName.trim() || plan === 'PRO' || (['BASIC', 'ADVANCED'].includes(plan) && !githubRepoUrl.trim())} 
+                  className="px-8 py-2.5 bg-foreground text-background font-bold text-sm rounded-xl flex items-center justify-center min-w-[140px] hover:opacity-90 shadow-lg shadow-foreground/10 active:scale-[0.98] transition-all disabled:opacity-50"
                 >
-                  {createProjectLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Project"}
+                  {createProjectLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Creating...</span>
+                    </div>
+                  ) : (
+                    "Create Project"
+                  )}
                 </button>
               </div>
             </form>
@@ -251,58 +328,71 @@ export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) 
 
       {/* SDK API Key Modal */}
       {createdSdkKey && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-background border border-border rounded-xl shadow-lg w-full max-w-lg p-8 space-y-6 animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center border-b border-border pb-4">
-              <h2 className="text-xl font-semibold">Project Created Successfully!</h2>
-              <button 
-                onClick={() => {
-                  setCreatedSdkKey(null);
-                  window.location.reload();
-                }} 
-                className="text-foreground/50 hover:text-foreground"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-background border border-border/50 rounded-[2rem] shadow-2xl w-full max-w-md p-0 flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden text-foreground">
+            <div className="bg-foreground/5 px-8 pt-8 pb-6 flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-10 h-10 text-green-500" />
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight">Project Created!</h2>
+              <p className="text-foreground/50 text-sm max-w-xs mt-2">
+                Your project is ready. Here is your SDK API Key to start tracking issues.
+              </p>
             </div>
             
-            <div className="space-y-4">
-              <p className="text-foreground/80">
-                You selected the <strong>Advanced</strong> plan. To automatically catch and ingest frontend and backend errors, please install our SDK and initialize it with this API Key.
-              </p>
-              
-              <div className="bg-muted p-4 rounded-md overflow-x-auto border border-border">
-                <code className="text-sm font-mono text-primary break-all">{createdSdkKey}</code>
+            <div className="p-8 space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-foreground/40 px-1">Your SDK API Key</label>
+                <div className="group relative">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                  <div className="relative bg-background border border-border/50 p-4 rounded-xl flex items-center justify-between gap-4">
+                    <code className="text-sm font-mono text-foreground break-all select-all">{createdSdkKey}</code>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdSdkKey);
+                        // Optional: show a toast or change icon
+                      }}
+                      className="p-2 hover:bg-foreground/5 rounded-lg transition-colors text-foreground/40 hover:text-foreground"
+                      title="Copy to clipboard"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-red-500/80 font-medium px-1">
+                  Important: Copy this key now! It won't be shown again for security reasons.
+                </p>
               </div>
               
-              <div className="bg-card p-4 rounded-md border border-border text-sm">
-                <p className="font-semibold mb-2">Quick Start (Next.js / Node):</p>
-                <pre className="text-xs text-foreground/70 whitespace-pre-wrap">
+              <div className="bg-foreground/5 p-5 rounded-2xl border border-border/30 space-y-3">
+                <div className="flex items-center gap-2 text-sm font-bold">
+                  <div className="p-1 rounded bg-foreground text-background">
+                    <Layers className="w-3 h-3" />
+                  </div>
+                  Quick Start Guide
+                </div>
+                <div className="text-[11px] font-mono text-foreground/70 bg-black/5 p-3 rounded-lg overflow-x-auto border border-border/50">
+                  <pre className="whitespace-pre">
 {`npm install @devnexus/sdk
 
 import { DevNexus } from '@devnexus/sdk';
 
 DevNexus.init({
   apiKey: '${createdSdkKey}',
-  environment: process.env.NODE_ENV
+  environment: 'production'
 });`}
-                </pre>
+                  </pre>
+                </div>
               </div>
-              
-              <p className="text-xs text-red-500 font-medium pt-2">
-                Make sure to copy this key now! You won't be able to see it again.
-              </p>
-            </div>
 
-            <div className="pt-4 flex justify-end">
               <button 
                 onClick={() => {
                   setCreatedSdkKey(null);
                   window.location.reload();
                 }} 
-                className="px-6 py-2 bg-foreground text-background font-medium rounded-md hover:opacity-90 transition-opacity"
+                className="w-full py-4 bg-foreground text-background font-bold rounded-xl hover:opacity-90 shadow-xl shadow-foreground/10 active:scale-[0.98] transition-all"
               >
-                I have copied the key
+                I've copied the key
               </button>
             </div>
           </div>
