@@ -7,9 +7,12 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
-    name: Build & Lint
+  platform:
+    name: Platform (Next.js)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: incident-management-system
 
     steps:
       - name: Checkout Code
@@ -36,3 +39,25 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/devnexus
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+  sdk:
+    name: SDK (TypeScript)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdk
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Build SDK
+        run: bun run build
