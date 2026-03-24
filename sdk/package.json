@@ -1,6 +1,6 @@
 {
-  "name": "@devnexus/sdk",
-  "version": "1.0.0",
+  "name": "devnexus-sdk",
+  "version": "1.0.1",
   "description": "Official SDK for DevNexus Incident Management System",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
