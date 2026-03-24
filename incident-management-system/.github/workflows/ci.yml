@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Prisma Generate
+        run: bunx prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/devnexus
+
+      - name: Run Lint
+        run: bun run lint
+
+      - name: Build Application
+        run: bun run build
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/devnexus
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
