@@ -31,9 +31,9 @@ export default async function DeveloperResolvedPage() {
     description: issue.description,
     rootCause: issue.description.substring(0, 100) + "...",
     severity: issue.severity,
-    timeAgo: formatTimeAgo(issue.createdAt),
+    timeAgo: formatTimeAgo(new Date(issue.createdAt)),
     status: issue.status,
-    logs: issue.logs,
+    logs: issue.logs as Record<string, unknown> | null,
     teamName: issue.team?.name || "",
     assignedToEmail: user.email,
   }));

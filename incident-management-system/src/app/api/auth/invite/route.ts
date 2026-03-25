@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { signToken, verifyToken } from '@/lib/jwt';
+import { Role } from '@prisma/client';
 
 export async function POST(request: Request) {
   try {
@@ -16,7 +17,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { email, role, projectId, teamId } = await request.json();
+    const { email, role, projectId, teamId } = await request.json() as {
+      email?: string;
+      role?: Role;
+      projectId?: string;
+      teamId?: string;
+    };
 
     if (!email || !role) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });

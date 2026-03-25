@@ -3,7 +3,12 @@ import { createProject, deleteProject } from "@/services/project-service";
 import { PlanType } from "@prisma/client";
 
 export const POST = withAuth(async (req, { decoded, body }) => {
-  const { name, description, plan, githubRepoUrl } = body;
+  const { name, description, plan, githubRepoUrl } = body as {
+    name?: string;
+    description?: string;
+    plan?: PlanType;
+    githubRepoUrl?: string;
+  };
 
   if (!name) return apiError("Project name is required", 400);
   if (!decoded.orgId) return apiError("Organization ID is missing in token", 401);

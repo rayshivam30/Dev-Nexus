@@ -19,7 +19,17 @@ export const PATCH = withAuth(async (req, { decoded, body }) => {
       githubUrl, 
       linkedinUrl, 
       skills 
-    } = body;
+    } = body as {
+      name?: string;
+      bio?: string;
+      image?: string;
+      phoneNumber?: string;
+      location?: string;
+      githubUrl?: string;
+      linkedinUrl?: string;
+      skills?: string[];
+    };
+
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },

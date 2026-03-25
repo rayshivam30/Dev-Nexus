@@ -5,7 +5,10 @@ import { verifyToken, signToken, JwtPayload } from '@/lib/jwt';
 
 export async function POST(request: Request) {
   try {
-    const { token, password } = await request.json();
+    const { token, password } = await request.json() as {
+      token?: string;
+      password?: string;
+    };
 
     if (!token || !password) {
       return NextResponse.json({ error: 'Missing token or password' }, { status: 400 });

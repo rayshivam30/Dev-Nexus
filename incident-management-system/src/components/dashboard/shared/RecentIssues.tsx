@@ -28,7 +28,9 @@ export interface Issue {
   resolutionBreached?: boolean | null;
   team?: { id?: string | null; name: string } | null;
   assignedTo?: { id?: string | null; email: string; name?: string | null } | null;
+  createdAt?: Date | string | null;
 }
+
 
 interface RecentIssuesProps {
   issues: Issue[];
