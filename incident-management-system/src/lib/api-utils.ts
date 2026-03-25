@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, JwtPayload } from "@/lib/jwt";
 
+export interface HandlerContext {
+  decoded: JwtPayload;
+  body?: unknown;
+  params: unknown;
+}
+
 export type ApiHandler = (
   req: NextRequest,
-  context: { decoded: JwtPayload; body?: any; params: any }
+  context: HandlerContext
 ) => Promise<NextResponse>;
 
 export function withAuth(handler: ApiHandler, allowedRoles?: string[]) {
-  return async (req: NextRequest, context?: { params: any }) => {
+  return async (req: NextRequest, context?: { params: unknown }) => {
     try {
       const params = context?.params;
       const authHeader = req.headers.get("Authorization");
@@ -38,7 +44,11 @@ export function withAuth(handler: ApiHandler, allowedRoles?: string[]) {
         }
       }
 
-      return await handler(req, { decoded, body, params });
+      return await handler(req, { 
+        decoded, 
+        body, 
+        params: params || {} 
+      });
     } catch (error) {
       console.error("API Error:", error);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -46,7 +56,7 @@ export function withAuth(handler: ApiHandler, allowedRoles?: string[]) {
   };
 }
 
-export function apiResponse(message: string, data?: any, status = 200) {
+export function apiResponse(message: string, data?: Record<string, unknown>, status = 200) {
   return NextResponse.json({ message, ...data }, { status });
 }
 

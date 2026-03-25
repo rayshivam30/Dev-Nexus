@@ -95,8 +95,9 @@ export function CreateIssueModal({
       
       onSuccess();
       onClose();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create issue");
+
     } finally {
       setSubmitting(false);
     }

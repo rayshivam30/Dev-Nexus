@@ -1,7 +1,8 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ShieldAlert, CheckCircle, Zap, Shield, Activity } from "lucide-react";
+import { CheckCircle, Shield, Activity } from "lucide-react";
+
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (

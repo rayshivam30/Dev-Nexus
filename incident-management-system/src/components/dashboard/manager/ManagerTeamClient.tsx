@@ -59,8 +59,8 @@ export function ManagerTeamClient({ projectId, projectName, teams }: ManagerTeam
       setTeamName("");
       setShowCreateTeam(false);
       router.refresh();
-    } catch (err: any) {
-      setTeamError(err.message);
+    } catch (err) {
+      setTeamError(err instanceof Error ? err.message : "Failed to create team");
     } finally {
       setTeamLoading(false);
     }
@@ -83,12 +83,13 @@ export function ManagerTeamClient({ projectId, projectName, teams }: ManagerTeam
       if (!res.ok) throw new Error(data.error);
       setInviteLinks((p) => ({ ...p, [teamId]: data.inviteLink }));
       setInviteEmails((p) => ({ ...p, [teamId]: "" }));
-    } catch (err: any) {
-      setInviteErrors((p) => ({ ...p, [teamId]: err.message }));
+    } catch (err) {
+      setInviteErrors((p) => ({ ...p, [teamId]: err instanceof Error ? err.message : "Failed to invite developer" }));
     } finally {
       setInviteLoading((p) => ({ ...p, [teamId]: false }));
     }
   }
+
 
   function copyLink(teamId: string) {
     navigator.clipboard.writeText(inviteLinks[teamId] || "");

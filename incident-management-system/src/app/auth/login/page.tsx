@@ -37,11 +37,12 @@ export default function LoginPage() {
 
       router.push("/dashboard/profile?source=login");
       router.refresh();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to login");
     } finally {
       setLoading(false);
     }
+
   }
 
   return (
@@ -120,8 +121,9 @@ export default function LoginPage() {
       </form>
 
       <div className="text-center text-[10px] font-bold uppercase tracking-widest text-white/30 pb-2">
-        Don't have an account? <Link href="/auth/register" className="text-white hover:text-violet-400 underline-offset-4 hover:underline transition-all">Create an organization</Link>
+        Don&apos;t have an account? <Link href="/auth/register" className="text-white hover:text-violet-400 underline-offset-4 hover:underline transition-all">Create an organization</Link>
       </div>
+
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { Issue } from "@/components/dashboard/shared/RecentIssues";
 
 interface Manager {
   id: string;
@@ -39,11 +40,11 @@ interface DetailedProject {
   sdkApiKey?: string | null;
   githubRepoUrl?: string | null;
   isSdkConnected?: boolean;
-  issues?: any[];
+  issues?: Issue[];
 }
 
-export function ProjectDetailClient({ project: initialProject }: { project: any }) {
-  const project = initialProject as DetailedProject;
+export function ProjectDetailClient({ project: initialProject }: { project: DetailedProject }) {
+  const project = initialProject;
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteLink, setInviteLink] = useState("");
@@ -75,8 +76,8 @@ export function ProjectDetailClient({ project: initialProject }: { project: any 
       if (!res.ok) throw new Error(data.error);
       setInviteLink(data.inviteLink);
       setInviteEmail("");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate invite");
     } finally {
       setInviteLoading(false);
     }
@@ -162,7 +163,7 @@ export function ProjectDetailClient({ project: initialProject }: { project: any 
                 <UserCircle className="w-6 h-6 text-primary" /> Assigned Managers
               </h2>
               {project.managers.length > 0 && (
-                <span className="text-xs font-mono text-foreground/40">{project.managers.length} ACTIVE</span>
+                <span className="text-xs font-mono text-foreground/40 uppercase tracking-tighter tracking-wider">{project.managers.length} ACTIVE</span>
               )}
             </div>
             
@@ -257,11 +258,11 @@ export function ProjectDetailClient({ project: initialProject }: { project: any 
                 <Layers className="w-6 h-6 text-amber-500" /> Unassigned Project Issues
               </h2>
               <div className="space-y-4">
-                {project.issues.map((issue: any) => (
+                {project.issues.map((issue: Issue) => (
                   <div key={issue.id} className="p-4 rounded-xl border border-border bg-accent/5 hover:bg-accent/10 transition-colors flex justify-between items-center group">
                     <div className="flex-1 pr-4">
                       <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{issue.title}</p>
-                      <p suppressHydrationWarning className="text-xs text-foreground/50 mt-1">{new Date(issue.createdAt).toLocaleDateString()}</p>
+                      <p suppressHydrationWarning className="text-xs text-foreground/50 mt-1">{new Date(issue.createdAt || "").toLocaleDateString()}</p>
                     </div>
                     <div className="flex gap-2 text-[10px] font-bold uppercase tracking-wider shrink-0">
                       <span className={`px-2 py-1 rounded-md border ${issue.severity === 'CRITICAL' || issue.severity === 'HIGH' ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-amber-500/10 border-amber-500/20 text-amber-500'}`}>
@@ -371,7 +372,7 @@ export function ProjectDetailClient({ project: initialProject }: { project: any 
 
           <div className="rounded-3xl border border-border bg-primary/5 p-6 border-dashed">
             <p className="text-xs text-foreground/50 leading-relaxed text-center italic">
-              "Managers can see project-specific issues, manage their assigned teams, and invite developers to their teams."
+              &quot;Managers can see project-specific issues, manage their assigned teams, and invite developers to their teams.&quot;
             </p>
           </div>
 
@@ -423,7 +424,7 @@ export function ProjectDetailClient({ project: initialProject }: { project: any 
                         <p>Note: For local testing, use the standalone SDK path:</p>
                         <code className="text-foreground/40 block bg-black/20 p-2 rounded font-mono">npm install ../sdk</code>
                         <p className="text-[9px] text-foreground/30">Or use absolute path:</p>
-                        <code className="text-foreground/20 block bg-black/10 p-1 rounded font-mono">npm install "C:\Users\91626\OneDrive\Desktop\DevNexus\sdk"</code>
+                        <code className="text-foreground/20 block bg-black/10 p-1 rounded font-mono">npm install &quot;C:\Users\91626\OneDrive\Desktop\DevNexus\sdk&quot;</code>
                       </div>
                     </div>
                 </div>
@@ -474,7 +475,7 @@ DevNexus.init({
                   <Plus className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                   <div className="space-y-1">
                     <p className="text-[10px] text-foreground/60 leading-relaxed italic">
-                      "Once integrated, unhandled errors in your app will automatically create <strong>High Severity</strong> issues in DevNexus."
+                      &quot;Once integrated, unhandled errors in your app will automatically create <strong>High Severity</strong> issues in DevNexus.&quot;
                     </p>
                     {project.githubRepoUrl && (
                       <p className="text-[10px] text-purple-400 font-bold flex items-center gap-1.5">

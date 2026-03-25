@@ -43,21 +43,24 @@ export default async function DeveloperDashboardPage() {
       include: { team: true },
     }),
     prisma.user.findMany({
-      select: { id: true, email: true, teamId: true },
+      select: { id: true, email: true, teamId: true, name: true },
       where: { teamId: user.team?.id, role: "DEVELOPER" }
     })
   ]);
 
-  const recentIssues: Issue[] = assignedIssuesRaw.map((issue: any) => {
+  const recentIssues: Issue[] = assignedIssuesRaw.map((issue) => {
     return {
       id: issue.id,
       title: issue.title,
       rootCause: issue.description.substring(0, 100) + "...",
       description: issue.description,
-      severity: issue.severity as any,
-      timeAgo: formatTimeAgo(issue.createdAt),
+      severity: issue.severity,
+      timeAgo: formatTimeAgo(new Date(issue.createdAt)),
       status: issue.status,
-      logs: issue.logs,
+      logs: issue.logs as Record<string, unknown> | null,
+      teamId: issue.teamId,
+      projectId: issue.projectId,
+      createdAt: issue.createdAt,
       teamName: issue.team?.name || "",
       assignedToEmail: user.email,
     };
@@ -65,7 +68,8 @@ export default async function DeveloperDashboardPage() {
 
   const teamName = user.team?.name ?? "";
   const teamId = user.team?.id;
-  const projectId = user.team?.projectId;
+  const projectId = user.projectId || user.team?.projectId; // user.projectId for managers, user.team?.projectId for developers
+
 
   return (
     <DeveloperDashboardClient

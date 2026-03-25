@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, AlertTriangle, Clock, MoreHorizontal, User } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
 export interface Issue {
   id: string;
@@ -12,7 +12,10 @@ export interface Issue {
   environment?: string | null;
   timeAgo: string;
   status?: string | null;
-  logs?: any;
+  logs?: Record<string, unknown> | null;
+
+
+
   teamName?: string | null;
   teamId?: string | null;
   projectId?: string | null;
@@ -52,11 +55,12 @@ export function RecentIssues({ issues, onAssignClick, onStatusChange, onRowClick
                 <p className="text-sm text-foreground/50 truncate w-48 md:w-80 lg:w-96">
                   {issue.rootCause}
                 </p>
-                {issue.status === "OPEN" && issue.logs?.suggestedAssigneeId && (
+                {issue.status === "OPEN" && !!issue.logs?.suggestedAssigneeId && (
                   <p className="text-xs text-amber-500/80 mt-1 italic">
                     Requires Assignment Approval
                   </p>
                 )}
+
               </div>
             </div>
             

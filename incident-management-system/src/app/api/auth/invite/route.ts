@@ -30,7 +30,8 @@ export async function POST(request: Request) {
       projectId,
       teamId,
       invitedBy: decoded.userId
-    } as any, '24h');
+    }, '24h');
+
 
     const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/accept-invite?token=${inviteToken}`;
 

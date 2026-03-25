@@ -13,8 +13,9 @@ export function DeveloperResolvedClient({ resolvedIssues }: { resolvedIssues: Is
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Resolved Issues</h1>
         <p className="text-foreground/60 mt-1">
-          Issues you've resolved. Total: <span className="font-semibold text-foreground">{resolvedIssues.length}</span>
+          Issues you&apos;ve resolved. Total: <span className="font-semibold text-foreground">{resolvedIssues.length}</span>
         </p>
+
       </div>
 
       {resolvedIssues.length === 0 ? (

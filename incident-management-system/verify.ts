@@ -29,8 +29,9 @@ async function runTests() {
   });
   const loginFailData = await loginFailRes.json();
   if (loginFailRes.status === 403) {
-    console.log('Login blocked correctly (Pending Approval)');
+    console.log('Login blocked correctly (Pending Approval):', loginFailData.error);
   } else {
+
     throw new Error('Login passed unconditionally, expected 403');
   }
 

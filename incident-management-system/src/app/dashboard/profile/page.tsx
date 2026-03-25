@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { 
-  Loader2, User, Mail, Phone, MapPin, Github, Linkedin, Save, Plus, X, 
-  Camera, Briefcase, Award, Globe, Shield, Sparkles, LayoutDashboard,
-  AlertCircle, FolderKanban, Settings, CheckSquare, Edit3, UserCircle
+  Loader2, User, Mail, Phone, MapPin, Github, Linkedin, Save, X, 
+  Camera, Briefcase, Award, Globe, Shield, LayoutDashboard,
+  AlertCircle, FolderKanban, CheckSquare, Edit3, UserCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar, NavItem } from "@/components/dashboard/shared/Sidebar";
@@ -68,15 +69,7 @@ function ProfileContent() {
     }
   };
 
-  useEffect(() => {
-    fetchProfile();
-    // If coming from login, we should enable edit mode after data is fetched
-    if (fromLogin) {
-      setIsEditing(true);
-    }
-  }, [fromLogin]);
-
-  async function fetchProfile() {
+  const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("incident_token");
@@ -110,12 +103,20 @@ function ProfileContent() {
         setStats(data.stats);
       }
 
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch profile");
     } finally {
       setLoading(false);
     }
-  }
+  }, [router]);
+
+  useEffect(() => {
+    fetchProfile();
+    // If coming from login, we should enable edit mode after data is fetched
+    if (fromLogin) {
+      setIsEditing(true);
+    }
+  }, [fromLogin, fetchProfile]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -158,8 +159,8 @@ function ProfileContent() {
           router.push(roleDashboard[formData.role] || "/dashboard");
         }, 2000);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update profile");
     } finally {
       setSubmitting(false);
     }
@@ -192,13 +193,17 @@ function ProfileContent() {
     );
   }
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0 }
-  };
+  interface ProfileFieldProps {
+    label: string;
+    value: string;
+    field: string;
+    type?: "input" | "textarea";
+    placeholder?: string;
+    icon?: React.ElementType;
+  }
 
   // Helper component for label + display/input
-  const ProfileField = ({ label, value, field, type = "input", placeholder, icon: Icon }: any) => {
+  const ProfileField = ({ label, value, field, type = "input", placeholder, icon: Icon }: ProfileFieldProps) => {
     return (
       <div className="group space-y-1.5 focus-within:text-foreground transition-colors">
         <label className={cn(
@@ -235,8 +240,8 @@ function ProfileContent() {
           <div className="flex items-center gap-3 py-1 group/display min-h-[24px]">
              {Icon && <Icon className="h-4 w-4 text-foreground/20 group-hover/display:text-foreground/40 transition-colors" />}
              <span className={cn(
-               "text-sm font-medium transition-colors",
-               value ? "text-foreground/80" : "text-foreground/20 italic"
+                "text-sm font-medium transition-colors",
+                value ? "text-foreground/80" : "text-foreground/20 italic"
              )}>
                {value || `No ${label.toLowerCase()} specified`}
              </span>
@@ -257,7 +262,9 @@ function ProfileContent() {
           <div className="absolute -bottom-16 left-8 md:left-12">
             <div className="relative group h-32 w-32 rounded-3xl border-4 border-background bg-card overflow-hidden shadow-2xl transition-transform hover:scale-[1.02]">
               {formData.image ? (
-                <img src={formData.image} alt={formData.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                <div className="relative h-full w-full">
+                  <Image src={formData.image} alt={formData.name} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
+                </div>
               ) : (
                 <div className="h-full w-full flex items-center justify-center bg-accent text-foreground/10">
                   <User className="h-14 w-14" />
@@ -499,7 +506,7 @@ function ProfileContent() {
 
                     <div className="flex flex-wrap gap-3">
                       <AnimatePresence>
-                        {skills.map((skill, index) => (
+                        {skills.map((skill) => (
                           <motion.div
                             key={skill}
                             initial={{ scale: 0.9, opacity: 0 }}

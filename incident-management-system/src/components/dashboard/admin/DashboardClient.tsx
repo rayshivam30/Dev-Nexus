@@ -48,8 +48,9 @@ export function DashboardClient({
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome back, {orgName} Admin.</h1>
-          <p className="text-foreground/60">Here's a live overview of your organization.</p>
+          <p className="text-foreground/60">Here&apos;s a live overview of your organization.</p>
         </div>
+
         <button 
           onClick={() => setIsCreateIssueOpen(true)}
           className="bg-foreground text-background px-4 py-2 rounded-md font-medium hover:opacity-90 transition-opacity flex items-center gap-2"

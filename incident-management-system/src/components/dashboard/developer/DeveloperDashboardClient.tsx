@@ -52,9 +52,10 @@ export function DeveloperDashboardClient({
         throw new Error(data.error || "Failed to update status");
       }
       router.refresh();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update status");
     }
+
   }
 
   const stats = [

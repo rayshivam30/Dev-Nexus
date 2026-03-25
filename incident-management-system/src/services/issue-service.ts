@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/db";
-import { EnvironmentType, IssueStatus, IssueSeverity, PlanType } from "@prisma/client";
+import { EnvironmentType, IssueStatus, IssueSeverity, PlanType, Prisma } from "@prisma/client";
 
 export async function createIssue(data: {
   title: string;
   description: string;
-  severity: any;
+  severity: IssueSeverity;
   priority?: string;
   environment?: EnvironmentType;
   projectId: string;
@@ -24,32 +24,35 @@ export async function createIssue(data: {
     select: { plan: true }
   });
 
-  const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(projectId, severity, project?.plan);
+  const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(projectId, severity, project?.plan || undefined);
 
-  const issueData: any = {
+  const issueData: Prisma.IssueCreateInput = {
     title,
     description,
     severity,
     priority: priority || "MEDIUM",
     environment: environment || "PRODUCTION",
-    projectId,
+    project: { connect: { id: projectId } },
     source: "MANUAL",
     status: "OPEN",
     responseSlaDeadline,
     resolutionSlaDeadline
   };
 
-  if (teamId) issueData.teamId = teamId;
+  if (teamId) {
+    issueData.team = { connect: { id: teamId } };
+  }
 
   if (assignedToId) {
     if (role === "MANAGER" || role === "ADMIN") {
-      issueData.assignedToId = assignedToId;
+      issueData.assignedTo = { connect: { id: assignedToId } };
       issueData.status = "ASSIGNED";
       issueData.acceptedAt = new Date();
     } else {
       issueData.logs = { suggestedAssigneeId: assignedToId };
     }
   }
+
 
   const issue = await prisma.issue.create({
     data: issueData,
@@ -77,10 +80,10 @@ export async function updateIssue(id: string, data: {
   const oldIssue = await prisma.issue.findUnique({ where: { id } });
   if (!oldIssue) throw new Error("Issue not found");
 
-  const updateData: any = {};
+  const updateData: Prisma.IssueUpdateInput = {};
   if (status) updateData.status = status;
-  if (teamId) updateData.teamId = teamId;
-  if (assignedToId) updateData.assignedToId = assignedToId;
+  if (teamId) updateData.team = { connect: { id: teamId } };
+  if (assignedToId) updateData.assignedTo = { connect: { id: assignedToId } };
   if (rootCause) updateData.rootCause = rootCause;
 
   if (status === "RESOLVED") {
@@ -174,15 +177,7 @@ export async function getIssuesByProject(projectId: string) {
   });
 }
 
-/**
- * Helper to calculate SLA deadlines based on project plan and issue severity.
- * Rules (Applied only for ADVANCED plans):
- * - CRITICAL: 1h Response, 4h Resolution
- * - HIGH: 4h Response, 24h Resolution
- * - MEDIUM: 8h Response, 3 days Resolution
- * - LOW: 24h Response, 7 days Resolution
- */
-export async function calculateSLADeadlines(projectId: string, severity: IssueSeverity, plan?: PlanType) {
+export async function calculateSLADeadlines(_projectId: string, severity: IssueSeverity, plan?: PlanType) {
   if (plan !== "ADVANCED") {
     return { responseSlaDeadline: null, resolutionSlaDeadline: null };
   }

@@ -81,8 +81,8 @@ export function ManagerDashboardClient({
       setTeamName("");
       setShowCreateTeam(false);
       router.refresh();
-    } catch (err: any) {
-      setCreateError(err.message);
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "Failed to create team");
     } finally {
       setCreating(false);
     }
@@ -215,8 +215,8 @@ export function ManagerDashboardClient({
               if (!res.ok) throw new Error("Failed to assign issue");
               setAssigningIssue(null);
               router.refresh();
-            } catch (err: any) {
-              alert(err.message);
+            } catch (err) {
+              alert(err instanceof Error ? err.message : "Failed to assign issue");
             } finally {
               setIsAssigning(false);
             }

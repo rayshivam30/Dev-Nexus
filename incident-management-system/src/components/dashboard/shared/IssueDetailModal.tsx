@@ -8,8 +8,18 @@ export interface TeamData { id: string; name: string; projectId: string; }
 export interface DeveloperData { id: string; name?: string | null; email: string; teamId: string | null; }
 
 interface DetailedIssue extends Issue {
-  activities?: any[];
-  comments?: any[];
+  activities?: Array<{
+    id: string;
+    action: string;
+    createdAt: string | Date;
+    user?: { email: string; name?: string | null };
+  }>;
+  comments?: Array<{
+    id: string;
+    text: string;
+    createdAt: string | Date;
+    user?: { name?: string | null; email: string };
+  }>;
 }
 
 interface IssueDetailModalProps {
@@ -46,31 +56,31 @@ export function IssueDetailModal({
   const [resolvingSubmit, setResolvingSubmit] = useState(false);
 
   useEffect(() => {
+    async function fetchIssueDetails(id: string) {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem("incident_token") || "";
+        const res = await fetch(`/api/issues/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setIssue(data.issue);
+          setAssignDevId(data.issue.logs?.suggestedAssigneeId || "");
+        }
+      } catch (err) {
+        console.error("Failed to fetch details:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     if (initialIssue) {
       fetchIssueDetails(initialIssue.id);
     } else {
       setIssue(null);
     }
   }, [initialIssue]);
-
-  async function fetchIssueDetails(id: string) {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("incident_token") || "";
-      const res = await fetch(`/api/issues/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setIssue(data.issue);
-        setAssignDevId(data.issue.logs?.suggestedAssigneeId || "");
-      }
-    } catch (err) {
-      console.error("Failed to fetch details:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleAddComment(e: React.FormEvent) {
     e.preventDefault();
@@ -85,7 +95,14 @@ export function IssueDetailModal({
       });
       if (res.ok) {
         setCommentText("");
-        fetchIssueDetails(issue.id); // Refresh
+        // Trigger a re-fetch of details by re-setting the issue id
+        if (initialIssue) {
+          const resDetail = await fetch(`/api/issues/${issue.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const dataDetail = await resDetail.json();
+          if (resDetail.ok) setIssue(dataDetail.issue);
+        }
       }
     } catch (err) {
       console.error("Failed to add comment:", err);
@@ -98,7 +115,18 @@ export function IssueDetailModal({
     e.preventDefault();
     if (onAssignSubmit) {
       await onAssignSubmit(assignTeamId, assignDevId);
-      if (issue) fetchIssueDetails(issue.id);
+      // Refresh
+      const token = localStorage.getItem("incident_token") || "";
+      if (issue) {
+        const resDetail = await fetch(`/api/issues/${issue.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const dataDetail = await resDetail.json();
+        if (resDetail.ok) {
+          setIssue(dataDetail.issue);
+          setAssignDevId(dataDetail.issue.logs?.suggestedAssigneeId || "");
+        }
+      }
     }
   };
 
@@ -109,7 +137,13 @@ export function IssueDetailModal({
     try {
       await onStatusChange(issue.id, "RESOLVED", rootCauseInput);
       setIsResolving(false);
-      fetchIssueDetails(issue.id);
+      // Refresh
+      const token = localStorage.getItem("incident_token") || "";
+      const resDetail = await fetch(`/api/issues/${issue.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const dataDetail = await resDetail.json();
+      if (resDetail.ok) setIssue(dataDetail.issue);
     } finally {
       setResolvingSubmit(false);
     }
@@ -169,7 +203,7 @@ export function IssueDetailModal({
                 <Globe className="w-4 h-4" /> root cause analysis
               </h4>
               <div className="text-sm text-emerald-500 bg-emerald-500/5 border border-emerald-500/20 p-5 rounded-2xl italic">
-                "{issue.rootCause}"
+                &quot;{issue.rootCause}&quot;
               </div>
             </div>
           )}
@@ -183,7 +217,7 @@ export function IssueDetailModal({
               {loading ? (
                  <div className="flex items-center gap-2 text-xs text-foreground/30 py-4"><Loader2 className="w-3 h-3 animate-spin"/> Loading history...</div>
               ) : issue?.activities && issue.activities.length > 0 ? (
-                issue.activities.map((act, i) => (
+                issue.activities.map((act) => (
                   <div key={act.id} className="relative">
                     <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-background border-2 border-border/50"></div>
                     <div className="text-xs">
@@ -368,8 +402,9 @@ export function IssueDetailModal({
                       {developers.filter(d => d.teamId === assignTeamId).map(dev => (
                         <option key={dev.id} value={dev.id}>
                           {dev.name || dev.email}
-                          {issue?.logs?.suggestedAssigneeId === dev.id ? " (Suggested)" : ""}
+                          {(issue?.logs as { suggestedAssigneeId?: string })?.suggestedAssigneeId === dev.id ? " (Suggested)" : ""}
                         </option>
+
                       ))}
                     </select>
                   )}

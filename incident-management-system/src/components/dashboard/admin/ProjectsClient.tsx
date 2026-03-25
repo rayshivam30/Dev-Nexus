@@ -1,10 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Trash2, Github, Mail, Layout, Info, Layers, CheckCircle2, X, Copy, Check } from "lucide-react";
+import { Loader2, Trash2, Github, Mail, Layout, Info, Layers, CheckCircle2, X, Copy } from "lucide-react";
+
 import Link from "next/link";
 
-export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) {
+interface TeamSummary {
+  id: string;
+  name: string;
+}
+
+interface ManagerSummary {
+  id: string;
+  email: string;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  description: string | null;
+  plan: string;
+  teams: TeamSummary[];
+  managers: ManagerSummary[];
+  sdkApiKey?: string | null;
+}
+
+export function ProjectsClient({ initialProjects }: { initialProjects: Project[] }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDesc, setNewProjectDesc] = useState("");
@@ -15,6 +36,16 @@ export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) 
   const [githubRepoUrl, setGithubRepoUrl] = useState("");
   const [createdSdkKey, setCreatedSdkKey] = useState<string | null>(null);
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
+
+  // Use the imports to avoid unused var warnings if they are actually used in the UI
+  // Copy and Check are used in the SDK modal but were reported as unused.
+  // Plus was also reported as unused but I see it in other files, let's check here.
+  // Wait, I don't see Plus being used in this file's JSX. 
+  // I'll remove Plus from imports if it's truly unused.
+  // Check is NOT used in the JSX I see in the previous view_file. 
+  // Wait, line 361: {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+  // So Check and Copy ARE used.
+  // Plus? I don't see Plus.
 
   async function handleDeleteProject(id: string) {
     if (!confirm("Are you sure you want to delete this project? All associated teams and issues might be affected.")) return;
@@ -28,8 +59,8 @@ export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to delete project");
       window.location.reload();
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to delete project");
     } finally {
       setDeleteLoadingId(null);
     }
@@ -86,8 +117,8 @@ export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) 
         setIsModalOpen(false);
         window.location.reload(); // Quick refresh to reflect the new project on SSR
       }
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to create project");
     } finally {
       setCreateProjectLoading(false);
     }
@@ -111,7 +142,7 @@ export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {initialProjects.length === 0 ? (
           <div className="col-span-full py-12 text-center text-foreground/50 border border-border rounded-xl bg-card">
-            No projects created yet. Click "Create Project" to get started.
+            No projects created yet. Click &quot;Create Project&quot; to get started.
           </div>
         ) : (
           initialProjects.map(p => (
@@ -253,7 +284,7 @@ export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) 
                     <div className="space-y-1">
                       <h3 className="text-xl font-bold">Pro Plan is Coming Soon</h3>
                       <p className="text-sm text-foreground/50 max-w-[240px]">
-                        We're putting the finishing touches on our Enterprise-grade features.
+                        We&apos;re putting the finishing touches on our Enterprise-grade features.
                       </p>
                     </div>
                   </div>
@@ -291,7 +322,7 @@ export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) 
                           className="w-full px-4 py-2.5 bg-foreground/5 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/30 transition-all placeholder:text-foreground/30" 
                           placeholder="manager@example.com" 
                         />
-                        <p className="text-[10px] text-foreground/40 italic ml-1">They'll get an invitation link to join as a Project Manager.</p>
+                        <p className="text-[10px] text-foreground/40 italic ml-1">They&apos;ll get an invitation link to join as a Project Manager.</p>
                       </div>
                     </div>
                   </>
@@ -360,7 +391,7 @@ export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) 
                   </div>
                 </div>
                 <p className="text-[10px] text-red-500/80 font-medium px-1">
-                  Important: Copy this key now! It won't be shown again for security reasons.
+                  Important: Copy this key now! It won&apos;t be shown again for security reasons.
                 </p>
               </div>
               
@@ -374,13 +405,13 @@ export function ProjectsClient({ initialProjects }: { initialProjects: any[] }) 
                 <div className="text-[11px] font-mono text-foreground/70 bg-black/5 p-3 rounded-lg overflow-x-auto border border-border/50">
                   <pre className="whitespace-pre">
 {`npm install @devnexus/sdk
-
-import { DevNexus } from '@devnexus/sdk';
-
-DevNexus.init({
-  apiKey: '${createdSdkKey}',
-  environment: 'production'
-});`}
+377: 
+378: import { DevNexus } from '@devnexus/sdk';
+379: 
+380: DevNexus.init({
+381:   apiKey: '${createdSdkKey}',
+382:   environment: 'production'
+383: });`}
                   </pre>
                 </div>
               </div>
@@ -392,7 +423,7 @@ DevNexus.init({
                 }} 
                 className="w-full py-4 bg-foreground text-background font-bold rounded-xl hover:opacity-90 shadow-xl shadow-foreground/10 active:scale-[0.98] transition-all"
               >
-                I've copied the key
+                I&apos;ve copied the key
               </button>
             </div>
           </div>

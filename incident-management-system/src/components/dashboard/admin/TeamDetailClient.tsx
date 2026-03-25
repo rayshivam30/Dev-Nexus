@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { formatTimeAgo } from "@/lib/utils";
 import { IssueDetailModal } from "@/components/dashboard/shared/IssueDetailModal";
+import { Issue } from "@/components/dashboard/shared/RecentIssues";
 import { useState } from "react";
 
 interface TeamMember {
@@ -15,16 +16,6 @@ interface TeamMember {
   email: string;
   status: string;
   role: string;
-}
-
-interface Issue {
-  id: string;
-  title: string;
-  description: string;
-  severity: string;
-  status: string;
-  createdAt: string | Date;
-  assignedTo?: { email: string } | null;
 }
 
 interface Team {
@@ -36,7 +27,7 @@ interface Team {
 }
 
 export function TeamDetailClient({ team }: { team: Team }) {
-  const [viewingIssue, setViewingIssue] = useState<any | null>(null);
+  const [viewingIssue, setViewingIssue] = useState<Issue | null>(null);
   const activeIssues = team.issues.filter(i => i.status !== "RESOLVED" && i.status !== "OPEN");
   const unassignedIssues = team.issues.filter(i => i.status === "OPEN");
   const resolvedIssues = team.issues.filter(i => i.status === "RESOLVED");
@@ -66,7 +57,7 @@ export function TeamDetailClient({ team }: { team: Team }) {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {stats.map((s, i) => (
+            {stats.map((s) => (
               <div key={s.label} className="p-3 bg-accent/10 border border-border rounded-2xl w-full flex flex-col items-center min-w-[100px]">
                 <div className={`p-1.5 rounded-lg mb-1 ${s.bg}`}>
                   <s.icon className={`w-3.5 h-3.5 ${s.color}`} />
@@ -155,7 +146,7 @@ export function TeamDetailClient({ team }: { team: Team }) {
             className="rounded-3xl border border-primary/20 bg-primary/5 p-6 border-dashed"
           >
             <p className="text-xs text-foreground/50 leading-relaxed text-center italic">
-              "Developers assigned to this team will receive all related notifications and can manage issues via their own dashboard."
+              &quot;Developers assigned to this team will receive all related notifications and can manage issues via their own dashboard.&quot;
             </p>
           </motion.div>
         </div>
@@ -172,7 +163,7 @@ export function TeamDetailClient({ team }: { team: Team }) {
   );
 }
 
-function Section({ title, icon, count, children, emptyText }: { title: string; icon: any; count: number; children: any; emptyText: string }) {
+function Section({ title, icon, count, children, emptyText }: { title: string; icon: React.ReactNode; count: number; children: React.ReactNode; emptyText: string }) {
   return (
     <motion.div 
       initial={{ opacity: 0, y: 15 }}
@@ -225,7 +216,7 @@ function IssueCard({ issue, onLinkClick }: { issue: Issue; onLinkClick: () => vo
             {issue.severity}
           </span>
           <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" /> {formatTimeAgo(new Date(issue.createdAt))}
+            <Clock className="w-3 h-3" /> {issue.createdAt ? formatTimeAgo(new Date(issue.createdAt)) : "Unknown"}
           </span>
           {issue.assignedTo && (
             <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/20 border border-border">
@@ -237,7 +228,7 @@ function IssueCard({ issue, onLinkClick }: { issue: Issue; onLinkClick: () => vo
       
       <div className="flex items-center gap-3 self-end md:self-center">
         <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-tighter ${statusColors[issue.status || ""] || "bg-accent text-foreground/50"}`}>
-          {issue.status.replace("_", " ")}
+          {issue.status ? issue.status.replace("_", " ") : "Unknown"}
         </span>
         <button 
           onClick={(e) => { e.stopPropagation(); onLinkClick(); }}

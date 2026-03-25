@@ -15,11 +15,12 @@ async function runTest() {
   }
 
   // Initialize SDK
-  const sdk = DevNexus.init({
+  DevNexus.init({
     apiKey: API_KEY,
     baseUrl: 'http://localhost:3000/api/ingest',
     autoCapture: false
   });
+
 
   console.log('Reporting a manual exception...');
   try {

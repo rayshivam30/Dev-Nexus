@@ -31,8 +31,8 @@ export function ManagerIssuesClient({ initialIssues, teams, allDevelopers }: Man
       }
       setSelectedIssue(null);
       router.refresh();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to assign issue");
     } finally {
       setIsAssigning(false);
     }
@@ -48,8 +48,8 @@ export function ManagerIssuesClient({ initialIssues, teams, allDevelopers }: Man
       });
       if (!res.ok) throw new Error("Failed to update status");
       router.refresh();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update status");
     }
   }
 
@@ -57,8 +57,9 @@ export function ManagerIssuesClient({ initialIssues, teams, allDevelopers }: Man
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Issues</h1>
-        <p className="text-foreground/60 mt-1">All issues within your project's teams.</p>
+        <p className="text-foreground/60 mt-1">All issues within your project&apos;s teams.</p>
       </div>
+
 
       {initialIssues.length === 0 ? (
         <div className="rounded-xl border border-border bg-card p-12 text-center text-foreground/50 italic">

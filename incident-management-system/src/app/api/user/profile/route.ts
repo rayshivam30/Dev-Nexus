@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 
 export const PATCH = withAuth(async (req, { decoded, body }) => {

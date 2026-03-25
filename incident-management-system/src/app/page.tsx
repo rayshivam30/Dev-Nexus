@@ -1,34 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Database, ShieldCheck, Zap, Github, Terminal, Activity, CheckCircle2, Globe, Lock } from "lucide-react";
+import { ArrowRight, Terminal, Activity, CheckCircle2 } from "lucide-react";
+
 import Link from "next/link";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
-
-const features = [
-  { 
-    icon: ShieldCheck, 
-    title: "SLA Guardrails", 
-    description: "Hard-coded response and resolution windows. Automated escalation triggers ensure no incident is left stranded." 
-  },
-  { 
-    icon: Zap, 
-    title: "Predictive Root Cause", 
-    description: "Our heuristics engine maps incoming errors to specific Git commits, identifies regressions, and points to the likely fix." 
-  },
-  { 
-    icon: Database, 
-    title: "Native Ingestion", 
-    description: "Native SDKs and GitHub webhooks capture state, environment variables, and stack traces the microsecond a failure occurs." 
-  }
-];
-
-const stats = [
-  { label: "Uptime", value: "99.99%" },
-  { label: "Incidents Resolved", value: "12M+" },
-  { label: "Avg. Resolution", value: "14m" }
-];
 
 const pricing = [
   { 
@@ -118,7 +94,7 @@ export default function LandingPage() {
             transition={{ delay: 0.4, duration: 0.8 }}
             className="mt-12 text-lg md:text-xl text-white/40 max-w-2xl font-medium leading-relaxed"
           >
-            DevNexus is a mission-critical incident infrastructure for teams that can't afford a second of downtime. Lightweight SDK. Heavyweight resolution.
+            DevNexus is a mission-critical incident infrastructure for teams that can&apos;t afford a second of downtime. Lightweight SDK. Heavyweight resolution.
           </motion.p>
 
           <motion.div 
@@ -178,25 +154,21 @@ export default function LandingPage() {
                             <span className="text-[10px] text-white/30 uppercase tracking-widest font-bold">src/lib/devnexus.ts</span>
                         </div>
                         <div className="p-6 space-y-1 text-white/90">
-                            <p><span className="text-violet-400">import</span> &#123; DevNexus &#125; <span className="text-violet-400">from</span> <span className="text-emerald-400">'@devnexus/sdk'</span>;</p>
+                            <p><span className="text-violet-400">import</span> &#123; DevNexus &#125; <span className="text-violet-400">from</span> <span className="text-emerald-400">&apos;@devnexus/sdk&apos;</span>;</p>
                             <p className="opacity-0">.</p>
-                            <p><span className="text-white/40">// Initialize once</span></p>
+                            <p><span className="text-white/40">{"// Initialize once"}</span></p>
                             <p><span className="text-violet-400">DevNexus</span>.<span className="text-blue-400 font-bold">init</span>(&#123;</p>
-                            <p className="ml-4">apiKey: <span className="text-emerald-400">'dn_live_...x28'</span>,</p>
+                            <p className="ml-4">apiKey: <span className="text-emerald-400">&apos;dn_live_...x28&apos;</span>,</p>
                             <p className="ml-4">autoCapture: <span className="text-blue-400">true</span>,</p>
-                            <p className="ml-4">environment: <span className="text-emerald-400">'production'</span></p>
+                            <p className="ml-4">environment: <span className="text-emerald-400">&apos;production&apos;</span></p>
                             <p>&#125;);</p>
                             <p className="opacity-0">.</p>
-                            <p><span className="text-white/40">// That's it. We handle the rest.</span></p>
+                            <p><span className="text-white/40">{"// That's it. We handle the rest."}</span></p>
                         </div>
                     </div>
                 </motion.div>
             </div>
         </section>
-
-
-
-
 
   
         {/* Pricing Section */}
@@ -205,7 +177,7 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto relative z-10">
             <div className="text-center mb-20 space-y-4">
               <h2 className="text-4xl md:text-5xl font-bold">Simple, transparent pricing.</h2>
-              <p className="text-white/40 max-w-xl mx-auto">Choose the plan that fits your current needs and scale when you're ready.</p>
+              <p className="text-white/40 max-w-xl mx-auto">Choose the plan that fits your current needs and scale when you&apos;re ready.</p>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -308,4 +280,3 @@ export default function LandingPage() {
     </div>
   );
 }
-

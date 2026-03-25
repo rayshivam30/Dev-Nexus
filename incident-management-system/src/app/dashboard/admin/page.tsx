@@ -30,8 +30,8 @@ export default async function AdminDashboardPage() {
       where: { assignedToId: null },
       take: 5,
       orderBy: { createdAt: 'desc' },
-      include: { team: true }
-    }) as any,
+      include: { team: true, assignedTo: true }
+    }),
     prisma.project.findMany({
       include: {
         _count: { 
@@ -44,20 +44,24 @@ export default async function AdminDashboardPage() {
     }),
     prisma.project.findMany({ select: { id: true, name: true } }),
     prisma.team.findMany({ select: { id: true, name: true, projectId: true } }),
-    prisma.user.findMany({ select: { id: true, email: true, teamId: true }, where: { role: 'DEVELOPER' } })
+    prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER' } })
   ]);
 
-  const recentIssues: Issue[] = recentIssuesRaw.map((issue: any) => {
+  const recentIssues: Issue[] = recentIssuesRaw.map((issue) => {
     return {
       id: issue.id,
       title: issue.title,
       rootCause: issue.description.substring(0, 100) + '...',
       description: issue.description,
       status: issue.status,
-      severity: issue.severity as any,
+      severity: issue.severity,
       teamName: issue.team?.name || "—",
       assignedToEmail: issue.assignedTo?.email || "—",
-      timeAgo: formatTimeAgo(new Date(issue.createdAt))
+      timeAgo: formatTimeAgo(new Date(issue.createdAt)),
+      logs: issue.logs as Record<string, unknown> | null,
+      createdAt: issue.createdAt,
+      projectId: issue.projectId,
+      teamId: issue.teamId
     };
   });
 

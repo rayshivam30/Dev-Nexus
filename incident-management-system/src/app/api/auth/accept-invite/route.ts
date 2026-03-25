@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { hashPassword } from '@/lib/hash';
-import { verifyToken, signToken } from '@/lib/jwt';
+import { verifyToken, signToken, JwtPayload } from '@/lib/jwt';
 
 export async function POST(request: Request) {
   try {
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     }
 
     // Verify the invite token
-    const decoded = verifyToken(token) as any;
+    const decoded = verifyToken(token) as JwtPayload;
     if (!decoded || !decoded.email || !decoded.role || !decoded.orgId) {
       return NextResponse.json({ error: 'Invalid or expired invite link' }, { status: 400 });
     }
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     // For DEVELOPER role, save the teamId from the invite token
     const user = await prisma.user.create({
       data: {
-        email,
+        email: email as string,
         passwordHash,
         role,
         status: 'ACTIVE',

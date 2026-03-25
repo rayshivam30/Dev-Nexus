@@ -1,0 +1,22 @@
+$ eslint
+
+C:\Users\91626\OneDrive\Desktop\DevNexus\incident-management-system\src\app\dashboard\developer\resolved\DeveloperResolvedClient.tsx
+  16:21  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\91626\OneDrive\Desktop\DevNexus\incident-management-system\src\app\page.tsx
+  4:22  warning  'Database' is defined but never used     @typescript-eslint/no-unused-vars
+  4:32  warning  'ShieldCheck' is defined but never used  @typescript-eslint/no-unused-vars
+  4:45  warning  'Zap' is defined but never used          @typescript-eslint/no-unused-vars
+
+C:\Users\91626\OneDrive\Desktop\DevNexus\incident-management-system\src\components\dashboard\admin\ProjectsClient.tsx
+  4:86  warning  'Check' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\91626\OneDrive\Desktop\DevNexus\incident-management-system\src\lib\jwt.ts
+  22:12  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\91626\OneDrive\Desktop\DevNexus\incident-management-system\verify.ts
+  30:9  warning  'loginFailData' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 7 problems (1 error, 6 warnings)
+
+error: script "lint" exited with code 1

@@ -23,8 +23,8 @@ export function DeveloperIssuesClient({ issues }: DeveloperIssuesClientProps) {
       });
       if (!res.ok) throw new Error("Failed to update status");
       window.location.reload();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update status");
     } finally {
       setStatusUpdating(false);
     }
@@ -53,9 +53,10 @@ export function DeveloperIssuesClient({ issues }: DeveloperIssuesClientProps) {
 
       {issues.length === 0 ? (
         <div className="rounded-xl border border-border bg-card p-16 text-center space-y-3">
-          <p className="text-xl font-semibold text-foreground">You're all caught up! 🎉</p>
+          <p className="text-xl font-semibold text-foreground">You&apos;re all caught up! 🎉</p>
           <p className="text-sm text-foreground/50">No open issues are assigned to you right now.</p>
         </div>
+
       ) : (
         <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
           {issues.map((issue) => (

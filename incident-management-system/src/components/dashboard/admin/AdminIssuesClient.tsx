@@ -31,8 +31,8 @@ export function AdminIssuesClient({ issues, teams, developers }: AdminIssuesClie
       }
       setSelectedIssue(null);
       window.location.reload();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to assign issue");
     } finally {
       setIsAssigning(false);
     }
@@ -49,10 +49,11 @@ export function AdminIssuesClient({ issues, teams, developers }: AdminIssuesClie
       if (!res.ok) throw new Error("Failed to update status");
       // Note: Modal will refresh its own data, but we refresh page to update list
       window.location.reload();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update status");
     }
   }
+
 
   return (
     <>

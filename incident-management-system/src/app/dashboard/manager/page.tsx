@@ -33,6 +33,8 @@ export default async function ManagerDashboardPage() {
   }
 
   const projectId = user.projectId;
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
 
   const [teams, recentIssuesRaw, openIssuesCount, resolvedTodayCount, developerCount] = await Promise.all([
     prisma.team.findMany({
@@ -45,35 +47,41 @@ export default async function ManagerDashboardPage() {
       take: 6,
       orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
       include: { team: true },
-    }) as any,
+    }),
     prisma.issue.count({
       where: { projectId, status: { in: ["OPEN", "ASSIGNED", "IN_PROGRESS"] } },
-    }) as any,
+    }),
     prisma.issue.count({
       where: {
         projectId,
         status: "RESOLVED",
-        resolvedAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+        resolvedAt: { gte: startOfToday },
       },
-    }) as any,
+    }),
     prisma.user.findMany({
-      select: { id: true, email: true, teamId: true },
+      select: { id: true, email: true, teamId: true, name: true },
       where: { team: { projectId }, role: "DEVELOPER" },
     }),
   ]);
 
-  const recentIssues: Issue[] = recentIssuesRaw.map((issue: any) => {
-    const diffMins = Math.floor((Date.now() - issue.createdAt.getTime()) / 60000);
+  const now = new Date().getTime();
+  const recentIssues: Issue[] = recentIssuesRaw.map((issue) => {
+    const diffMins = Math.floor((now - issue.createdAt.getTime()) / 60000);
     const timeAgo = diffMins < 60 ? `${diffMins}m ago` : `${Math.floor(diffMins / 60)}h ago`;
     return {
       id: issue.id,
       title: issue.title,
+      description: issue.description,
       rootCause: issue.description.substring(0, 100) + "...",
-      severity: issue.severity as any,
+      severity: issue.severity,
       timeAgo,
       status: issue.status,
-      logs: issue.logs,
+      logs: issue.logs as Record<string, unknown>,
+      teamId: issue.teamId,
+      projectId: issue.projectId,
+      createdAt: issue.createdAt,
     };
+
   });
 
   return (

@@ -100,8 +100,8 @@ function AcceptInviteContent() {
 
       setSuccess(true);
       setTimeout(() => router.push(destination), 1500);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -130,7 +130,8 @@ function AcceptInviteContent() {
         </div>
         <h1 className="text-3xl font-bold tracking-tight">Accept Invite</h1>
         <p className="text-sm text-foreground/60">
-          You've been invited as a{" "}
+          You&apos;ve been invited as a{" "}
+
           <span className="font-semibold text-foreground capitalize">
             {role.toLowerCase()}
           </span>

@@ -3,20 +3,21 @@
 import { useState } from "react";
 import { CheckCircle } from "lucide-react";
 import { IssueDetailModal } from "@/components/dashboard/shared/IssueDetailModal";
+import { Issue } from "@/components/dashboard/shared/RecentIssues";
 
 interface DeveloperResolvedClientProps {
-  resolvedIssues: any[];
+  resolvedIssues: Issue[];
 }
 
 export function DeveloperResolvedClient({ resolvedIssues }: DeveloperResolvedClientProps) {
-  const [selectedIssue, setSelectedIssue] = useState<any | null>(null);
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Resolved Issues</h1>
         <p className="text-foreground/60 mt-1">
-          Issues you've resolved. Total: <span className="font-semibold text-foreground">{resolvedIssues.length}</span>
+          Issues you&apos;ve resolved. Total: <span className="font-semibold text-foreground">{resolvedIssues.length}</span>
         </p>
       </div>
 
