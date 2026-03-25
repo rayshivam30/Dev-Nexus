@@ -36,6 +36,12 @@ function ProfileContent() {
 
   const [skills, setSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
+  const [stats, setStats] = useState({
+    resolvedCount: 0,
+    rating: "5.0",
+    profileCompletion: 0,
+  });
+
 
   const getNavItems = (role: string): NavItem[] => {
     switch (role) {
@@ -100,6 +106,10 @@ function ProfileContent() {
         role: data.user.role || "",
       });
       setSkills(data.user.skills || []);
+      if (data.stats) {
+        setStats(data.stats);
+      }
+
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -134,6 +144,9 @@ function ProfileContent() {
 
       setSuccess(true);
       setIsEditing(false);
+      
+      // Refresh data to update stats (like profile completion)
+      setTimeout(() => fetchProfile(), 100);
       
       if (fromLogin) {
         setTimeout(() => {
@@ -331,28 +344,35 @@ function ProfileContent() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             {/* Stats Sidebar */}
             <div className="space-y-8">
-              <section className="p-6 rounded-3xl bg-card border border-border shadow-sm space-y-6">
+               <section className="p-6 rounded-3xl bg-card border border-border shadow-sm space-y-6">
                  <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground/30">Activity Hub</h3>
                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                       <span className="block text-3xl font-black">12</span>
-                       <span className="block text-[8px] font-black uppercase text-foreground/40 tracking-wider">Resolved</span>
+                       <span className="block text-3xl font-black">{stats.resolvedCount}</span>
+                       <span className="block text-[8px] font-black uppercase text-foreground/40 tracking-wider">
+                         {formData.role === "ADMIN" ? "Company Resolved" : 
+                          formData.role === "MANAGER" ? "Project Resolved" : "Resolved"}
+                       </span>
                     </div>
                     <div className="space-y-1">
-                       <span className="block text-3xl font-black">4.8</span>
-                       <span className="block text-[8px] font-black uppercase text-foreground/40 tracking-wider">Rating</span>
+                       <span className="block text-3xl font-black">{stats.rating}</span>
+                       <span className="block text-[8px] font-black uppercase text-foreground/40 tracking-wider">
+                         {formData.role === "ADMIN" ? "Org Health" : 
+                          formData.role === "MANAGER" ? "Project Health" : "Rating"}
+                       </span>
                     </div>
                  </div>
                  <div className="pt-4 border-t border-border/50">
                     <div className="flex items-center justify-between text-[10px] font-bold mb-2">
                        <span className="text-foreground/40 uppercase">Profile Completion</span>
-                       <span className="text-primary font-black">85%</span>
+                       <span className="text-primary font-black">{stats.profileCompletion}%</span>
                     </div>
                     <div className="h-1.5 w-full bg-accent rounded-full overflow-hidden">
-                       <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: '85%' }} />
+                       <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${stats.profileCompletion}%` }} />
                     </div>
                  </div>
               </section>
+
 
               <section className="p-6 rounded-3xl bg-primary/5 border border-primary/10 space-y-4">
                  <h3 className="text-[10px] font-black uppercase tracking-widest text-primary/60">Pro Tip</h3>
