@@ -36,6 +36,40 @@ export function DashboardClient({
   const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false);
   const [viewingIssue, setViewingIssue] = useState<Issue | null>(null);
   
+  const [isAssigning, setIsAssigning] = useState(false);
+  
+  const handleAssignSubmit = async (teamId: string, devId: string) => {
+    if (!viewingIssue) return;
+    setIsAssigning(true);
+    try {
+      const token = localStorage.getItem("incident_token") || "";
+      const res = await fetch(`/api/issues/${viewingIssue.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          teamId,
+          assignedToId: devId || null,
+          status: devId ? "ASSIGNED" : "OPEN"
+        })
+      });
+
+      if (res.ok) {
+        router.refresh();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to assign issue");
+      }
+    } catch (err) {
+      console.error("Assignment error:", err);
+      alert("Failed to assign issue. Please try again.");
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
   const stats = [
     { title: "Open Issues", value: openIssuesCount, icon: AlertTriangle, color: "text-amber-500", bgClass: "bg-amber-500/10" },
     { title: "SLA Breached", value: breachedCount, icon: ShieldAlert, color: "text-destructive", bgClass: "bg-destructive/10" },
@@ -67,7 +101,7 @@ export function DashboardClient({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <RecentIssues issues={recentIssues} onRowClick={(issue) => setViewingIssue(issue)} />
+          <RecentIssues issues={recentIssues} onAssignClick={(issue) => setViewingIssue(issue)} onRowClick={(issue) => setViewingIssue(issue)} />
         </div>
         <div className="space-y-4">
           <ActiveProjects projects={activeProjects} />
@@ -87,7 +121,11 @@ export function DashboardClient({
         <IssueDetailModal
           issue={viewingIssue}
           onClose={() => setViewingIssue(null)}
-          allowAssign={false}
+          allowAssign={true}
+          teams={allTeams}
+          developers={allDevelopers}
+          onAssignSubmit={handleAssignSubmit}
+          isAssigning={isAssigning}
         />
       )}
     </div>

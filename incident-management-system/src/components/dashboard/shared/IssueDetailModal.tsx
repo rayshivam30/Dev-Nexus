@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Loader2, Send, Clock, MessageSquare, ShieldAlert, Globe, BarChart2, Timer, AlertTriangle } from "lucide-react";
+import { X, Loader2, Send, Clock, MessageSquare, ShieldAlert, Globe, BarChart2, Timer, AlertTriangle, Github } from "lucide-react";
 import { Issue } from "./RecentIssues";
 
 export interface TeamData { id: string; name: string; projectId: string; }
@@ -302,6 +302,19 @@ export function IssueDetailModal({
                 <span className="text-foreground/40">Assignee</span>
                 <span className="font-bold tracking-tight truncate max-w-[140px] text-right">{issue?.assignedTo?.email || initialIssue.assignedToEmail || "None"}</span>
               </div>
+              {issue?.source === 'GITHUB' && (
+                <div className="flex justify-between items-center text-sm border-b border-border/30 pb-3">
+                  <span className="text-foreground/40">Source</span>
+                  <a 
+                    href={(issue.logs as { html_url?: string })?.html_url || "#"} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 font-bold text-primary hover:underline"
+                  >
+                    <Github className="w-3.5 h-3.5" /> GitHub
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* SLA Section */}

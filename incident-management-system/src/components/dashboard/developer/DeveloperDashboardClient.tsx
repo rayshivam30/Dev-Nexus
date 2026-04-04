@@ -36,7 +36,7 @@ export function DeveloperDashboardClient({
   const [viewingIssue, setViewingIssue] = useState<Issue | null>(null);
 
 
-  async function handleStatusChange(issueId: string, newStatus: string) {
+  async function handleStatusChange(issueId: string, newStatus: string, rootCause?: string) {
     try {
       const token = localStorage.getItem("incident_token") || "";
       const res = await fetch(`/api/issues/${issueId}`, {
@@ -45,7 +45,10 @@ export function DeveloperDashboardClient({
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ 
+          status: newStatus,
+          rootCause: rootCause 
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -55,7 +58,6 @@ export function DeveloperDashboardClient({
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update status");
     }
-
   }
 
   const stats = [
@@ -118,6 +120,7 @@ export function DeveloperDashboardClient({
           issue={viewingIssue}
           onClose={() => setViewingIssue(null)}
           allowAssign={false}
+          onStatusChange={handleStatusChange}
         />
       )}
     </div>

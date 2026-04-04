@@ -4,7 +4,7 @@ import { useState } from "react";
 import { 
   Loader2, Copy, Check, UserCircle, Users, 
   Layers, ShieldCheck, Mail, ArrowRight,
-  ExternalLink, Plus, Layout
+  ExternalLink, Plus, Layout, Github
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -123,28 +123,40 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
-            {[
-              { label: "Total Teams", value: project.teams.length, icon: Users, color: "text-blue-400" },
-              { label: "Active Issues", value: totalIssues, icon: Layers, color: "text-amber-400" },
-              { label: "Managers", value: project.managers.length, icon: ShieldCheck, color: "text-emerald-400" },
-              { label: "Project ID", value: project.id.slice(0, 8), icon: Mail, color: "text-purple-400" },
-            ].map((stat, i) => (
-              <motion.div 
-                key={stat.label}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 + i * 0.1 }}
-                className="p-4 rounded-2xl bg-accent/10 border border-border hover:bg-accent/20 transition-colors"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`p-2 rounded-lg bg-background/50 border border-border ${stat.color}`}>
-                    <stat.icon className="w-4 h-4" />
+              {[
+                { label: "Total Teams", value: project.teams.length, icon: Users, color: "text-blue-400" },
+                { label: "Active Issues", value: totalIssues, icon: Layers, color: "text-amber-400" },
+                { label: "Managers", value: project.managers.length, icon: ShieldCheck, color: "text-emerald-400" },
+                { 
+                  label: project.githubRepoUrl ? "GitHub Repo" : "Project ID", 
+                  value: project.githubRepoUrl ? "Connected" : project.id.slice(0, 8), 
+                  icon: project.githubRepoUrl ? Github : Mail, 
+                  color: project.githubRepoUrl ? "text-white" : "text-purple-400",
+                  link: project.githubRepoUrl || undefined
+                },
+              ].map((stat, i) => (
+                <motion.div 
+                  key={stat.label}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2 + i * 0.1 }}
+                  className="p-4 rounded-2xl bg-accent/10 border border-border hover:bg-accent/20 transition-all group/stat relative overflow-hidden"
+                >
+                  {stat.link && (
+                    <a href={stat.link} target="_blank" rel="noopener noreferrer" className="absolute inset-0 z-10" />
+                  )}
+                  <div className="flex items-center gap-3 mb-2 relative z-0">
+                    <div className={`p-2 rounded-lg bg-background/50 border border-border ${stat.color} group-hover/stat:scale-110 transition-transform`}>
+                      <stat.icon className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-medium text-foreground/50 uppercase tracking-wider">{stat.label}</span>
                   </div>
-                  <span className="text-xs font-medium text-foreground/50 uppercase tracking-wider">{stat.label}</span>
-                </div>
-                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-              </motion.div>
-            ))}
+                  <div className="text-2xl font-bold text-foreground flex items-center gap-2">
+                    {stat.value}
+                    {stat.link && <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover/stat:opacity-100 transition-all translate-y-1 group-hover:translate-y-0" />}
+                  </div>
+                </motion.div>
+              ))}
           </div>
         </div>
       </motion.div>

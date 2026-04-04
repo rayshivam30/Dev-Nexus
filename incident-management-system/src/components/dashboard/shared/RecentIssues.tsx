@@ -13,6 +13,7 @@ export interface Issue {
   timeAgo: string;
   status?: string | null;
   logs?: Record<string, unknown> | null;
+  source?: string | null;
 
 
 
