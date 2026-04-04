@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "DevNexus",
   description: "Incident Management System",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

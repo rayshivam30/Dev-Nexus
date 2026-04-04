@@ -43,7 +43,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           src="/assets/auth_bg.png" 
           alt="Auth Background" 
           fill 
+          sizes="(max-width: 1024px) 0px, 55vw"
           className="object-cover opacity-60 grayscale hover:grayscale-0 transition-all duration-1000 scale-105"
+          priority
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
         <div className="absolute inset-0 bg-violet-600/10 mix-blend-overlay" />
