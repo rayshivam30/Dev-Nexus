@@ -273,7 +273,7 @@ export function IssueDetailModal({
         </div>
 
         {/* Right Side: Sidebar / Actions */}
-        <div className="w-full md:w-[320px] bg-foreground/[0.03] border-t md:border-t-0 md:border-l border-border/50 p-6 flex flex-col gap-8 shrink-0">
+        <div className="w-full md:w-[320px] bg-foreground/[0.03] border-t md:border-t-0 md:border-l border-border/50 p-6 flex flex-col gap-8 shrink-0 overflow-y-auto">
           <div className="hidden md:flex justify-end">
              <button onClick={onClose} className="p-2 rounded-full hover:bg-foreground/5 text-foreground/40 hover:text-foreground transition-colors">
               <X className="w-6 h-6" />
