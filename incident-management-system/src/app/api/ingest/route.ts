@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { IssueSource, IssueSeverity } from "@prisma/client";
+import { IssueSource, IssueSeverity, Prisma } from "@prisma/client";
 import { calculateSLADeadlines } from "@/services/issue-service";
+import { analyzeIncident } from "@/lib/ai-service";
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -54,8 +55,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Bad Request: Error message is required" }, { status: 400, headers: corsHeaders });
     }
 
-    // Determine severity (allow override from SDK)
-    let severity: IssueSeverity = IssueSeverity.HIGH;
+    // Determine tech stack if available from project
+    const techStack = project.techStack || [];
+
+    // Use AI to analyze the incident
+    const aiAnalysis = await analyzeIncident(
+      { message, stack, browserInfo, osInfo, tags, metadata },
+      (customSource as IssueSource) || IssueSource.SDK,
+      techStack
+    );
+
+    // Determine severity (allow override from SDK, else use AI suggested)
+    let severity: IssueSeverity = aiAnalysis.severity;
     if (severityOverride && Object.values(IssueSeverity).includes(severityOverride as IssueSeverity)) {
       severity = severityOverride as IssueSeverity;
     }
@@ -65,9 +76,15 @@ export async function POST(req: Request) {
     // Create Issue
     const issue = await prisma.issue.create({
       data: {
-        title: message.length > 100 ? `${message.substring(0, 97)}...` : message,
-        description: `Source: ${customSource || 'SDK'}\n\nStack Trace:\n${stack || "Not provided"}`,
+        title: aiAnalysis.title,
+        description: aiAnalysis.description,
+        rootCause: aiAnalysis.rootCause,
+        suggestedFixes: aiAnalysis.suggestedFixes,
+        priority: aiAnalysis.priority,
+        environment: aiAnalysis.environment,
         projectId: project.id,
+
+
         source: (customSource as IssueSource) || IssueSource.SDK,
         severity,
         responseSlaDeadline,
@@ -78,10 +95,13 @@ export async function POST(req: Request) {
           rawMessage: message,
           stackTrace: stack,
           tags: tags || {},
-          metadata: metadata || {}
+          metadata: metadata || {},
+          aiFullAnalysis: aiAnalysis as unknown as Prisma.InputJsonValue
         }
       }
     });
+
+
 
     return NextResponse.json({ 
       success: true, 

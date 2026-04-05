@@ -6,7 +6,9 @@ export interface Issue {
   id: string;
   title: string;
   rootCause?: string | null;
+  suggestedFixes?: string | null;
   description: string;
+
   severity: "Low" | "Medium" | "High" | "Critical" | string;
   priority?: string | null;
   environment?: string | null;

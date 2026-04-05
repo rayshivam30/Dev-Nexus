@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Loader2, Send, Clock, MessageSquare, ShieldAlert, Globe, BarChart2, Timer, AlertTriangle, Github } from "lucide-react";
+import { X, Loader2, Send, Clock, MessageSquare, ShieldAlert, Globe, BarChart2, Timer, AlertTriangle, Github, Sparkles, Lightbulb } from "lucide-react";
+
 import { Issue } from "./RecentIssues";
 
 export interface TeamData { id: string; name: string; projectId: string; }
@@ -204,6 +205,20 @@ export function IssueDetailModal({
               </h4>
               <div className="text-sm text-emerald-500 bg-emerald-500/5 border border-emerald-500/20 p-5 rounded-2xl italic">
                 &quot;{issue.rootCause}&quot;
+              </div>
+            </div>
+          )}
+
+          {issue?.suggestedFixes && (
+            <div className="space-y-3">
+              <h4 className="text-sm font-bold flex items-center gap-2 text-purple-500 lowercase tracking-tighter italic">
+                <Sparkles className="w-4 h-4" /> ai suggested fixes
+              </h4>
+              <div className="text-sm text-purple-500 bg-purple-500/5 border border-purple-500/20 p-5 rounded-2xl whitespace-pre-wrap leading-relaxed">
+                <div className="flex gap-3">
+                  <Lightbulb className="w-5 h-5 shrink-0 text-amber-500" />
+                  <span>{issue.suggestedFixes}</span>
+                </div>
               </div>
             </div>
           )}

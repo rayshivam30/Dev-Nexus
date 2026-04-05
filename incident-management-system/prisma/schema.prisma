@@ -156,8 +156,10 @@ model Issue {
 
   environment         EnvironmentType @default(PRODUCTION)
   rootCause           String?
+  suggestedFixes      String?
 
   activities          IssueActivity[]
+
   comments            IssueComment[]
 }
 
