@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface StatCardProps {
   title: string;
@@ -15,18 +16,21 @@ interface StatCardProps {
 export function StatCard({ title, value, icon: Icon, color, bgClass, index }: StatCardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1, duration: 0.5 }}
-      className="p-6 rounded-xl border border-border bg-card transition-all hover:bg-accent/50 group"
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.2 }}
+      className={cn(
+        "p-6 border-4 border-black shadow-[8px_8px_0_0_black] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all group",
+        bgClass
+      )}
     >
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-foreground/50">{title}</p>
-          <p className="text-3xl font-bold mt-2 text-white">{value}</p>
+        <div className="space-y-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/60">{title}</p>
+          <p className="text-5xl font-[900] italic tracking-tighter text-black leading-none">{value}</p>
         </div>
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${bgClass}`}>
-          <Icon className={`w-6 h-6 ${color}`} />
+        <div className="w-14 h-14 bg-white border-4 border-black flex items-center justify-center -rotate-3 group-hover:rotate-0 transition-transform">
+          <Icon className={cn("w-8 h-8", color)} />
         </div>
       </div>
     </motion.div>

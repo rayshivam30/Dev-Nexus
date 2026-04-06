@@ -5,8 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { 
   Loader2, User, Mail, Phone, MapPin, Github, Linkedin, Save, X, 
-  Camera, Briefcase, Award, Globe, Shield, LayoutDashboard,
-  AlertCircle, FolderKanban, CheckSquare, Edit3, UserCircle
+  Camera, Briefcase, Globe, Shield, LayoutDashboard,
+  AlertCircle, FolderKanban, CheckSquare, Edit3, UserCircle,
+  Terminal, Zap, ShieldAlert, Activity, Command
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar, NavItem } from "@/components/dashboard/shared/Sidebar";
@@ -42,7 +43,6 @@ function ProfileContent() {
     rating: "5.0",
     profileCompletion: 0,
   });
-
 
   const getNavItems = (role: string): NavItem[] => {
     switch (role) {
@@ -112,7 +112,6 @@ function ProfileContent() {
 
   useEffect(() => {
     fetchProfile();
-    // If coming from login, we should enable edit mode after data is fetched
     if (fromLogin) {
       setIsEditing(true);
     }
@@ -146,7 +145,6 @@ function ProfileContent() {
       setSuccess(true);
       setIsEditing(false);
       
-      // Refresh data to update stats (like profile completion)
       setTimeout(() => fetchProfile(), 100);
       
       if (fromLogin) {
@@ -180,360 +178,338 @@ function ProfileContent() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <motion.div 
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="flex flex-col items-center gap-4"
-        >
-          <Loader2 className="w-12 h-12 animate-spin text-primary" />
-          <p className="text-sm font-medium text-foreground/40 italic">Loading your profile...</p>
-        </motion.div>
+      <div className="flex h-screen items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-6">
+          <Loader2 className="w-16 h-16 animate-spin text-black" />
+          <p className="text-2xl font-black uppercase italic tracking-widest animate-pulse">SYNCHRONIZING_USER_DATA...</p>
+        </div>
       </div>
     );
   }
-
-  interface ProfileFieldProps {
-    label: string;
-    value: string;
-    field: string;
-    type?: "input" | "textarea";
-    placeholder?: string;
-    icon?: React.ElementType;
-  }
-
-  // Helper component for label + display/input
-  const ProfileField = ({ label, value, field, type = "input", placeholder, icon: Icon }: ProfileFieldProps) => {
-    return (
-      <div className="group space-y-1.5 focus-within:text-foreground transition-colors">
-        <label className={cn(
-          "text-[10px] font-bold uppercase tracking-widest text-foreground/40 transition-colors",
-          isEditing && "group-focus-within:text-primary"
-        )}>
-          {label}
-        </label>
-        
-        {isEditing ? (
-          <div className="relative group/field">
-            {Icon && <Icon className="absolute left-3.5 top-3.5 h-4 w-4 text-foreground/30 group-focus-within/field:text-primary" />}
-            {type === "textarea" ? (
-              <textarea
-                value={value}
-                onChange={e => setFormData({ ...formData, [field]: e.target.value })}
-                rows={5}
-                className="w-full px-4 py-3 bg-accent/30 border border-border/50 rounded-xl focus:bg-background focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all resize-none shadow-sm text-sm"
-                placeholder={placeholder}
-              />
-            ) : (
-              <input
-                value={value}
-                onChange={e => setFormData({ ...formData, [field]: e.target.value })}
-                className={cn(
-                  "w-full px-4 py-3 bg-accent/30 border border-border/50 rounded-xl focus:bg-background focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-sm text-sm",
-                  Icon && "pl-11"
-                )}
-                placeholder={placeholder}
-              />
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-3 py-1 group/display min-h-[24px]">
-             {Icon && <Icon className="h-4 w-4 text-foreground/20 group-hover/display:text-foreground/40 transition-colors" />}
-             <span className={cn(
-                "text-sm font-medium transition-colors",
-                value ? "text-foreground/80" : "text-foreground/20 italic"
-             )}>
-               {value || `No ${label.toLowerCase()} specified`}
-             </span>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      <Sidebar navItems={getNavItems(formData.role)} roleTitle={`${formData.role} Panel`} />
+    <div className="flex h-screen bg-white text-black overflow-hidden font-mono">
+      <Sidebar navItems={getNavItems(formData.role)} roleTitle={`${formData.role}_HUB`} />
       
-      <main className="flex-1 overflow-y-auto custom-scrollbar">
-        {/* Banner Section */}
-        <div className="relative h-48 w-full bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-emerald-600/10 border-b border-border/50">
-          <div className="absolute inset-0 backdrop-blur-[100px]" />
-          <div className="absolute -bottom-16 left-8 md:left-12">
-            <div className="relative group h-32 w-32 rounded-3xl border-4 border-background bg-card overflow-hidden shadow-2xl transition-transform hover:scale-[1.02]">
-              {formData.image ? (
-                <div className="relative h-full w-full">
-                  <Image src={formData.image} alt={formData.name} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
+      <main className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 lg:p-12">
+        {/* ── MISSION_CONTROL BANNER ── */}
+        <div className="relative h-80 w-full bg-white border-4 border-black mb-16 overflow-hidden">
+           {/* Brutalist Grid Pattern */}
+           <div className="absolute inset-0 bg-[#FFD700]/5 opacity-50" style={{ backgroundImage: 'radial-gradient(black 1px, transparent 0)', backgroundSize: '20px 20px' }}></div>
+           
+           {/* Telemetry Accents */}
+           <div className="absolute top-4 left-4 flex gap-4 opacity-20">
+              <div className="flex items-center gap-2 text-[8px] font-black uppercase">
+                 <div className="h-1 w-8 bg-black"></div> LATENCY_012ms
+              </div>
+              <div className="flex items-center gap-2 text-[8px] font-black uppercase">
+                 <div className="h-1 w-8 bg-black"></div> BANDWIDTH_98%
+              </div>
+           </div>
+
+           <div className="absolute inset-y-0 left-0 w-1 bg-black/10"></div>
+           <div className="absolute inset-y-0 right-0 w-1 bg-black/10"></div>
+           
+           <div className="absolute inset-0 flex items-center justify-between px-8 md:px-16">
+              <div className="flex items-center gap-12">
+                {/* PROFILE FRAME RIG */}
+                <div className="relative group">
+                   {/* Tactical Bracket Accents */}
+                   <div className="absolute -top-3 -left-3 w-8 h-8 border-t-4 border-l-4 border-[#FF00FF] z-10"></div>
+                   <div className="absolute -bottom-3 -right-3 w-8 h-8 border-b-4 border-r-4 border-[#00D1FF] z-10"></div>
+                   
+                   <div className="relative w-48 h-48 border-4 border-black bg-white shadow-[12px_12px_0_0_black] overflow-hidden">
+                      {formData.image ? (
+                        <Image src={formData.image} alt={formData.name} fill className="object-cover grayscale hover:grayscale-0 transition-all duration-500" />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center bg-[#F0F0F0] text-black/10">
+                          <User className="h-20 w-20" />
+                        </div>
+                      )}
+                      
+                      {isEditing && (
+                        <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center cursor-pointer text-[#FFD700] z-20 group-hover:bg-black/90 transition-all">
+                          <Camera className="h-8 w-8 mb-2 animate-bounce" />
+                          <span className="text-[10px] font-black uppercase tracking-widest italic">INIT_UPLOAD</span>
+                        </div>
+                      )}
+                   </div>
                 </div>
-              ) : (
-                <div className="h-full w-full flex items-center justify-center bg-accent text-foreground/10">
-                  <User className="h-14 w-14" />
+                
+                {/* IDENTITY STACK */}
+                <div className="space-y-3">
+                   <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 bg-black text-[#FFD700] px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] italic shadow-[4px_4px_0_0_black]">
+                        <Shield className="w-3 h-3" /> USER_NODE_ACTIVE
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-[#32CD32] animate-pulse border-2 border-black"></div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-black/40">UPLINK_STABLE</span>
+                      </div>
+                   </div>
+                   
+                   <div className="space-y-0">
+                      <h1 className="text-4xl md:text-7xl font-[950] tracking-tighter uppercase italic leading-[0.8] text-black drop-shadow-[5px_5px_0_rgba(0,0,0,0.1)]">
+                        {formData.name || "UNIDENTIFIED"}
+                      </h1>
+                      <div className="flex items-center gap-3 pt-3">
+                         <span className="text-[11px] font-black uppercase text-black/30 tracking-[0.4em]">RANK_LEVEL_04</span>
+                         <span className="text-[11px] font-black uppercase text-black/30 tracking-[0.4em]">NODE_HASH_{formData.email?.slice(0, 4).toUpperCase()}</span>
+                      </div>
+                   </div>
                 </div>
-              )}
-              {isEditing && (
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white">
-                  <Camera className="h-6 w-6 mb-1" />
-                  <span className="text-[10px] font-bold uppercase">Change</span>
-                </div>
-              )}
-            </div>
-          </div>
+              </div>
+
+              {/* ACTION RIG */}
+              <div className="hidden xl:block">
+                 {isEditing ? (
+                   <div className="flex flex-col gap-4">
+                      <button
+                        type="button"
+                        onClick={() => { setIsEditing(false); fetchProfile(); }}
+                        className="h-14 px-8 border-4 border-black bg-white text-xs font-black uppercase italic shadow-[6px_6px_0_0_#FF3131] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all active:scale-95"
+                      >
+                        ABORT_COMMAND
+                      </button>
+                      <button
+                        onClick={handleSubmit}
+                        disabled={submitting || !formData.name}
+                        className="h-14 px-10 bg-black text-[#FFD700] border-4 border-black text-xs font-black uppercase italic shadow-[8px_8px_0_0_#32CD32] hover:bg-black hover:text-[#32CD32] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all flex items-center justify-center gap-3 disabled:opacity-20"
+                      >
+                        {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} COMMIT_SAVE
+                      </button>
+                   </div>
+                 ) : (
+                   <button
+                     onClick={() => setIsEditing(true)}
+                     className="h-20 px-12 bg-black text-[#00D1FF] border-4 border-black text-sm font-black uppercase italic shadow-[12px_12px_0_0_black] hover:bg-[#00D1FF] hover:text-black hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all flex items-center gap-6 group"
+                   >
+                     <Edit3 className="w-8 h-8 group-hover:rotate-[15deg] transition-transform" /> 
+                     <div className="flex flex-col items-start leading-none gap-1">
+                        <span>MODIFY_IDENTITY</span>
+                        <span className="text-[10px] opacity-40 italic">MANUAL_OVERRIDE</span>
+                     </div>
+                   </button>
+                 )}
+              </div>
+           </div>
         </div>
 
-        <div className="mt-20 px-8 md:px-12 pb-20 max-w-6xl mx-auto space-y-12">
-          {/* Header Action Bar */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/50">
-            <div className="space-y-1">
-               <motion.h1 
-                 initial={{ opacity: 0, x: -20 }}
-                 animate={{ opacity: 1, x: 0 }}
-                 className="text-4xl font-black tracking-tight text-foreground"
-               >
-                 {formData.name || "Set Up Your Profile"}
-               </motion.h1>
-               <div className="flex items-center gap-4 text-foreground/40 font-bold uppercase tracking-widest text-[10px]">
-                 <span className="flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-full border border-primary/20">
-                   <Shield className="w-3 h-3" /> {formData.role}
-                 </span>
-                 <span className="flex items-center gap-1.5">
-                   <Mail className="w-3 h-3" /> {formData.email}
-                 </span>
-               </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-               {isEditing ? (
-                 <>
-                   <button
-                     type="button"
-                     onClick={() => {
-                        setIsEditing(false);
-                        fetchProfile(); 
-                     }}
-                     className="px-5 py-2.5 rounded-xl text-sm font-bold text-foreground/60 hover:bg-accent/50 transition-all border border-transparent hover:border-border"
-                   >
-                     Cancel
-                   </button>
-                   <button
-                     onClick={handleSubmit}
-                     disabled={submitting || !formData.name}
-                     className="px-6 py-2.5 bg-foreground text-background font-black rounded-xl text-xs uppercase tracking-widest flex items-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-foreground/10 disabled:opacity-50"
-                   >
-                     {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Save Profile</>}
-                   </button>
-                 </>
-               ) : (
-                 <button
-                   onClick={() => setIsEditing(true)}
-                   className="px-6 py-2.5 bg-primary text-primary-foreground font-black rounded-xl text-xs uppercase tracking-widest flex items-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-primary/20"
-                 >
-                   <Edit3 className="w-4 h-4" /> Edit Profile
-                 </button>
-               )}
-            </div>
-          </div>
-
-          {/* Success/Error Alerts */}
+        <div className="mt-12 px-6 md:px-12 pb-20 max-w-6xl mx-auto space-y-12">
+          {/* Status Panel */}
           <AnimatePresence mode="wait">
             {error && (
-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="p-4 bg-destructive/10 text-destructive text-sm font-bold border border-destructive/20 rounded-2xl">
-                {error}
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="p-6 border-4 border-black bg-[#FF3131] text-white font-black uppercase italic flex items-center gap-4 shadow-[6px_6px_0_0_black] text-sm">
+                <ShieldAlert className="w-8 h-8" /> ERROR: {error}
               </motion.div>
             )}
             {success && (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-5 bg-emerald-500/10 text-emerald-500 text-sm font-bold border border-emerald-500/20 rounded-2xl flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                Profile updated successfully! {fromLogin && "Proceeding to dashboard..."}
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 border-4 border-black bg-[#32CD32] font-black uppercase italic flex items-center gap-4 shadow-[6px_6px_0_0_black] text-sm">
+                <CheckSquare className="w-8 h-8" /> SYSTEM_SYNC_COMPLETE
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-            {/* Stats Sidebar */}
-            <div className="space-y-8">
-               <section className="p-6 rounded-3xl bg-card border border-border shadow-sm space-y-6">
-                 <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground/30">Activity Hub</h3>
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                       <span className="block text-3xl font-black">{stats.resolvedCount}</span>
-                       <span className="block text-[8px] font-black uppercase text-foreground/40 tracking-wider">
-                         {formData.role === "ADMIN" ? "Company Resolved" : 
-                          formData.role === "MANAGER" ? "Project Resolved" : "Resolved"}
-                       </span>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+            
+            {/* ── LEFT METRICS COLUMN ── */}
+            <div className="lg:col-span-4 space-y-10">
+               <section className="p-8 border-4 border-black bg-white shadow-[8px_8px_0_0_black] space-y-8">
+                 <h3 className="text-lg font-[950] uppercase italic tracking-tighter flex items-center gap-3 text-black">
+                   <Activity className="w-6 h-6 text-[#FF3131]" /> NODE_METRICS
+                 </h3>
+                 
+                 <div className="space-y-4">
+                    <div className="p-5 border-4 border-black bg-[#F8F8F8] shadow-[4px_4px_0_0_#FF00FF]">
+                       <span className="block text-4xl font-black italic tracking-tighter">{stats.resolvedCount}</span>
+                       <span className="block text-[9px] font-black uppercase text-black/40 tracking-[0.2em]">RESOLVED_OPS</span>
                     </div>
-                    <div className="space-y-1">
-                       <span className="block text-3xl font-black">{stats.rating}</span>
-                       <span className="block text-[8px] font-black uppercase text-foreground/40 tracking-wider">
-                         {formData.role === "ADMIN" ? "Org Health" : 
-                          formData.role === "MANAGER" ? "Project Health" : "Rating"}
-                       </span>
+                    <div className="p-5 border-4 border-black bg-[#F8F8F8] shadow-[4px_4px_0_0_#00D1FF]">
+                       <span className="block text-4xl font-black italic tracking-tighter">{stats.rating}</span>
+                       <span className="block text-[9px] font-black uppercase text-black/40 tracking-[0.2em]">OPERATOR_RANK</span>
                     </div>
                  </div>
-                 <div className="pt-4 border-t border-border/50">
-                    <div className="flex items-center justify-between text-[10px] font-bold mb-2">
-                       <span className="text-foreground/40 uppercase">Profile Completion</span>
-                       <span className="text-primary font-black">{stats.profileCompletion}%</span>
+
+                 <div className="pt-6 border-t-2 border-black space-y-3">
+                    <div className="flex justify-between items-end">
+                       <span className="text-[9px] font-black uppercase text-black/40">DATA_SYNC</span>
+                       <span className="text-xl font-black italic">{stats.profileCompletion}%</span>
                     </div>
-                    <div className="h-1.5 w-full bg-accent rounded-full overflow-hidden">
-                       <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${stats.profileCompletion}%` }} />
+                    <div className="h-4 border-2 border-black p-0.5 bg-white">
+                       <div className="h-full bg-black transition-all duration-1000" style={{ width: `${stats.profileCompletion}%` }} />
                     </div>
                  </div>
               </section>
 
-
-              <section className="p-6 rounded-3xl bg-primary/5 border border-primary/10 space-y-4">
-                 <h3 className="text-[10px] font-black uppercase tracking-widest text-primary/60">Pro Tip</h3>
-                 <p className="text-xs font-medium text-foreground/60 leading-relaxed">
-                   Connecting your GitHub account helps your team collaborate more effectively on code-related incidents.
+              <section className="p-6 border-4 border-black bg-[#FFD700] shadow-[8px_8px_0_0_black] space-y-3 relative overflow-hidden">
+                 <h4 className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                    <Zap className="w-4 h-4 fill-black" /> ADVISORY
+                 </h4>
+                 <p className="text-[10px] font-black uppercase italic leading-tight text-black/80">
+                    &quot;INTEGRATING_GITHUB_UPLINK_INCREASES_METRICS_BY_42%.&quot;
                  </p>
               </section>
             </div>
 
-            {/* Form Fields */}
-            <div className="lg:col-span-2 space-y-12">
-               {/* Personal Details Section */}
-               <div className="space-y-8">
-                 <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20">
-                       <Briefcase className="w-5 h-5" />
-                    </div>
-                    <h2 className="text-xl font-black tracking-tight">Professional Workspace</h2>
+            {/* ── MAIN IDENTITY RIG ── */}
+            <div className="lg:col-span-8 space-y-12">
+               
+               {/* Professional Specs */}
+               <div className="space-y-6">
+                 <div className="flex items-center gap-4 bg-black text-[#00D1FF] px-5 py-1.5 inline-flex rotate-1 border-2 border-black">
+                    <Briefcase className="w-5 h-5" />
+                    <h2 className="text-base font-black uppercase italic tracking-tighter">DATA_WORKSPACE</h2>
                  </div>
 
-                 <div className="space-y-8">
-                    <ProfileField 
-                      label="Full Name" 
-                      value={formData.name} 
-                      field="name" 
-                      placeholder="Enter your full name" 
-                    />
+                 <div className="bg-white border-4 border-black p-8 shadow-[10px_10px_0_0_black] space-y-10">
+                    <div className="space-y-1">
+                       <label className="text-[9px] font-black uppercase tracking-widest text-black/40 ml-1">IDENTIFIER_NAME</label>
+                       {isEditing ? (
+                         <input
+                           value={formData.name}
+                           onChange={e => setFormData({ ...formData, name: e.target.value })}
+                           className="w-full h-14 px-5 border-4 border-black bg-white font-black uppercase italic focus:bg-[#00D1FF]/5 outline-none shadow-[4px_4px_0_0_black]"
+                         />
+                       ) : (
+                         <div className="p-5 border-4 border-black bg-[#F8F8F8] font-black uppercase italic text-2xl shadow-[4px_4px_0_0_black]">{formData.name || "UNIDENTIFIED"}</div>
+                       )}
+                    </div>
                     
-                    <ProfileField 
-                      label="Biography" 
-                      value={formData.bio} 
-                      field="bio" 
-                      type="textarea" 
-                      placeholder="Tell the team about your expertise and current focus..." 
-                    />
+                    <div className="space-y-1">
+                       <label className="text-[9px] font-black uppercase tracking-widest text-black/40 ml-1">OPERATOR_BIO</label>
+                       {isEditing ? (
+                         <textarea
+                           value={formData.bio}
+                           onChange={e => setFormData({ ...formData, bio: e.target.value })}
+                           className="w-full p-5 border-4 border-black bg-white font-black uppercase italic focus:bg-[#00D1FF]/5 outline-none shadow-[4px_4px_0_0_black] min-h-[140px]"
+                         />
+                       ) : (
+                         <div className="p-6 border-4 border-black bg-[#F8F8F8] font-black uppercase italic text-lg leading-relaxed shadow-[4px_4px_0_0_black]">
+                            {formData.bio || "NULL_STREAM"}
+                         </div>
+                       )}
+                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <ProfileField 
-                        label="Location" 
-                        value={formData.location} 
-                        field="location" 
-                        icon={MapPin} 
-                        placeholder="City, Country" 
-                      />
-                      <ProfileField 
-                        label="Avatar URL" 
-                        value={formData.image} 
-                        field="image" 
-                        icon={Camera} 
-                        placeholder="https://..." 
-                      />
+                       <div className="space-y-1">
+                          <label className="text-[9px] font-black uppercase tracking-widest text-black/40 ml-1">GEOGRAPHIC_NODE</label>
+                          {isEditing ? (
+                            <div className="relative">
+                              <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" />
+                              <input value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} className="w-full h-14 pl-14 border-4 border-black bg-white font-black uppercase italic shadow-[4px_4px_0_0_black]" />
+                            </div>
+                          ) : (
+                            <div className="h-14 px-5 border-4 border-black bg-[#F8F8F8] font-black uppercase italic flex items-center gap-3 shadow-[4px_4px_0_0_black]">
+                              <MapPin className="w-4 h-4 opacity-20" /> {formData.location || "OFF_GRID"}
+                            </div>
+                          )}
+                       </div>
+                       <div className="space-y-1">
+                          <label className="text-[9px] font-black uppercase tracking-widest text-black/40 ml-1">AVATAR_LINK</label>
+                          {isEditing ? (
+                            <div className="relative">
+                              <Globe className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" />
+                              <input value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} className="w-full h-14 pl-14 border-4 border-black bg-white font-black uppercase italic shadow-[4px_4px_0_0_black]" />
+                            </div>
+                          ) : (
+                            <div className="h-14 px-5 border-4 border-black bg-[#F8F8F8] font-black uppercase italic flex items-center gap-3 shadow-[4px_4px_0_0_black] truncate">
+                              <Globe className="w-4 h-4 opacity-20" /> {formData.image || "NULL"}
+                            </div>
+                          )}
+                       </div>
                     </div>
                  </div>
                </div>
 
-               {/* Connections Section */}
-               <div className="space-y-8 pt-4">
-                 <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500 border border-purple-500/20">
-                       <Globe className="w-5 h-5" />
-                    </div>
-                    <h2 className="text-xl font-black tracking-tight">Social Network</h2>
+               {/* Communications RIG */}
+               <div className="space-y-6">
+                 <div className="flex items-center gap-4 bg-black text-[#FF00FF] px-5 py-1.5 inline-flex -rotate-1 border-2 border-black">
+                    <Terminal className="w-5 h-5" />
+                    <h2 className="text-base font-black uppercase italic tracking-tighter">COMMS_LINK</h2>
                  </div>
 
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <ProfileField 
-                      label="Phone Number" 
-                      value={formData.phoneNumber} 
-                      field="phoneNumber" 
-                      icon={Phone} 
-                      placeholder="+1 234 567 890" 
-                    />
-                    <ProfileField 
-                      label="Email (Disabled)" 
-                      value={formData.email} 
-                      field="email" 
-                      icon={Mail} 
-                    />
-                    <ProfileField 
-                      label="GitHub" 
-                      value={formData.githubUrl} 
-                      field="githubUrl" 
-                      icon={Github} 
-                      placeholder="github.com/..." 
-                    />
-                    <ProfileField 
-                      label="LinkedIn" 
-                      value={formData.linkedinUrl} 
-                      field="linkedinUrl" 
-                      icon={Linkedin} 
-                      placeholder="linkedin.com/in/..." 
-                    />
+                 <div className="bg-white border-4 border-black p-8 shadow-[10px_10px_0_0_black] grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {[
+                      { l: "UPLINK_PHONE", v: formData.phoneNumber, f: "phoneNumber", i: Phone },
+                      { l: "UPLINK_EMAIL (LOCKED)", v: formData.email, f: "email", i: Mail, d: true },
+                      { l: "GITHUB_UPLINK", v: formData.githubUrl, f: "githubUrl", i: Github },
+                      { l: "LINKEDIN_UPLINK", v: formData.linkedinUrl, f: "linkedinUrl", i: Linkedin },
+                    ].map((row) => (
+                      <div key={row.l} className="space-y-1">
+                        <label className="text-[9px] font-black uppercase tracking-widest text-black/40 ml-1">{row.l}</label>
+                        {isEditing && !row.d ? (
+                          <div className="relative">
+                             <row.i className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 opacity-20" />
+                             <input value={row.v} onChange={e => setFormData({ ...formData, [row.f]: e.target.value })} className="w-full h-14 pl-14 border-4 border-black bg-white font-black uppercase italic shadow-[4px_4px_0_0_black]" />
+                          </div>
+                        ) : (
+                          <div className={cn(
+                            "h-14 px-5 border-4 border-black bg-[#F8F8F8] font-black uppercase italic flex items-center gap-3 shadow-[4px_4px_0_0_black] truncate",
+                            row.d && "opacity-60"
+                          )}>
+                             <row.i className="w-4 h-4 opacity-20" /> {row.v || "NOT_ACTIVE"}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                  </div>
                </div>
 
-               {/* Skills Tag Section */}
-               <div className="space-y-8 pt-4">
-                 <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
-                       <Award className="w-5 h-5" />
-                    </div>
-                    <h2 className="text-xl font-black tracking-tight">Expertise Stack</h2>
+               {/* Expertise Protocol */}
+               <div className="space-y-6">
+                 <div className="flex items-center gap-4 bg-black text-[#32CD32] px-5 py-1.5 inline-flex rotate-2 border-2 border-black">
+                    <Command className="w-5 h-5" />
+                    <h2 className="text-base font-black uppercase italic tracking-tighter">EXPERTISE_STACK</h2>
                  </div>
 
-                 <div className="p-8 rounded-3xl bg-card border border-border shadow-sm space-y-8">
+                 <div className="bg-white border-4 border-black p-8 shadow-[12px_12px_0_0_black] space-y-8 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-[#32CD32] opacity-5 -rotate-12 translate-x-12 -translate-y-12"></div>
+                    
                     {isEditing && (
-                      <div className="flex gap-4">
+                      <div className="flex gap-4 relative z-10">
                         <input
                           value={newSkill}
                           onChange={e => setNewSkill(e.target.value)}
                           onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addSkill())}
-                          className="flex-1 px-5 py-3 bg-accent/30 border border-border/50 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-medium"
-                          placeholder="Add a techncial or soft skill..."
+                          className="flex-1 h-12 px-5 border-4 border-black bg-white font-black uppercase italic focus:bg-[#32CD32]/5 outline-none shadow-[4px_4px_0_0_black] text-xs"
+                          placeholder="ADD_PROTOCOL..."
                         />
                         <button
                           type="button"
                           onClick={addSkill}
-                          className="px-6 bg-foreground text-background rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-foreground/10"
+                          className="h-12 px-6 bg-black text-[#32CD32] border-4 border-black font-black uppercase italic shadow-[6px_6px_0_0_black] hover:bg-[#32CD32] hover:text-black hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all text-xs"
                         >
-                          Add
+                          INIT
                         </button>
                       </div>
                     )}
 
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap gap-4 relative z-10">
                       <AnimatePresence>
                         {skills.map((skill) => (
                           <motion.div
                             key={skill}
-                            initial={{ scale: 0.9, opacity: 0 }}
+                            initial={{ scale: 0.85, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
+                            exit={{ scale: 0.85, opacity: 0 }}
                             className={cn(
-                              "flex items-center gap-3 py-2 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all border",
+                              "flex items-center gap-3 h-12 border-4 border-black font-black uppercase italic text-[10px] shadow-[4px_4px_0_0_black] transition-all",
                               isEditing 
-                                ? "pl-5 pr-4 bg-background border-border hover:border-primary/50 text-foreground" 
-                                : "px-5 bg-primary/5 border-primary/10 text-primary"
+                                ? "pl-5 pr-3 bg-white border-black hover:bg-[#32CD32] hover:text-black cursor-default" 
+                                : "px-6 bg-[#32CD32] text-black border-black"
                             )}
                           >
                             {skill}
                             {isEditing && (
-                              <button
-                                type="button"
-                                onClick={() => removeSkill(skill)}
-                                className="text-foreground/20 hover:text-destructive transition-colors"
-                              >
-                                <X className="w-3.5 h-3.5" />
+                              <button type="button" onClick={() => removeSkill(skill)} className="text-black/30 hover:text-black transition-colors border-l-2 border-black/10 pl-2">
+                                <X className="w-4 h-4 stroke-[4px]" />
                               </button>
                             )}
                           </motion.div>
                         ))}
                       </AnimatePresence>
                       {skills.length === 0 && (
-                        <p className="text-sm font-medium text-foreground/20 italic">No skills added to your expertise stack yet.</p>
+                        <p className="text-lg font-black uppercase italic opacity-10 py-6 tracking-widest text-center w-full">NULL_SKILLS_ALGO</p>
                       )}
                     </div>
                  </div>
@@ -545,17 +521,18 @@ function ProfileContent() {
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+          width: 12px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
+          background: #F0F0F0;
+          border-left: 4px solid black;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(var(--foreground), 0.05);
-          border-radius: 10px;
+          background: black;
+          border: 2px solid #F0F0F0;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(var(--foreground), 0.1);
+          background: #333;
         }
       `}</style>
     </div>
@@ -565,8 +542,8 @@ function ProfileContent() {
 export default function ProfilePage() {
   return (
     <Suspense fallback={
-      <div className="flex h-screen items-center justify-center bg-background">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      <div className="flex h-screen items-center justify-center bg-white">
+        <Loader2 className="w-16 h-16 animate-spin text-black" />
       </div>
     }>
       <ProfileContent />

@@ -45,15 +45,21 @@ export default async function AdminIssuesPage() {
   }));
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Unassigned Issues</h1>
-        <p className="text-foreground/60 mt-1">Issues not yet assigned to a developer.</p>
+    <div className="space-y-12 pb-20">
+      <div className="flex flex-col gap-4">
+        <h1 className="text-5xl md:text-7xl font-[900] tracking-tighter uppercase italic leading-none border-l-8 border-black pl-8">
+          UNASSIGNED <br />
+          <span className="bg-[#00D1FF] border-4 border-black px-4 shadow-[6px_6px_0_0_black]">INCIDENTS_ALL</span>
+        </h1>
+        <p className="text-black font-black uppercase text-xs tracking-widest mt-4 opacity-60 max-w-xl">
+          Critical operations center for unallocated organizational issues. Resolve or assign immediately to avoid SLA breach.
+        </p>
       </div>
 
       {issuesRaw.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-12 text-center text-foreground/50">
-          No unassigned issues found.
+        <div className="p-20 border-4 border-black bg-white shadow-[12px_12px_0_0_#32CD32] text-center">
+          <p className="text-2xl font-black uppercase italic text-black">NO_UNASSIGNED_INCIDENTS_FOUND</p>
+          <p className="text-xs font-bold text-black/40 mt-4 uppercase tracking-widest">System node status: ALL_CLEAR</p>
         </div>
       ) : (
         <AdminIssuesClient issues={mappedIssues} teams={allTeams} developers={allDevelopers} />

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Trash2, Github, Mail, Layout, Info, Layers, CheckCircle2, X, Copy } from "lucide-react";
-
+import { Loader2, Trash2, Github, Mail, Layout, Info, Layers, CheckCircle2, X, Copy, Activity, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 interface TeamSummary {
@@ -37,16 +37,6 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
   const [createdSdkKey, setCreatedSdkKey] = useState<string | null>(null);
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
 
-  // Use the imports to avoid unused var warnings if they are actually used in the UI
-  // Copy and Check are used in the SDK modal but were reported as unused.
-  // Plus was also reported as unused but I see it in other files, let's check here.
-  // Wait, I don't see Plus being used in this file's JSX. 
-  // I'll remove Plus from imports if it's truly unused.
-  // Check is NOT used in the JSX I see in the previous view_file. 
-  // Wait, line 361: {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-  // So Check and Copy ARE used.
-  // Plus? I don't see Plus.
-
   async function handleDeleteProject(id: string) {
     if (!confirm("Are you sure you want to delete this project? All associated teams and issues might be affected.")) return;
     setDeleteLoadingId(id);
@@ -66,14 +56,12 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
     }
   }
 
-
   async function handleCreateProject(e: React.FormEvent) {
     e.preventDefault();
     setCreateProjectLoading(true);
     try {
       const token = localStorage.getItem("incident_token") || "";
       
-      // 1. Create the project
       const projectRes = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -85,7 +73,6 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
       
       const newProjectId = projectData.project.id;
 
-      // 2. If a manager email was provided, send an invite
       if (inviteManagerEmail.trim()) {
         const inviteRes = await fetch("/api/auth/invite", {
           method: "POST",
@@ -115,7 +102,7 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
         setCreatedSdkKey(sdkApiKey);
       } else {
         setIsModalOpen(false);
-        window.location.reload(); // Quick refresh to reflect the new project on SSR
+        window.location.reload();
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create project");
@@ -125,230 +112,227 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Projects & Teams</h1>
-          <p className="text-foreground/60">Manage your active projects and teams.</p>
+    <div className="space-y-12 pb-20">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="flex flex-col gap-4">
+          <h1 className="text-5xl md:text-7xl font-[900] tracking-tighter uppercase italic leading-none border-l-8 border-black pl-8">
+            PROJECTS <br />
+            <span className="bg-[#FFD700] border-4 border-black px-4 shadow-[6px_6px_0_0_black]">INFRA_UNITS</span>
+          </h1>
+          <p className="text-black font-black uppercase text-xs tracking-widest mt-4 opacity-60 max-w-xl border-b-2 border-black/10 pb-4">
+            Manage your operational containers and organization-level deployments.
+          </p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-foreground text-background px-4 py-2 rounded-md font-medium hover:opacity-90 transition-opacity"
+          className="bg-[#FFD700] text-black h-16 px-8 border-4 border-black font-[900] text-xl uppercase tracking-tighter hover:bg-black hover:text-white shadow-[8px_8px_0_0_black] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all flex items-center gap-4 active:scale-95"
         >
-          Create Project
+          <Plus className="w-6 h-6 stroke-[4px]" /> NEW_PROJECT
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
         {initialProjects.length === 0 ? (
-          <div className="col-span-full py-12 text-center text-foreground/50 border border-border rounded-xl bg-card">
-            No projects created yet. Click &quot;Create Project&quot; to get started.
+          <div className="col-span-full p-20 border-4 border-black border-dashed bg-white text-center shadow-[12px_12px_0_0_#F0F0F0]">
+            <p className="text-2xl font-black uppercase italic opacity-20">NO_DATA_CONTAINERS_DETECTED</p>
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="mt-8 text-xs font-black uppercase underline underline-offset-4 decoration-2 hover:bg-black hover:text-white px-4 py-2 transition-colors"
+            >
+              INITIALIZE_FIRST_PROJECT
+            </button>
           </div>
         ) : (
           initialProjects.map(p => (
-            <div key={p.id} className="block p-6 border border-border rounded-xl bg-card hover:border-foreground/30 transition-colors group relative overflow-hidden">
-              <Link href={`/dashboard/admin/projects/${p.id}`} className="absolute inset-0 z-0"></Link>
-              <div className="absolute top-0 left-0 w-1 h-full bg-foreground/20 group-hover:bg-foreground/50 transition-colors pointer-events-none z-10"></div>
-              
-              <div className="flex justify-between items-start mb-4 relative z-10 pointer-events-none">
-                <Link href={`/dashboard/admin/projects/${p.id}`} className="font-semibold text-lg text-foreground line-clamp-1 pointer-events-auto hover:underline">{p.name}</Link>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleDeleteProject(p.id);
-                  }}
-                  disabled={deleteLoadingId === p.id}
-                  className="text-foreground/50 hover:text-red-500 transition-colors pointer-events-auto p-2 -mr-2 -mt-2 rounded-md disabled:opacity-50"
-                  title="Delete Project"
-                >
-                  {deleteLoadingId === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                </button>
-              </div>
-              
-              <div className="relative z-10 pointer-events-none">
-                {p.description && (
-                  <p className="text-sm text-foreground/70 mb-4 line-clamp-2">{p.description}</p>
-                )}
-                <div className="flex items-center gap-4 text-xs text-foreground/50 mt-auto pt-4 border-t border-border">
-                  <span>{p.teams?.length || 0} Teams</span>
-                  <span>{p.managers?.length || 0} Managers</span>
-                </div>
-              </div>
+            <div key={p.id} className="group relative">
+               <div className="absolute inset-0 bg-black translate-x-3 translate-y-3 -z-10 group-hover:translate-x-1 group-hover:translate-y-1 transition-all"></div>
+               <div className="p-8 bg-white border-4 border-black flex flex-col h-full hover:translate-x-1 hover:translate-y-1 transition-all">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="w-12 h-12 bg-[#00D1FF] border-2 border-black flex items-center justify-center -rotate-3 group-hover:rotate-0 transition-transform">
+                        <Activity className="w-6 h-6 text-black" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDeleteProject(p.id);
+                      }}
+                      disabled={deleteLoadingId === p.id}
+                      className="text-black/20 hover:text-[#FF3131] transition-colors p-2"
+                    >
+                      {deleteLoadingId === p.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  
+                  <Link href={`/dashboard/admin/projects/${p.id}`} className="block">
+                    <h2 className="text-3xl font-[900] uppercase tracking-tighter italic leading-none group-hover:underline decoration-4 mb-4">
+                      {p.name}
+                    </h2>
+                  </Link>
+                  
+                  <p className="text-xs font-bold text-black/60 mb-8 flex-1 line-clamp-3 italic">
+                    {p.description || "NO_DESCRIPTION_PROVIDED_BY_OPERATOR"}
+                  </p>
+                  
+                  <div className="grid grid-cols-2 border-t-2 border-black pt-6 gap-4">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase text-black/40">TEAMS</span>
+                      <span className="text-xl font-black italic">{String(p.teams?.length || 0).padStart(2, '0')}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase text-black/40">MANAGERS</span>
+                      <span className="text-xl font-black italic">{String(p.managers?.length || 0).padStart(2, '0')}</span>
+                    </div>
+                  </div>
+                  
+                  <Link 
+                    href={`/dashboard/admin/projects/${p.id}`}
+                    className="mt-8 flex items-center justify-center w-full py-4 border-2 border-black bg-black text-white font-black uppercase text-[10px] tracking-widest hover:bg-[#FFD700] hover:text-black transition-colors"
+                  >
+                    ACCESS_PROJECT_NODE
+                  </Link>
+               </div>
             </div>
           ))
         )}
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-background border border-border/50 rounded-[2rem] shadow-2xl w-full max-w-lg flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden">
-            <div className="flex justify-between items-center px-6 py-4 border-b border-border/50">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-foreground/5">
-                  <Layout className="w-5 h-5 text-foreground/70" />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white border-8 border-black shadow-[30px_30px_0_0_black] w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-8 bg-black text-white">
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-[#FFD700] border-2 border-white">
+                  <Layout className="w-6 h-6 text-black" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold tracking-tight">Create New Project</h2>
-                  <p className="text-xs text-foreground/50">Set up a new workspace for your team</p>
-                </div>
+                <h2 className="text-4xl font-[900] uppercase italic tracking-tighter">PROJECT_INIT</h2>
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)} 
-                className="p-2 rounded-full hover:bg-foreground/5 text-foreground/50 hover:text-foreground transition-colors"
+                className="p-2 hover:bg-white hover:text-black transition-colors border-2 border-white"
               >
-                <X className="w-5 h-5" />
+                <X className="w-8 h-8 stroke-[3px]" />
               </button>
             </div>
             
-            <form onSubmit={handleCreateProject} className="p-6 pt-2 space-y-6 overflow-y-auto max-h-[80vh]">
-              <div className="space-y-4">
-                {/* Project Basics Section */}
-                <div className="space-y-4">
+            <form onSubmit={handleCreateProject} className="p-10 space-y-8 overflow-y-auto custom-scrollbar">
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold flex items-center gap-2">
+                    <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
                       <Layout className="w-4 h-4" />
-                      Project Name <span className="text-red-500">*</span>
+                      PROJECT_NAME*
                     </label>
                     <input 
                       required 
                       value={newProjectName} 
                       onChange={e=>setNewProjectName(e.target.value)} 
-                      className="w-full px-4 py-2.5 bg-foreground/5 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/30 transition-all placeholder:text-foreground/30" 
-                      placeholder="E.g., Core API Integration" 
+                      className="w-full px-6 py-4 bg-white border-4 border-black font-bold uppercase text-sm focus:outline-none focus:bg-[#00D1FF] transition-colors placeholder:text-black/20" 
+                      placeholder="CORE_SYSTEM" 
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold flex items-center gap-2">
-                      <Info className="w-4 h-4" />
-                      Description (Optional)
+                    <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      INITIAL_MANAGER_EMAIL
                     </label>
-                    <textarea 
-                      value={newProjectDesc} 
-                      onChange={e=>setNewProjectDesc(e.target.value)} 
-                      rows={3}
-                      className="w-full px-4 py-2.5 bg-foreground/5 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/30 transition-all resize-none placeholder:text-foreground/30" 
-                      placeholder="Briefly describe the purpose of this project..." 
+                    <input 
+                      type="email"
+                      value={inviteManagerEmail} 
+                      onChange={e=>setInviteManagerEmail(e.target.value)} 
+                      className="w-full px-6 py-4 bg-white border-4 border-black font-bold uppercase text-sm focus:outline-none focus:bg-[#FF00FF] focus:text-white transition-colors placeholder:text-black/20" 
+                      placeholder="OPERATOR@DOMAIN.COM" 
                     />
                   </div>
                 </div>
-
-                {/* Plan Selection Section */}
-                <div className="space-y-3 pt-2">
-                  <label className="text-sm font-semibold flex items-center gap-2">
-                    <Layers className="w-4 h-4" />
-                    Select Plan <span className="text-red-500">*</span>
+                
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                    <Info className="w-4 h-4" />
+                    PROJECT_SPECS
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <textarea 
+                    value={newProjectDesc} 
+                    onChange={e=>setNewProjectDesc(e.target.value)} 
+                    rows={3}
+                    className="w-full px-6 py-4 bg-white border-4 border-black font-bold uppercase text-sm focus:outline-none focus:bg-[#F0F0F0] transition-colors resize-none placeholder:text-black/20" 
+                    placeholder="DEFINE_PURPOSE_OF_THIS_CONTAINER..." 
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                    <Layers className="w-4 h-4" />
+                    TIER_SELECTION*
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {[
-                      { id: "BASIC", name: "Basic", desc: "For small hobby projects", color: "bg-blue-500/10 text-blue-500" },
-                      { id: "ADVANCED", name: "Advanced", desc: "Best for growing teams", color: "bg-purple-500/10 text-purple-500" },
-                      { id: "PRO", name: "Pro", desc: "Enterprise scale power", color: "bg-amber-500/10 text-amber-500" }
+                      { id: "BASIC", name: "TIER_01", desc: "INDIE_OPS", color: "bg-[#00D1FF]" },
+                      { id: "ADVANCED", name: "TIER_02", desc: "UNIT_DEPLOYS", color: "bg-[#FFD700]" },
+                      { id: "PRO", name: "TIER_XX", desc: "CORE_LEAGUE", color: "bg-[#FF00FF]" }
                     ].map((p) => (
                       <div 
                         key={p.id}
                         onClick={() => setPlan(p.id)}
-                        className={`relative p-3 rounded-xl border-2 cursor-pointer transition-all duration-200 flex flex-col gap-1 ${
+                        className={cn(
+                          "relative p-6 border-4 cursor-pointer transition-all flex flex-col items-center text-center gap-2",
                           plan === p.id 
-                            ? 'border-foreground bg-foreground/5 ring-4 ring-foreground/5' 
-                            : 'border-border/50 hover:border-foreground/20 hover:bg-foreground/[0.02]'
-                        } ${p.id === 'PRO' ? 'opacity-80' : ''}`}
-                      >
-                        {plan === p.id && p.id !== 'PRO' && (
-                          <div className="absolute top-2 right-2">
-                            <CheckCircle2 className="w-4 h-4 text-foreground" />
-                          </div>
+                            ? `border-black ${p.color} shadow-none translate-x-1 translate-y-1 font-black` 
+                            : 'border-black bg-white shadow-[4px_4px_0_0_black] hover:bg-[#F0F0F0]'
                         )}
-                        <div className="text-sm font-bold flex items-center justify-between">
-                          {p.name}
-                          {p.id === 'PRO' && (
-                            <span className="text-[8px] bg-foreground text-background px-1 rounded font-bold uppercase tracking-tighter">Coming Soon</span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-foreground/50 leading-tight">{p.id === 'PRO' ? "Unlocking Soon..." : p.desc}</div>
-                        <div className={`mt-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded w-fit ${p.color}`}>
-                          {p.id}
-                        </div>
+                      >
+                        <div className="text-lg font-black uppercase tracking-tighter italic">{p.name}</div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest opacity-60 leading-tight">{p.desc}</div>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {plan === 'PRO' ? (
-                  <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 border-2 border-dashed border-border/50 rounded-[2rem] bg-foreground/[0.02] animate-in fade-in zoom-in-95 duration-500">
-                    <div className="p-4 rounded-full bg-amber-500/10">
-                      <Layers className="w-12 h-12 text-amber-500" />
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="text-xl font-bold">Pro Plan is Coming Soon</h3>
-                      <p className="text-sm text-foreground/50 max-w-[240px]">
-                        We&apos;re putting the finishing touches on our Enterprise-grade features.
-                      </p>
-                    </div>
+                  <div className="py-12 border-4 border-black bg-black text-white flex flex-col items-center justify-center text-center space-y-4">
+                    <Activity className="w-12 h-12 text-[#FF00FF] animate-pulse" />
+                    <h3 className="text-2xl font-black uppercase italic tracking-tighter">ACCESS_DENIED</h3>
+                    <p className="text-xs font-bold uppercase opacity-40 max-w-[280px]">Tier_XX capabilities are currently restricted to early alpha users.</p>
                   </div>
                 ) : (
-                  <>
-                    {/* Integration & Invitations Section */}
-                    <div className="space-y-4 pt-2">
-                      {["BASIC", "ADVANCED"].includes(plan) && (
-                        <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                          <label className="text-sm font-semibold flex items-center gap-2">
-                            <Github className="w-4 h-4" />
-                            GitHub Repository URL <span className="text-red-500">*</span>
-                          </label>
-                          <input 
-                            type="url"
-                            required
-                            value={githubRepoUrl} 
-                            onChange={e=>setGithubRepoUrl(e.target.value)} 
-                            className="w-full px-4 py-2.5 bg-foreground/5 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/30 transition-all placeholder:text-foreground/30" 
-                            placeholder="https://github.com/org/repo" 
-                          />
-                          <p className="text-[10px] text-foreground/40 italic ml-1">Connect for automatic issue ingestion via Webhooks.</p>
-                        </div>
-                      )}
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold flex items-center gap-2">
-                          <Mail className="w-4 h-4" />
-                          Invite Manager (Optional)
-                        </label>
-                        <input 
-                          type="email"
-                          value={inviteManagerEmail} 
-                          onChange={e=>setInviteManagerEmail(e.target.value)} 
-                          className="w-full px-4 py-2.5 bg-foreground/5 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/30 transition-all placeholder:text-foreground/30" 
-                          placeholder="manager@example.com" 
-                        />
-                        <p className="text-[10px] text-foreground/40 italic ml-1">They&apos;ll get an invitation link to join as a Project Manager.</p>
-                      </div>
+                  <div className="space-y-4 pt-4 border-t-2 border-black">
+                    <div className="space-y-2">
+                      <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                        <Github className="w-4 h-4" />
+                        REPOSITORY_LINK*
+                      </label>
+                      <input 
+                        type="url"
+                        required
+                        value={githubRepoUrl} 
+                        onChange={e=>setGithubRepoUrl(e.target.value)} 
+                        className="w-full px-6 py-4 bg-white border-4 border-black font-bold uppercase text-sm focus:outline-none focus:bg-[#32CD32] transition-colors placeholder:text-black/20" 
+                        placeholder="HTTPS://GITHUB.COM/ORG/REPO" 
+                      />
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
 
-              <div className="pt-6 flex flex-col sm:flex-row justify-end gap-3 border-t border-border/50">
+              <div className="pt-10 flex flex-col sm:flex-row justify-end gap-6 border-t-4 border-black bg-[#F0F0F0] -mx-10 -mb-10 p-10 mt-10">
                 <button 
                   type="button" 
                   onClick={() => setIsModalOpen(false)} 
-                  className="px-6 py-2.5 rounded-xl font-semibold text-sm hover:bg-foreground/5 transition-all text-foreground/60 hover:text-foreground"
+                  className="px-8 py-4 border-4 border-black bg-white font-black uppercase text-xs tracking-widest hover:bg-black hover:text-white transition-colors shadow-[4px_4px_0_0_black] active:shadow-none active:translate-x-1 active:translate-y-1"
                 >
-                  Cancel
+                  ABORT_INIT
                 </button>
                 <button 
                   type="submit" 
                   disabled={createProjectLoading || !newProjectName.trim() || plan === 'PRO' || (['BASIC', 'ADVANCED'].includes(plan) && !githubRepoUrl.trim())} 
-                  className="px-8 py-2.5 bg-foreground text-background font-bold text-sm rounded-xl flex items-center justify-center min-w-[140px] hover:opacity-90 shadow-lg shadow-foreground/10 active:scale-[0.98] transition-all disabled:opacity-50"
+                  className="px-10 py-4 bg-[#FFD700] text-black border-4 border-black font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-[6px_6px_0_0_black] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-50"
                 >
                   {createProjectLoading ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Creating...</span>
-                    </div>
+                    <><Loader2 className="w-4 h-4 animate-spin stroke-[3px]" /> INITIALIZING...</>
                   ) : (
-                    "Create Project"
+                    "FINALIZE_DEPLOYMENT"
                   )}
                 </button>
               </div>
@@ -359,60 +343,60 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
 
       {/* SDK API Key Modal */}
       {createdSdkKey && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-background border border-border/50 rounded-[2rem] shadow-2xl w-full max-w-md p-0 flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden text-foreground">
-            <div className="bg-foreground/5 px-8 pt-8 pb-6 flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle2 className="w-10 h-10 text-green-500" />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80">
+          <div className="bg-white border-8 border-black shadow-[40px_40px_0_0_#32CD32] w-full max-w-xl p-0 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-[#32CD32] p-12 border-b-8 border-black flex flex-col items-center text-center">
+              <div className="w-24 h-24 bg-white border-4 border-black flex items-center justify-center mb-6 shadow-[8px_8px_0_0_black]">
+                <CheckCircle2 className="w-14 h-14 text-black stroke-[3px]" />
               </div>
-              <h2 className="text-2xl font-bold tracking-tight">Project Created!</h2>
-              <p className="text-foreground/50 text-sm max-w-xs mt-2">
-                Your project is ready. Here is your SDK API Key to start tracking issues.
+              <h2 className="text-4xl font-[900] uppercase italic tracking-tighter text-black">PROJECT_STABLE</h2>
+              <p className="text-black font-black text-xs uppercase tracking-widest mt-4">
+                Operational container successfully deployed to the nexus.
               </p>
             </div>
             
-            <div className="p-8 space-y-6">
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-foreground/40 px-1">Your SDK API Key</label>
-                <div className="group relative">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                  <div className="relative bg-background border border-border/50 p-4 rounded-xl flex items-center justify-between gap-4">
-                    <code className="text-sm font-mono text-foreground break-all select-all">{createdSdkKey}</code>
+            <div className="p-12 space-y-10">
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-black/40">MASTER_SDK_KEY</label>
+                <div className="relative">
+                  <div className="absolute inset-0 bg-black translate-x-2 translate-y-2"></div>
+                  <div className="relative bg-white border-4 border-black p-6 flex items-center justify-between gap-6 overflow-hidden">
+                    <code className="text-sm font-black text-black break-all select-all font-mono italic">
+                       {createdSdkKey}
+                    </code>
                     <button 
                       onClick={() => {
                         navigator.clipboard.writeText(createdSdkKey);
-                        // Optional: show a toast or change icon
+                        alert("API_KEY_COPIED_TO_CLIPBOARD");
                       }}
-                      className="p-2 hover:bg-foreground/5 rounded-lg transition-colors text-foreground/40 hover:text-foreground"
-                      title="Copy to clipboard"
+                      className="p-3 bg-black text-white hover:bg-[#FFD700] hover:text-black transition-colors"
+                      title="Copy Key"
                     >
-                      <Copy className="w-4 h-4" />
+                      <Copy className="w-6 h-6" />
                     </button>
                   </div>
                 </div>
-                <p className="text-[10px] text-red-500/80 font-medium px-1">
-                  Important: Copy this key now! It won&apos;t be shown again for security reasons.
+                <p className="text-[10px] text-[#FF3131] font-black uppercase tracking-widest text-center mt-4">
+                  !!! CRITICAL: COPY KEY NOW. RECORD WILL BE PURGED FROM THIS VIEW !!!
                 </p>
               </div>
               
-              <div className="bg-foreground/5 p-5 rounded-2xl border border-border/30 space-y-3">
-                <div className="flex items-center gap-2 text-sm font-bold">
-                  <div className="p-1 rounded bg-foreground text-background">
-                    <Layers className="w-3 h-3" />
+              <div className="bg-[#F0F0F0] p-8 border-4 border-black space-y-6">
+                <div className="flex items-center gap-3 text-xs font-black uppercase">
+                  <div className="p-2 bg-black text-white">
+                    <Layers className="w-4 h-4" />
                   </div>
-                  Quick Start Guide
+                  INJECTION_GUIDE
                 </div>
-                <div className="text-[11px] font-mono text-foreground/70 bg-black/5 p-3 rounded-lg overflow-x-auto border border-border/50">
-                  <pre className="whitespace-pre">
+                <div className="text-[11px] font-bold text-black bg-white p-6 border-2 border-black overflow-x-auto whitespace-pre font-mono italic">
 {`npm install @devnexus/sdk
-377: 
-378: import { DevNexus } from '@devnexus/sdk';
-379: 
-380: DevNexus.init({
-381:   apiKey: '${createdSdkKey}',
-382:   environment: 'production'
-383: });`}
-                  </pre>
+
+import { Nexus } from '@devnexus/sdk';
+
+Nexus.init({
+  id: '${createdSdkKey}',
+  env: 'PRODUCTION'
+});`}
                 </div>
               </div>
 
@@ -421,9 +405,9 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
                   setCreatedSdkKey(null);
                   window.location.reload();
                 }} 
-                className="w-full py-4 bg-foreground text-background font-bold rounded-xl hover:opacity-90 shadow-xl shadow-foreground/10 active:scale-[0.98] transition-all"
+                className="w-full py-6 bg-black text-white font-black uppercase italic tracking-widest hover:bg-[#FFD700] hover:text-black transition-colors shadow-[8px_8px_0_0_#32CD32]"
               >
-                I&apos;ve copied the key
+                CONFIRM_RECEIPT_&_CONTINUE
               </button>
             </div>
           </div>

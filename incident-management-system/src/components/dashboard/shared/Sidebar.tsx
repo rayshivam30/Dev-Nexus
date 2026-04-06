@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, ShieldAlert, LucideIcon, User, ChevronRight } from "lucide-react";
+import { LogOut, LucideIcon, User, ChevronRight, Activity } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
 
 export interface NavItem {
   href: string;
@@ -28,21 +27,20 @@ export function Sidebar({ navItems, roleTitle }: SidebarProps) {
   }
 
   return (
-    <aside className="w-68 border-r border-border/50 bg-card/10 backdrop-blur-xl flex flex-col h-full hidden md:flex transition-all duration-300">
-      <div className="p-6 flex items-center space-x-3 border-b border-border/30 bg-accent/10">
-        <motion.div 
-          whileHover={{ rotate: 5, scale: 1.05 }}
-          className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20"
-        >
-          <ShieldAlert className="w-5 h-5 text-primary-foreground" />
-        </motion.div>
-        <div className="flex flex-col">
-          <span className="font-extrabold text-sm uppercase tracking-widest text-foreground">AI Nexus</span>
-          <span className="text-[10px] font-bold text-foreground/40 bg-accent/30 px-1.5 py-0.5 rounded-full inline-block mt-0.5">{roleTitle}</span>
-        </div>
+    <aside className="w-72 border-r-4 border-black bg-white flex flex-col h-full hidden md:flex z-50">
+      <div className="p-8 border-b-4 border-black bg-[#FFD700]">
+        <Link href="/dashboard/admin" className="flex items-center space-x-3 group">
+          <div className="w-12 h-12 bg-black border-2 border-black flex items-center justify-center shadow-[4px_4px_0_0_white] group-hover:translate-x-0.5 group-hover:translate-y-0.5 group-hover:shadow-none transition-all">
+            <Activity className="w-7 h-7 text-[#FFD700]" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-[900] text-xl uppercase tracking-tighter italic leading-none">DevNexus_</span>
+            <span className="text-[10px] font-black bg-black text-white px-2 py-0.5 w-fit mt-1 uppercase tracking-widest">{roleTitle}</span>
+          </div>
+        </Link>
       </div>
 
-      <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 px-4 py-10 space-y-4 overflow-y-auto custom-scrollbar">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           
@@ -51,64 +49,60 @@ export function Sidebar({ navItems, roleTitle }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "group relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-300",
+                "group relative flex items-center justify-between px-4 py-3 border-2 border-black font-black uppercase text-xs tracking-widest transition-all",
                 isActive
-                  ? "bg-primary/10 text-primary shadow-sm" 
-                  : "text-foreground/50 hover:bg-accent/30 hover:text-foreground"
+                  ? "bg-black text-white shadow-none translate-x-1 translate-y-1" 
+                  : "bg-white text-black shadow-[4px_4px_0_0_black] hover:bg-[#00D1FF] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none"
               )}
             >
-              <div className="flex items-center space-x-3">
-                <item.icon className={cn("w-4.5 h-4.5 transition-transform duration-300 group-hover:scale-110", isActive ? "text-primary" : "text-foreground/40")} />
-                <span className="text-sm font-semibold">{item.label}</span>
+              <div className="flex items-center space-x-4">
+                <item.icon className={cn("w-5 h-5", isActive ? "text-[#FFD700]" : "text-black")} />
+                <span>{item.label}</span>
               </div>
-              {isActive && (
-                <motion.div layoutId="activeNav" className="absolute left-0 w-1 h-6 bg-primary rounded-full" />
-              )}
-              {isActive && <ChevronRight className="w-3.5 h-3.5 text-primary/50" />}
+              {isActive && <ChevronRight className="w-4 h-4 text-[#FFD700]" />}
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-border/30 space-y-2 bg-accent/5">
+      <div className="p-4 border-t-4 border-black space-y-4 bg-[#F0F0F0]">
         <Link
           href="/dashboard/profile"
           className={cn(
-            "group flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-300",
+            "group flex items-center justify-between px-4 py-3 border-2 border-black font-black uppercase text-xs tracking-widest transition-all",
             pathname === "/dashboard/profile"
-              ? "bg-primary/10 text-primary shadow-sm"
-              : "text-foreground/50 hover:bg-accent/30 hover:text-foreground"
+              ? "bg-black text-white shadow-none translate-x-1 translate-y-1"
+              : "bg-white text-black shadow-[4px_4px_0_0_black] hover:bg-[#FF00FF] hover:text-white hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none"
           )}
         >
-          <div className="flex items-center space-x-3">
-             <User className={cn("w-4.5 h-4.5 transition-transform duration-300 group-hover:scale-110", pathname === "/dashboard/profile" ? "text-primary" : "text-foreground/40")} />
-             <span className="text-sm font-semibold">Profile</span>
+          <div className="flex items-center space-x-4">
+             <User className={cn("w-5 h-5", pathname === "/dashboard/profile" ? "text-[#00D1FF]" : "text-black")} />
+             <span>Profile</span>
           </div>
-          {pathname === "/dashboard/profile" && <ChevronRight className="w-3.5 h-3.5 text-primary/50" />}
         </Link>
 
         <button
           onClick={handleLogout}
-          className="group flex w-full items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-300 text-foreground/40 hover:bg-destructive/10 hover:text-destructive"
+          className="group flex w-full items-center space-x-4 px-4 py-3 border-2 border-black font-black uppercase text-xs tracking-widest bg-white text-black shadow-[4px_4px_0_0_black] hover:bg-[#FF3131] hover:text-white hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all"
         >
-          <LogOut className="w-4.5 h-4.5 transition-transform duration-300 group-hover:-translate-x-0.5" />
-          <span className="text-sm font-semibold">Logout</span>
+          <LogOut className="w-5 h-5" />
+          <span>Security_Log_Out</span>
         </button>
       </div>
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
+          width: 8px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
+          background: #f0f0f0;
+          border-left: 2px solid black;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(var(--foreground), 0.05);
-          border-radius: 10px;
+          background: black;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(var(--foreground), 0.1);
+          background: #444;
         }
       `}</style>
     </aside>

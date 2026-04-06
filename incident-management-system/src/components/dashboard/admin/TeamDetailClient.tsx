@@ -1,12 +1,12 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { 
   Users, Layers, CheckCircle, Clock, 
-  Mail, ShieldAlert,
+  ShieldAlert,
   ArrowRight, Activity
 } from "lucide-react";
-import { formatTimeAgo } from "@/lib/utils";
+import Link from "next/link";
+import { formatTimeAgo, cn } from "@/lib/utils";
 import { IssueDetailModal } from "@/components/dashboard/shared/IssueDetailModal";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
 import { useState } from "react";
@@ -33,122 +33,127 @@ export function TeamDetailClient({ team }: { team: Team }) {
   const resolvedIssues = team.issues.filter(i => i.status === "RESOLVED");
 
   const stats = [
-    { label: "Members", value: team.members.length, icon: Users, color: "text-blue-400", bg: "bg-blue-400/10" },
-    { label: "Unassigned", value: unassignedIssues.length, icon: Clock, color: "text-amber-400", bg: "bg-amber-400/10" },
-    { label: "Active", value: activeIssues.length, icon: Activity, color: "text-primary", bg: "bg-primary/10" },
-    { label: "Resolved", value: resolvedIssues.length, icon: CheckCircle, color: "text-emerald-400", bg: "bg-emerald-400/10" },
+    { label: "RESOURCES", value: team.members.length, icon: Users, color: "bg-[#00D1FF]" },
+    { label: "UNASSIGNED", value: unassignedIssues.length, icon: Clock, color: "bg-[#FFD700]" },
+    { label: "OPERATIONAL", value: activeIssues.length, icon: Activity, color: "bg-[#FF00FF]", text: "text-white" },
+    { label: "STABILIZED", value: resolvedIssues.length, icon: CheckCircle, color: "bg-[#32CD32]" },
   ];
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-12 pb-24">
       {/* ── Team Header ── */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="rounded-3xl border border-border bg-card/50 backdrop-blur-md p-8 overflow-hidden relative"
-      >
-        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">{team.name}</h1>
-            <p className="text-foreground/60 flex items-center gap-2">
-              <Layers className="w-4 h-4" /> Part of <span className="font-semibold text-primary">{team.project.name}</span> project
+      <div className="p-10 md:p-12 border-8 border-black bg-white shadow-[16px_16px_0_0_black] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-48 h-full bg-black/5 -skew-x-12 translate-x-10 pointer-events-none"></div>
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-12">
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <span className="bg-black text-white px-4 py-1 text-[10px] font-black uppercase tracking-widest shadow-[4px_4px_0_0_#FFD700]">
+                SECTOR_RESOURCE: {team.id.slice(0, 8)}
+              </span>
+            </div>
+            <h1 className="text-6xl md:text-8xl font-[900] tracking-tighter uppercase italic leading-none text-black break-words">
+              {team.name}
+            </h1>
+            <p className="text-xl font-bold text-black/60 flex items-center gap-3 border-l-4 border-black pl-6 italic">
+              <Layers className="w-6 h-6" /> PART_OF_<Link href={`/dashboard/admin/projects/${team.project.id}`} className="underline decoration-4 hover:bg-black hover:text-white px-2 transition-colors">{team.project.name}</Link>_PROJECT
             </p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 shrink-0">
             {stats.map((s) => (
-              <div key={s.label} className="p-3 bg-accent/10 border border-border rounded-2xl w-full flex flex-col items-center min-w-[100px]">
-                <div className={`p-1.5 rounded-lg mb-1 ${s.bg}`}>
-                  <s.icon className={`w-3.5 h-3.5 ${s.color}`} />
+              <div key={s.label} className="p-6 bg-white border-4 border-black shadow-[6px_6px_0_0_black] flex flex-col items-center min-w-[120px] group hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all">
+                <div className={cn("p-2 border-2 border-black -rotate-6 group-hover:rotate-0 transition-transform mb-3 shadow-[3px_3px_0_0_black]", s.color, s.text || "text-black")}>
+                  <s.icon className="w-5 h-5" />
                 </div>
-                <div className="text-lg font-bold font-mono">{s.value}</div>
-                <div className="text-[10px] text-foreground/40 font-bold uppercase tracking-widest">{s.label}</div>
+                <div className="text-3xl font-[900] italic leading-none mb-1">{s.value}</div>
+                <div className="text-[10px] text-black/40 font-black uppercase tracking-widest">{s.label}</div>
               </div>
             ))}
           </div>
         </div>
-      </motion.div>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         
         {/* ── Left column: Issues Lists ── */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-2 space-y-12">
           
           {/* Unassigned Issues */}
           <Section 
-            title="Unassigned Issues" 
-            icon={<ShieldAlert className="w-5 h-5 text-amber-500" />} 
+            title="UNASSIGNED_LOGS" 
+            icon={<ShieldAlert className="w-8 h-8 text-[#FF3131]" />} 
             count={unassignedIssues.length}
-            emptyText="No unassigned issues."
+            emptyText="SYSTEM_CLEAR: NO_UNASSIGNED_LOGS_DETECTED"
+            accentColor="border-[#FF3131]"
           >
-            <div className="space-y-3">
+            <div className="space-y-6">
               {unassignedIssues.map((i) => <IssueCard key={i.id} issue={i} onLinkClick={() => setViewingIssue(i)} />)}
             </div>
           </Section>
 
           {/* Active Issues */}
           <Section 
-            title="Active Issues" 
-            icon={<Activity className="w-5 h-5 text-primary" />} 
+            title="OPERATIONAL_STREAM" 
+            icon={<Activity className="w-8 h-8 text-[#FF00FF]" />} 
             count={activeIssues.length}
-            emptyText="No active issues."
+            emptyText="IDLE_STATE: NO_ACTIVE_PROCESSES"
+            accentColor="border-[#FF00FF]"
           >
-            <div className="space-y-3">
+            <div className="space-y-6">
               {activeIssues.map((i) => <IssueCard key={i.id} issue={i} onLinkClick={() => setViewingIssue(i)} />)}
             </div>
           </Section>
 
           {/* Resolved Issues */}
           <Section 
-            title="Resolved Issues" 
-            icon={<CheckCircle className="w-5 h-5 text-emerald-500" />} 
+            title="STABILIZED_ARCHIVE" 
+            icon={<CheckCircle className="w-8 h-8 text-[#32CD32]" />} 
             count={resolvedIssues.length}
-            emptyText="No resolved issues."
+            emptyText="ARCHIVE_EMPTY: NO_RECORDS_FOUND"
+            accentColor="border-[#32CD32]"
           >
-            <div className="space-y-3">
+            <div className="space-y-6">
               {resolvedIssues.map((i) => <IssueCard key={i.id} issue={i} onLinkClick={() => setViewingIssue(i)} />)}
             </div>
           </Section>
         </div>
 
         {/* ── Right column: Members ── */}
-        <div className="space-y-6">
+        <div className="space-y-12">
           <Section 
-            title="Team Members" 
-            icon={<Users className="w-5 h-5 text-primary" />} 
+            title="RESOURCE_ALLOC" 
+            icon={<Users className="w-8 h-8 text-[#00D1FF]" />} 
             count={team.members.length}
-            emptyText="No members found."
+            emptyText="VOID_DETECTED: NO_OPERATORS_FOUND"
+            accentColor="border-[#00D1FF]"
           >
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-6">
               {team.members.map((m) => (
-                <div key={m.id} className="p-4 rounded-2xl bg-accent/5 border border-border transition-all hover:bg-accent/10 group">
-                  <div className="flex items-center justify-between">
+                <div key={m.id} className="p-6 bg-white border-4 border-black group relative">
+                  <div className="absolute inset-0 bg-black translate-x-1 translate-y-1 -z-10 group-hover:translate-x-0 group-hover:translate-y-0 transition-all"></div>
+                  <div className="flex items-center justify-between relative z-10">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-sm font-bold text-primary transition-transform group-hover:scale-105">
+                      <div className="w-14 h-14 bg-black border-2 border-black flex items-center justify-center text-xl font-black text-[#00D1FF] rotate-3 group-hover:rotate-0 transition-transform">
                         {m.email[0].toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-semibold truncate max-w-[150px]">{m.email.split('@')[0]}</p>
-                        <p className="text-[10px] text-foreground/40 font-mono">{m.role}</p>
+                        <p className="text-lg font-black uppercase tracking-tighter leading-none mb-1 truncate">{m.email.split('@')[0]}</p>
+                        <p className="text-[10px] font-bold text-black/40 truncate italic">{m.role}</p>
                       </div>
                     </div>
-                    <div className={`w-2 h-2 rounded-full ${m.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-foreground/20'}`} />
+                    <div className={cn("w-4 h-4 border-2 border-black", m.status === 'ACTIVE' ? 'bg-[#32CD32]' : 'bg-black')} />
                   </div>
                 </div>
               ))}
             </div>
           </Section>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-3xl border border-primary/20 bg-primary/5 p-6 border-dashed"
-          >
-            <p className="text-xs text-foreground/50 leading-relaxed text-center italic">
-              &quot;Developers assigned to this team will receive all related notifications and can manage issues via their own dashboard.&quot;
+          <div className="p-10 border-4 border-black bg-black text-white flex flex-col items-center text-center space-y-6 rotate-1 border-dashed">
+            <Activity className="w-12 h-12 text-[#FFD700] animate-pulse" />
+            <p className="text-xs font-black uppercase tracking-widest opacity-40 leading-relaxed italic">
+              &quot;Team nodes sync in real-time. Unauthorized access to sector logs is strictly prohibited under core protocols.&quot;
             </p>
-          </motion.div>
+          </div>
         </div>
       </div>
 
@@ -163,78 +168,73 @@ export function TeamDetailClient({ team }: { team: Team }) {
   );
 }
 
-function Section({ title, icon, count, children, emptyText }: { title: string; icon: React.ReactNode; count: number; children: React.ReactNode; emptyText: string }) {
+function Section({ title, icon, count, children, emptyText, accentColor }: { title: string; icon: React.ReactNode; count: number; children: React.ReactNode; emptyText: string; accentColor: string }) {
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 15 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      className="rounded-3xl border border-border bg-card p-6 md:p-8 space-y-6"
-    >
-      <div className="flex items-center justify-between border-b border-border/50 pb-4">
-        <h2 className="text-xl font-bold flex items-center gap-3">
+    <div className={cn("p-10 border-4 border-black bg-white shadow-[12px_12px_0_0_black] space-y-8", accentColor)}>
+      <div className="flex items-center justify-between border-b-4 border-black pb-6">
+        <h2 className="text-3xl font-[900] uppercase italic tracking-tighter flex items-center gap-4">
           {icon} {title}
         </h2>
-        <span className="text-[10px] font-mono font-bold tracking-widest text-foreground/20 bg-accent/5 px-2 py-1 rounded-md">
-          {count} TOTAL
+        <span className="text-[10px] font-black bg-black text-white px-3 py-1">
+          TOTAL_{count}
         </span>
       </div>
       {count === 0 ? (
-        <div className="py-12 text-center rounded-2xl bg-accent/5 border border-dashed border-border flex flex-col items-center">
-          <p className="text-sm text-foreground/40 italic">{emptyText}</p>
+        <div className="py-16 text-center border-4 border-black border-dashed bg-[#F8F8F8]">
+          <p className="text-lg font-black uppercase italic opacity-20 tracking-widest">{emptyText}</p>
         </div>
       ) : (
         children
       )}
-    </motion.div>
+    </div>
   );
 }
 
 function IssueCard({ issue, onLinkClick }: { issue: Issue; onLinkClick: () => void }) {
   const severityColors: Record<string, string> = {
-    CRITICAL: "border-red-500/20 text-red-400 bg-red-400/5",
-    HIGH: "border-orange-500/20 text-orange-400 bg-orange-400/5",
-    MEDIUM: "border-amber-500/20 text-amber-400 bg-amber-400/5",
-    LOW: "border-blue-500/20 text-blue-400 bg-blue-400/5",
+    CRITICAL: "bg-[#FF3131] text-white",
+    HIGH: "bg-[#FF3131] text-white shadow-[3px_3px_0_0_black]",
+    MEDIUM: "bg-[#FFD700] text-black shadow-[3px_3px_0_0_black]",
+    LOW: "bg-[#00D1FF] text-black shadow-[3px_3px_0_0_black]",
   };
 
   const statusColors: Record<string, string> = {
-    ASSIGNED: "bg-blue-500/10 text-blue-400",
-    IN_PROGRESS: "bg-amber-500/10 text-amber-400",
-    RESOLVED: "bg-emerald-500/10 text-emerald-400",
-    OPEN: "bg-slate-500/10 text-slate-400",
+    ASSIGNED: "bg-black text-white",
+    IN_PROGRESS: "bg-[#FF00FF] text-white",
+    RESOLVED: "bg-[#32CD32] text-black",
+    OPEN: "bg-white border-2 border-black",
   };
 
   return (
-    <div className="p-4 rounded-2xl border border-border bg-accent/5 hover:border-primary/20 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 group">
-      <div className="flex-1 space-y-1 min-w-0">
-        <p className="font-semibold text-foreground md:text-lg group-hover:text-primary transition-colors truncate">
+    <div className="p-6 bg-white border-4 border-black shadow-[6px_6px_0_0_black] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all group flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex-1 space-y-3 min-w-0">
+        <h3 className="text-2xl font-[900] uppercase italic tracking-tighter group-hover:underline decoration-4 truncate">
           {issue.title}
-        </p>
-        <div className="flex flex-wrap items-center gap-3 text-xs text-foreground/40 font-medium">
-          <span className={`px-2 py-0.5 rounded border ${severityColors[issue.severity || ""] || "border-border text-foreground/50"}`}>
+        </h3>
+        <div className="flex flex-wrap items-center gap-4 text-[10px] font-black uppercase tracking-widest text-black/40 italic">
+          <span className={cn("px-3 py-1 border-2 border-black", severityColors[issue.severity || ""] || "bg-white")}>
             {issue.severity}
           </span>
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" /> {issue.createdAt ? formatTimeAgo(new Date(issue.createdAt)) : "Unknown"}
+          <span className="flex items-center gap-2">
+            <Clock className="w-4 h-4" /> {issue.createdAt ? formatTimeAgo(new Date(issue.createdAt)) : "NULL_TIME"}
           </span>
           {issue.assignedTo && (
-            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/20 border border-border">
-              <Mail className="w-3 h-3" /> {issue.assignedTo.email.split('@')[0]}
+            <span className="flex items-center gap-2 px-3 py-1 bg-black text-white border-2 border-black">
+               {issue.assignedTo.email.split('@')[0]}
             </span>
           )}
         </div>
       </div>
       
-      <div className="flex items-center gap-3 self-end md:self-center">
-        <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-tighter ${statusColors[issue.status || ""] || "bg-accent text-foreground/50"}`}>
-          {issue.status ? issue.status.replace("_", " ") : "Unknown"}
+      <div className="flex items-center gap-6 self-end md:self-center">
+        <span className={cn("text-[10px] px-4 py-2 border-2 border-black font-black uppercase tracking-widest", statusColors[issue.status || ""] || "bg-white")}>
+          {issue.status ? issue.status.replace("_", " ") : "UNKNOWN"}
         </span>
         <button 
           onClick={(e) => { e.stopPropagation(); onLinkClick(); }}
-          className="p-2 border border-border rounded-xl hover:bg-primary hover:text-primary-foreground group-hover:border-primary transition-all"
+          className="p-4 bg-black text-white border-4 border-black hover:bg-[#FFD700] hover:text-black transition-colors shadow-[4px_4px_0_0_black] hover:shadow-none translate-y-0 hover:translate-x-1 hover:translate-y-1"
         >
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="w-6 h-6 stroke-[3px]" />
         </button>
       </div>
     </div>

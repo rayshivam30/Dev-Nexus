@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Loader2, Send, Clock, MessageSquare, ShieldAlert, Globe, BarChart2, Timer, AlertTriangle, Github, Sparkles, Lightbulb } from "lucide-react";
-
+import { X, Loader2, Send, Clock, MessageSquare, ShieldAlert, Globe, BarChart2, Timer, Github, Sparkles, Lightbulb, Activity, ChevronRight, ExternalLink, CheckCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Issue } from "./RecentIssues";
 
 export interface TeamData { id: string; name: string; projectId: string; }
@@ -51,7 +51,6 @@ export function IssueDetailModal({
   const [assignTeamId, setAssignTeamId] = useState("");
   const [assignDevId, setAssignDevId] = useState("");
   
-  // Resolution state
   const [isResolving, setIsResolving] = useState(false);
   const [rootCauseInput, setRootCauseInput] = useState("");
   const [resolvingSubmit, setResolvingSubmit] = useState(false);
@@ -96,7 +95,6 @@ export function IssueDetailModal({
       });
       if (res.ok) {
         setCommentText("");
-        // Trigger a re-fetch of details by re-setting the issue id
         if (initialIssue) {
           const resDetail = await fetch(`/api/issues/${issue.id}`, {
             headers: { Authorization: `Bearer ${token}` }
@@ -116,7 +114,6 @@ export function IssueDetailModal({
     e.preventDefault();
     if (onAssignSubmit) {
       await onAssignSubmit(assignTeamId, assignDevId);
-      // Refresh
       const token = localStorage.getItem("incident_token") || "";
       if (issue) {
         const resDetail = await fetch(`/api/issues/${issue.id}`, {
@@ -138,7 +135,6 @@ export function IssueDetailModal({
     try {
       await onStatusChange(issue.id, "RESOLVED", rootCauseInput);
       setIsResolving(false);
-      // Refresh
       const token = localStorage.getItem("incident_token") || "";
       const resDetail = await fetch(`/api/issues/${issue.id}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -155,246 +151,227 @@ export function IssueDetailModal({
   const showAssignForm = allowAssign && issue?.status === "OPEN";
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
-      <div className="bg-card w-full max-w-4xl rounded-3xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col md:flex-row max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/90 z-[150] flex items-center justify-center p-6 sm:p-10 overflow-y-auto custom-scrollbar">
+      <div className="bg-white w-full max-w-6xl border-8 border-black shadow-[30px_30px_0_0_black] flex flex-col md:flex-row relative animate-in zoom-in-95 duration-200">
         
-        {/* Left Side: Info & Timeline & Comments */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-8">
-          <div className="flex justify-between items-start">
-            <div className="space-y-1">
-              <h2 className="text-2xl font-bold tracking-tight text-foreground">{issue?.title || initialIssue.title}</h2>
-              <div className="flex flex-wrap gap-2 text-[10px] uppercase font-bold tracking-widest">
-                <span className={`px-2 py-0.5 rounded border border-border/50 bg-foreground/5 text-foreground/60`}>
-                  ID: {initialIssue.id.slice(-8)}
+        <div className="md:hidden flex justify-between items-center bg-black text-white p-6 border-b-8 border-black">
+          <h2 className="text-2xl font-black uppercase italic tracking-tighter">LOG_REPORT</h2>
+          <button onClick={onClose} className="p-2 border-2 border-white hover:bg-white hover:text-black transition-colors">
+            <X className="w-8 h-8 stroke-[3px]" />
+          </button>
+        </div>
+
+        <div className="flex-1 p-8 md:p-12 space-y-12 overflow-y-visible md:max-h-[85vh] md:overflow-y-auto custom-scrollbar">
+          <div className="space-y-6">
+            <div className="flex flex-wrap gap-4 text-[10px] uppercase font-black tracking-widest">
+              <span className="bg-[#FFD700] border-2 border-black px-4 py-1 shadow-[4px_4px_0_0_black]">
+                ID: {initialIssue.id.slice(-12)}
+              </span>
+              <span className={cn(
+                "px-4 py-1 border-2 border-black shadow-[4px_4px_0_0_black]",
+                (issue?.severity || initialIssue.severity) === 'CRITICAL' ? 'bg-[#FF3131] text-white' : 'bg-[#FFD700] text-black'
+              )}>
+                {issue?.severity || initialIssue.severity}_SEVERITY
+              </span>
+              {issue?.environment && (
+                <span className="bg-[#00D1FF] border-2 border-black px-4 py-1 shadow-[4px_4px_0_0_black]">
+                  {issue.environment}_ZONE
                 </span>
-                <span className={`px-2 py-0.5 rounded border ${
-                    (issue?.severity || initialIssue.severity) === 'CRITICAL' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-                  }`}>
-                  {issue?.severity || initialIssue.severity}
+              )}
+               {issue?.priority && (
+                <span className="bg-[#FF00FF] text-white border-2 border-black px-4 py-1 shadow-[4px_4px_0_0_black]">
+                  {issue.priority}_PRIORITY
                 </span>
-                {issue?.priority && (
-                  <span className={`px-2 py-0.5 rounded border bg-amber-500/10 text-amber-500 border-amber-500/20`}>
-                    {issue.priority} PRIORITY
-                  </span>
-                )}
-                 {issue?.environment && (
-                  <span className={`px-2 py-0.5 rounded border bg-blue-500/10 text-blue-500 border-blue-500/20`}>
-                    {issue.environment}
-                  </span>
-                )}
-              </div>
+              )}
             </div>
-            <button onClick={onClose} className="p-2 rounded-full hover:bg-foreground/5 text-foreground/40 hover:text-foreground transition-colors md:hidden">
-              <X className="w-6 h-6" />
-            </button>
+            
+            <h1 className="text-4xl md:text-6xl font-[900] tracking-tighter uppercase italic leading-none border-b-8 border-black pb-8 group">
+              {issue?.title || initialIssue.title}
+            </h1>
           </div>
 
-          <div className="space-y-3">
-            <h4 className="text-sm font-bold flex items-center gap-2 text-foreground/80 lowercase tracking-tighter italic">
-              <ShieldAlert className="w-4 h-4" /> description
+          <div className="space-y-4">
+            <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-3">
+              <ShieldAlert className="w-5 h-5 text-[#FF3131]" /> INCIDENT_DESCRIPTION
             </h4>
-            <div className="text-sm text-foreground/70 bg-foreground/[0.02] border border-border/30 p-5 rounded-2xl whitespace-pre-wrap leading-relaxed shadow-inner">
+            <div className="text-base font-bold text-black border-4 border-black p-8 bg-[#F8F8F8] shadow-[8px_8px_0_0_black] whitespace-pre-wrap leading-tight italic">
               {issue?.description || initialIssue.description}
             </div>
           </div>
 
           {issue?.rootCause && (
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold flex items-center gap-2 text-emerald-500 lowercase tracking-tighter italic">
-                <Globe className="w-4 h-4" /> root cause analysis
+            <div className="space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-3">
+                <Globe className="w-5 h-5 text-[#32CD32]" /> ROOT_CAUSE_DIAGNOSTICS
               </h4>
-              <div className="text-sm text-emerald-500 bg-emerald-500/5 border border-emerald-500/20 p-5 rounded-2xl italic">
+              <div className="text-base font-black text-white bg-[#32CD32] border-4 border-black p-8 shadow-[8px_8px_0_0_black] italic">
                 &quot;{issue.rootCause}&quot;
               </div>
             </div>
           )}
 
           {issue?.suggestedFixes && (
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold flex items-center gap-2 text-purple-500 lowercase tracking-tighter italic">
-                <Sparkles className="w-4 h-4" /> ai suggested fixes
+            <div className="space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-[#FF00FF]" /> AI_REMEDIATION_PROTOCOL
               </h4>
-              <div className="text-sm text-purple-500 bg-purple-500/5 border border-purple-500/20 p-5 rounded-2xl whitespace-pre-wrap leading-relaxed">
-                <div className="flex gap-3">
-                  <Lightbulb className="w-5 h-5 shrink-0 text-amber-500" />
+              <div className="text-base font-bold text-white bg-[#FF00FF] border-4 border-black p-8 shadow-[8px_8px_0_0_black] leading-tight">
+                <div className="flex gap-6">
+                  <Lightbulb className="w-8 h-8 shrink-0 text-[#FFD700] drop-shadow-[2px_2px_0_black]" />
                   <span>{issue.suggestedFixes}</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Timeline / Activity Section */}
-          <div className="space-y-4 pt-4 border-t border-border/50">
-            <h4 className="text-sm font-bold flex items-center gap-2 text-foreground/50">
-              <Clock className="w-4 h-4" /> Activity Timeline
+          <div className="pt-12 border-t-8 border-black space-y-8">
+            <h4 className="text-lg font-black uppercase italic tracking-tighter flex items-center gap-4">
+              <Clock className="w-6 h-6" /> OPERATION_CHRONO
             </h4>
-            <div className="space-y-4 ml-2 border-l-2 border-border/30 pl-6 pb-2">
-              {loading ? (
-                 <div className="flex items-center gap-2 text-xs text-foreground/30 py-4"><Loader2 className="w-3 h-3 animate-spin"/> Loading history...</div>
-              ) : issue?.activities && issue.activities.length > 0 ? (
-                issue.activities.map((act) => (
-                  <div key={act.id} className="relative">
-                    <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-background border-2 border-border/50"></div>
-                    <div className="text-xs">
-                      <p className="text-foreground/80 font-medium">{act.action}</p>
-                      <p className="text-[10px] text-foreground/40 mt-0.5">{new Date(act.createdAt).toLocaleString()} · {act.user?.email || "System"}</p>
+            <div className="space-y-8 ml-4 border-l-8 border-black pl-8 relative">
+                {loading ? (
+                   <div className="flex items-center gap-4 text-xs font-black uppercase opacity-20 py-8"><Loader2 className="w-6 h-6 animate-spin"/> UPLINK_STABILIZING...</div>
+                ) : issue?.activities && issue.activities.length > 0 ? (
+                  issue.activities.map((act) => (
+                    <div key={act.id} className="relative group">
+                      <div className="absolute -left-[44px] top-0 w-6 h-6 bg-white border-4 border-black group-hover:bg-[#FFD700] transition-colors"></div>
+                      <div className="space-y-1">
+                        <p className="text-lg font-black uppercase italic tracking-tighter leading-none">{act.action}</p>
+                        <p className="text-[10px] font-black uppercase text-black/40">{new Date(act.createdAt).toLocaleString()} {"//"} {act.user?.email || "SYSTEM_PROTOCOL"}</p>
+                      </div>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-xs text-foreground/30 italic">No activity recorded yet.</div>
-              )}
+                  ))
+                ) : (
+                  <div className="text-xs font-black uppercase opacity-20 italic">NULL_ACTIVITY_TELEMETRY</div>
+                )}
             </div>
           </div>
 
-          {/* Comments Section */}
-          <div className="space-y-4 pt-4 border-t border-border/50">
-            <h4 className="text-sm font-bold flex items-center gap-2 text-foreground/50">
-              <MessageSquare className="w-4 h-4" /> Discussion
+          <div className="pt-12 border-t-8 border-black space-y-8">
+            <h4 className="text-lg font-black uppercase italic tracking-tighter flex items-center gap-4">
+              <MessageSquare className="w-6 h-6" /> COMMS_CHANNEL
             </h4>
-            <div className="space-y-4">
+            <div className="space-y-8">
               {issue?.comments?.map((comment) => (
-                <div key={comment.id} className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-foreground/5 flex items-center justify-center text-[10px] font-bold border border-border/50">
+                <div key={comment.id} className="flex gap-6 items-start group">
+                  <div className="w-16 h-16 bg-black text-[#FFD700] border-4 border-black flex items-center justify-center text-xl font-black rotate-3 group-hover:rotate-0 transition-transform shrink-0 shadow-[4px_4px_0_0_black]">
                     {comment.user?.name?.[0] || comment.user?.email?.[0]?.toUpperCase()}
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold">{comment.user?.name || comment.user?.email}</span>
-                      <span suppressHydrationWarning className="text-[10px] text-foreground/40">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                  <div className="flex-1 space-y-4">
+                    <div className="flex items-center justify-between border-b-2 border-black pb-2">
+                      <span className="text-xs font-black uppercase tracking-widest">{comment.user?.name || comment.user?.email}</span>
+                      <span suppressHydrationWarning className="text-[10px] font-black uppercase opacity-20">{new Date(comment.createdAt).toLocaleDateString()} {"//"} {new Date(comment.createdAt).toLocaleTimeString()}</span>
                     </div>
-                    <div className="text-sm text-foreground/70 bg-foreground/5 px-4 py-2.5 rounded-2xl rounded-tl-none border border-border/20">
+                    <div className="text-base font-bold italic leading-tight text-black p-4 bg-white border-2 border-black shadow-[4px_4px_0_0_black]">
                       {comment.text}
                     </div>
                   </div>
                 </div>
               ))}
-              <form onSubmit={handleAddComment} className="flex gap-2 items-start mt-4">
+              <form onSubmit={handleAddComment} className="flex flex-col sm:flex-row gap-6 items-end group mt-12 bg-[#F0F0F0] p-8 border-4 border-black shadow-[10px_10px_0_0_black]">
                 <textarea 
                   value={commentText}
                   onChange={e => setCommentText(e.target.value)}
-                  placeholder="Ask a question or provide an update..."
-                  className="flex-1 bg-foreground/5 border border-border/50 rounded-2xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-foreground/10 resize-none min-h-[80px]"
+                  placeholder="TRANSMIT_UPDATE_OR_QUERY..."
+                  className="w-full bg-white border-4 border-black p-6 text-sm font-black uppercase focus:outline-none focus:bg-[#FFD700] transition-colors resize-none min-h-[120px] placeholder:text-black/20"
                 />
                 <button 
                   disabled={commenting || !commentText.trim()}
-                  className="p-3 bg-foreground text-background rounded-2xl hover:opacity-90 disabled:opacity-30 transition-all flex border border-foreground/10"
+                  className="w-full sm:w-auto h-24 px-10 bg-black text-white hover:bg-[#32CD32] hover:text-black transition-all border-4 border-black flex items-center justify-center shadow-[6px_6px_0_0_#FFD700] disabled:opacity-20 active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
-                  {commenting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                  {commenting ? <Loader2 className="w-8 h-8 animate-spin" /> : <Send className="w-10 h-10 stroke-[3px]" />}
                 </button>
               </form>
             </div>
           </div>
         </div>
 
-        {/* Right Side: Sidebar / Actions */}
-        <div className="w-full md:w-[320px] bg-foreground/[0.03] border-t md:border-t-0 md:border-l border-border/50 p-6 flex flex-col gap-8 shrink-0 overflow-y-auto">
+        <div className="w-full md:w-[400px] bg-[#F0F0F0] border-t-8 md:border-t-0 md:border-l-8 border-black p-8 md:p-12 flex flex-col gap-12 shrink-0 md:max-h-[85vh] md:overflow-y-auto custom-scrollbar">
           <div className="hidden md:flex justify-end">
-             <button onClick={onClose} className="p-2 rounded-full hover:bg-foreground/5 text-foreground/40 hover:text-foreground transition-colors">
-              <X className="w-6 h-6" />
+             <button onClick={onClose} className="p-3 border-4 border-black bg-white hover:bg-black hover:text-white transition-all shadow-[6px_6px_0_0_black] active:translate-x-1 active:translate-y-1 active:shadow-none">
+              <X className="w-10 h-10 stroke-[4px]" />
             </button>
           </div>
 
-          <div className="space-y-6">
-            <h4 className="text-xs font-bold uppercase tracking-[2px] text-foreground/30 flex items-center gap-2">
-              <BarChart2 className="w-4 h-4" /> metadata
+          <div className="space-y-10">
+            <h4 className="text-xl font-black uppercase italic tracking-tighter flex items-center gap-4 bg-black text-white p-4 -rotate-2">
+              <BarChart2 className="w-6 h-6 text-[#FFD700]" /> NODE_METRIC
             </h4>
             
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-sm border-b border-border/30 pb-3">
-                <span className="text-foreground/40">Status</span>
-                <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] tracking-tight border ${
-                  issue?.status === 'RESOLVED' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                }`}>
-                  {(issue?.status || initialIssue.status)?.replace("_", " ")}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-sm border-b border-border/30 pb-3">
-                <span className="text-foreground/40">Team</span>
-                <span className="font-bold tracking-tight">{issue?.team?.name || initialIssue.teamName || "Unassigned"}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm border-b border-border/30 pb-3">
-                <span className="text-foreground/40">Assignee</span>
-                <span className="font-bold tracking-tight truncate max-w-[140px] text-right">{issue?.assignedTo?.email || initialIssue.assignedToEmail || "None"}</span>
-              </div>
+            <div className="space-y-6">
+              {[
+                { label: "PROTOCOL_STATUS", value: (issue?.status || initialIssue.status)?.replace("_", " "), accent: "bg-[#00D1FF]" },
+                { label: "TARGET_UNIT", value: issue?.team?.name || initialIssue.teamName || "NULL_SECTOR", accent: "bg-[#FF00FF]", text: "text-white" },
+                { label: "LEAD_OPERATOR", value: issue?.assignedTo?.email || initialIssue.assignedToEmail || "UNALLOCATED", accent: "bg-black", text: "text-white" }
+              ].map((row) => (
+                <div key={row.label} className="space-y-2 group">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-black/40 px-1">{row.label}</label>
+                  <div className={cn("p-4 border-4 border-black font-black uppercase italic text-sm tracking-tighter shadow-[4px_4px_0_0_black] group-hover:translate-x-1 group-hover:translate-y-1 group-hover:shadow-none transition-all", row.accent, row.text || "text-black")}>
+                    {row.value}
+                  </div>
+                </div>
+              ))}
+              
               {issue?.source === 'GITHUB' && (
-                <div className="flex justify-between items-center text-sm border-b border-border/30 pb-3">
-                  <span className="text-foreground/40">Source</span>
+                <div className="pt-4 space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-black/40 px-1">EXTERNAL_LINK</label>
                   <a 
                     href={(issue.logs as { html_url?: string })?.html_url || "#"} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 font-bold text-primary hover:underline"
+                    className="flex items-center justify-between p-4 border-4 border-black bg-white font-black uppercase text-xs hover:bg-[#FFD700] transition-colors shadow-[4px_4px_0_0_black]"
                   >
-                    <Github className="w-3.5 h-3.5" /> GitHub
+                    <span className="flex items-center gap-2"><Github className="w-4 h-4" /> REPOSITORY_NODE</span>
+                    <ExternalLink className="w-4 h-4" />
                   </a>
                 </div>
               )}
             </div>
 
-            {/* SLA Section */}
             {(issue?.responseSlaDeadline || issue?.resolutionSlaDeadline) && (
-              <div className="space-y-4 pt-4 border-t border-border/30">
-                <h4 className="text-xs font-bold uppercase tracking-[2px] text-purple-500 flex items-center gap-2">
-                  <Timer className="w-4 h-4" /> SLA Status
+              <div className="pt-10 border-t-4 border-black space-y-8">
+                <h4 className="text-xl font-black uppercase italic tracking-tighter flex items-center gap-4">
+                  <Timer className="w-6 h-6 text-[#FF00FF]" /> SLA_MONITOR
                 </h4>
-                <div className="space-y-3">
+                <div className="space-y-6">
                   {issue.responseSlaDeadline && (
-                    <div className={`p-3 rounded-xl border space-y-1 ${
+                    <div className={cn(
+                      "p-6 border-4 border-black shadow-[6px_6px_0_0_black] space-y-3",
                       issue.status !== "OPEN" 
-                        ? (new Date(issue.responseSlaDeadline) > new Date(issue.acceptedAt || Date.now()) ? "bg-emerald-500/5 border-emerald-500/10" : "bg-red-500/5 border-red-500/10")
-                        : "bg-purple-500/5 border-purple-500/10"
-                    }`}>
-                      <p className="text-[10px] text-purple-500/60 uppercase font-bold tracking-wider">Response SLA</p>
+                        ? (new Date(issue.responseSlaDeadline) > new Date(issue.acceptedAt || Date.now()) ? "bg-[#32CD32]" : "bg-[#FF3131] text-white")
+                        : "bg-white"
+                    )}>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60">RESPONSE_DEADLINE</p>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold">
+                        <span className="text-2xl font-[900] italic leading-none tracking-tighter underline decoration-4">
                           {issue.status !== "OPEN" ? (
-                            new Date(issue.responseSlaDeadline) > new Date(issue.acceptedAt || Date.now()) ? (
-                              <span className="text-emerald-500 flex items-center gap-1">Met</span>
-                            ) : (
-                              <span className="text-red-500 flex items-center gap-1">Breached</span>
-                            )
+                            new Date(issue.responseSlaDeadline) > new Date(issue.acceptedAt || Date.now()) ? "MET" : "BREACHED"
                           ) : (
-                            new Date(issue.responseSlaDeadline) < new Date() ? (
-                              <span className="text-red-500 flex items-center gap-1">
-                                <AlertTriangle className="w-3 h-3" /> Breached
-                              </span>
-                            ) : (
-                              formatTimeRemaining(issue.responseSlaDeadline)
-                            )
+                            new Date(issue.responseSlaDeadline) < new Date() ? "BREACHED" : formatTimeRemaining(issue.responseSlaDeadline)
                           )}
                         </span>
-                        <span suppressHydrationWarning className="text-[10px] text-foreground/30">{new Date(issue.responseSlaDeadline).toLocaleTimeString()}</span>
+                        <span suppressHydrationWarning className="text-[10px] font-black uppercase opacity-40">{new Date(issue.responseSlaDeadline).toLocaleTimeString()}</span>
                       </div>
                     </div>
                   )}
 
                   {issue.resolutionSlaDeadline && (
-                    <div className={`p-3 rounded-xl border space-y-1 ${
+                    <div className={cn(
+                      "p-6 border-4 border-black shadow-[6px_6px_0_0_black] space-y-3",
                       issue.status === "RESOLVED"
-                        ? (new Date(issue.resolutionSlaDeadline) > new Date(issue.resolvedAt || Date.now()) ? "bg-emerald-500/5 border-emerald-500/10" : "bg-red-500/5 border-red-500/10")
-                        : "bg-purple-500/5 border-purple-500/10"
-                    }`}>
-                      <p className="text-[10px] text-purple-500/60 uppercase font-bold tracking-wider">Resolution SLA</p>
+                        ? (new Date(issue.resolutionSlaDeadline) > new Date(issue.resolvedAt || Date.now()) ? "bg-[#32CD32]" : "bg-[#FF3131] text-white")
+                        : "bg-white"
+                    )}>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60">RESOLUTION_DEADLINE</p>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold">
+                        <span className="text-2xl font-[900] italic leading-none tracking-tighter underline decoration-4">
                           {issue.status === "RESOLVED" ? (
-                            new Date(issue.resolutionSlaDeadline) > new Date(issue.resolvedAt || Date.now()) ? (
-                              <span className="text-emerald-500 flex items-center gap-1">Met</span>
-                            ) : (
-                              <span className="text-red-500 flex items-center gap-1">Breached</span>
-                            )
+                            new Date(issue.resolutionSlaDeadline) > new Date(issue.resolvedAt || Date.now()) ? "MET" : "BREACHED"
                           ) : (
-                            new Date(issue.resolutionSlaDeadline) < new Date() ? (
-                              <span className="text-red-500 flex items-center gap-1">
-                                <AlertTriangle className="w-3 h-3" /> Breached
-                              </span>
-                            ) : (
-                              formatTimeRemaining(issue.resolutionSlaDeadline)
-                            )
+                            new Date(issue.resolutionSlaDeadline) < new Date() ? "BREACHED" : formatTimeRemaining(issue.resolutionSlaDeadline)
                           )}
                         </span>
-                        <span suppressHydrationWarning className="text-[10px] text-foreground/30">{new Date(issue.resolutionSlaDeadline).toLocaleTimeString()}</span>
+                        <span suppressHydrationWarning className="text-[10px] font-black uppercase opacity-40">{new Date(issue.resolutionSlaDeadline).toLocaleTimeString()}</span>
                       </div>
                     </div>
                   )}
@@ -403,87 +380,94 @@ export function IssueDetailModal({
             )}
           </div>
 
-          {/* Assignment Section */}
           {showAssignForm && (
-            <div className="space-y-4 animate-in slide-in-from-right-4 duration-500">
-               <h4 className="text-xs font-bold uppercase tracking-[2px] text-primary">Assign Issue</h4>
-               <form onSubmit={handleAssign} className="space-y-3">
-                  <select
-                    required
-                    value={assignTeamId}
-                    onChange={(e) => { setAssignTeamId(e.target.value); setAssignDevId(""); }}
-                    className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                  >
-                    <option value="">Select Team...</option>
-                    {teams.filter(t => t.projectId === (issue?.projectId || initialIssue.projectId)).map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-
-                  {assignTeamId && (
+            <div className="pt-10 border-t-4 border-black space-y-8 animate-in slide-in-from-right-10 duration-500">
+               <h4 className="text-xl font-black uppercase italic tracking-tighter flex items-center gap-4 text-[#FF00FF]">
+                 <Activity className="w-6 h-6 shadow-[2px_2px_0_black]" /> UNIT_ALLOCATION
+               </h4>
+               <form onSubmit={handleAssign} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-black/40 px-1">UNIT_CLUSTER</label>
                     <select
-                      value={assignDevId}
-                      onChange={(e) => setAssignDevId(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-background border border-border/50 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 transition-all font-medium animate-in slide-in-from-top-2"
+                      required
+                      value={assignTeamId}
+                      onChange={(e) => { setAssignTeamId(e.target.value); setAssignDevId(""); }}
+                      className="w-full h-14 px-5 bg-white border-4 border-black font-black uppercase italic text-xs focus:bg-[#00D1FF] transition-all cursor-pointer shadow-[4px_4px_0_0_black]"
                     >
-                      <option value="">(Manual Pending)</option>
-                      {developers.filter(d => d.teamId === assignTeamId).map(dev => (
-                        <option key={dev.id} value={dev.id}>
-                          {dev.name || dev.email}
-                          {(issue?.logs as { suggestedAssigneeId?: string })?.suggestedAssigneeId === dev.id ? " (Suggested)" : ""}
-                        </option>
-
+                      <option value="">SELECT_CLUSTER...</option>
+                      {teams.filter(t => t.projectId === (issue?.projectId || initialIssue.projectId)).map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
                       ))}
                     </select>
+                  </div>
+
+                  {assignTeamId && (
+                    <div className="space-y-2 animate-in slide-in-from-top-4 duration-300">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-black/40 px-1">ASSIGNED_OPERATOR</label>
+                       <select
+                        value={assignDevId}
+                        onChange={(e) => setAssignDevId(e.target.value)}
+                        className="w-full h-14 px-5 bg-white border-4 border-black font-black uppercase italic text-xs focus:bg-[#FFD700] transition-all cursor-pointer shadow-[4px_4px_0_0_black]"
+                      >
+                        <option value="">PENDING_MANUAL_SPEC</option>
+                        {developers.filter(d => d.teamId === assignTeamId).map(dev => (
+                          <option key={dev.id} value={dev.id}>
+                            {dev.name || dev.email}
+                            {(issue?.logs as { suggestedAssigneeId?: string })?.suggestedAssigneeId === dev.id ? " [RECOMMENDED]" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   )}
 
                   <button
                     disabled={isAssigning || !assignTeamId}
-                    className="w-full py-3 bg-foreground text-background font-bold rounded-xl hover:opacity-90 disabled:opacity-30 shadow-lg shadow-foreground/10 transition-all active:scale-[0.98]"
+                    className="w-full h-20 bg-black text-white font-[900] uppercase italic tracking-widest transition-all border-4 border-black shadow-[8px_8px_0_0_#FF00FF] hover:bg-[#FFD700] hover:text-black hover:shadow-none hover:translate-x-1 hover:translate-y-1 disabled:opacity-20 flex items-center justify-center gap-4 text-xl"
                   >
-                    {isAssigning ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Confirm Assignment"}
+                    {isAssigning ? <Loader2 className="w-8 h-8 animate-spin" /> : <>INIT_DEPLOYMENT <ChevronRight className="w-8 h-8 stroke-[4px]" /></>}
                   </button>
                </form>
             </div>
           )}
 
-          {/* Standard Status Controls (For Developers / Progress) */}
           {issue?.status === "ASSIGNED" && onStatusChange && !showAssignForm && (
             <button
                onClick={() => onStatusChange(issue.id, "IN_PROGRESS")}
-               className="w-full py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
+               className="w-full h-20 bg-[#00D1FF] text-black font-[900] uppercase italic tracking-widest transition-all border-4 border-black shadow-[8px_8px_0_0_black] hover:bg-black hover:text-white hover:shadow-none hover:translate-x-1 hover:translate-y-1 text-xl flex items-center justify-center gap-4"
             >
-              Start Progress
+              START_REACTION_CMD <ChevronRight className="w-8 h-8 stroke-[4px]" />
             </button>
           )}
 
           {issue?.status === "IN_PROGRESS" && onStatusChange && (
-            <div className="space-y-4">
+            <div className="space-y-8">
               {!isResolving ? (
                 <button
                    onClick={() => setIsResolving(true)}
-                   className="w-full py-3 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-all"
+                   className="w-full h-20 bg-[#32CD32] text-black font-[900] uppercase italic tracking-widest transition-all border-4 border-black shadow-[8px_8px_0_0_black] hover:bg-black hover:text-white hover:shadow-none hover:translate-x-1 hover:translate-y-1 text-xl flex items-center justify-center gap-4"
                 >
-                  Resolve Issue
+                  STABILIZE_NODE <CheckCircle className="w-8 h-8 stroke-[4px]" />
                 </button>
               ) : (
-                <form onSubmit={handleResolveSubmit} className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
-                  <label className="text-xs font-bold text-emerald-500 uppercase">Root Cause Analysis</label>
-                  <textarea 
-                    required
-                    value={rootCauseInput}
-                    onChange={e => setRootCauseInput(e.target.value)}
-                    placeholder="Briefly describe why this happened..."
-                    className="w-full bg-background border border-emerald-500/30 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500/10 min-h-[100px] shadow-sm"
-                  />
-                  <div className="flex gap-2">
-                     <button type="button" onClick={() => setIsResolving(false)} className="flex-1 py-2 text-xs font-bold text-foreground/40 hover:text-foreground">Cancel</button>
+                <form onSubmit={handleResolveSubmit} className="space-y-8 animate-in zoom-in-95 duration-200">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[#32CD32]">ROOT_CAUSE_PROTOCOL_DUMP</label>
+                    <textarea 
+                      required
+                      value={rootCauseInput}
+                      onChange={e => setRootCauseInput(e.target.value)}
+                      placeholder="ENTER_INCIDENT_FIX_METADATA..."
+                      className="w-full bg-white border-4 border-black p-6 text-sm font-black uppercase italic focus:outline-none focus:bg-[#32CD32] transition-colors min-h-[160px] shadow-[6px_6px_0_0_black] placeholder:text-black/20"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-4">
+                     <button type="button" onClick={() => setIsResolving(false)} className="w-full py-4 text-xs font-black uppercase underline decoration-2 hover:bg-black hover:text-white transition-all">ABORT_STABILIZATION</button>
                      <button 
                       type="submit" 
                       disabled={resolvingSubmit || !rootCauseInput.trim()}
-                      className="flex-[2] py-2 bg-emerald-500 text-white font-bold rounded-xl text-sm"
+                      className="w-full h-20 bg-black text-white font-[900] uppercase italic tracking-widest border-4 border-black shadow-[8px_8px_0_0_#32CD32] hover:bg-[#32CD32] hover:text-black transition-all flex items-center justify-center gap-4 disabled:opacity-20"
                      >
-                        {resolvingSubmit ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Submit Fix"}
+                        {resolvingSubmit ? <Loader2 className="w-8 h-8 animate-spin" /> : <>TRANSMIT_RESTORE_CMD <ChevronRight className="w-8 h-8 stroke-[4px]" /></>}
                      </button>
                   </div>
                 </form>
@@ -495,16 +479,17 @@ export function IssueDetailModal({
     </div>
   );
 }
+
 function formatTimeRemaining(deadline: Date | string | null | undefined) {
   if (!deadline) return "";
   const diff = new Date(deadline).getTime() - Date.now();
-  if (diff <= 0) return "Overdue";
+  if (diff <= 0) return "EXPIRED";
   
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   
   if (hours > 24) {
-    return `${Math.floor(hours / 24)}d ${hours % 24}h remaining`;
+    return `${Math.floor(hours / 24)}d ${hours % 24}h`;
   }
-  return `${hours}h ${mins}m remaining`;
+  return `${hours}h ${mins}m`;
 }
