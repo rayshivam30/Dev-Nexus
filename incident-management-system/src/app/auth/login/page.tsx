@@ -42,68 +42,75 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-
   }
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-4xl font-black tracking-tight tracking-[-0.04em]">Sign In</h1>
-        <p className="text-white/40 text-sm font-medium tracking-tight">Access your resilient systems dashboard.</p>
+      <div className="space-y-2">
+        <h1 className="text-4xl font-[900] tracking-tighter uppercase italic leading-none text-black">
+          User <br /> 
+          <span className="bg-[#FFD700] border-[2px] border-black px-2 shadow-[4px_4px_0_0_black]">AUTH_LOG:</span>
+        </h1>
+        <p className="text-black font-bold uppercase text-[10px] border-l-2 border-black pl-3 opacity-60">
+          Access the primary resolution nexus.
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-          <button className="flex items-center justify-center space-x-2 py-3 border border-white/5 bg-white/[0.03] rounded-2xl hover:bg-white/[0.08] transition-all font-bold text-[10px] uppercase tracking-widest">
-            <Github className="w-4 h-4" />
-            <span>GitHub</span>
+      <div className="grid grid-cols-2 gap-4">
+          <button className="flex items-center justify-center space-x-3 py-3 border-[2px] border-black bg-white hover:bg-black hover:text-white transition-all font-black text-[11px] uppercase tracking-widest shadow-[3px_3px_0_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none">
+            <Github className="w-5 h-5" />
+            <span>GITHUB_ID</span>
           </button>
-          <button className="flex items-center justify-center space-x-2 py-3 border border-white/5 bg-white/[0.03] rounded-2xl hover:bg-white/[0.08] transition-all font-bold text-[10px] uppercase tracking-widest">
-            <Chrome className="w-4 h-4" />
-            <span>Google</span>
+          <button className="flex items-center justify-center space-x-3 py-3 border-[2px] border-black bg-white hover:bg-black hover:text-white transition-all font-black text-[11px] uppercase tracking-widest shadow-[3px_3px_0_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none">
+            <Chrome className="w-5 h-5" />
+            <span>GOOGLE_ID</span>
           </button>
       </div>
 
       <div className="relative py-1">
         <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-white/5" />
+            <span className="w-full border-t-[2px] border-black/10" />
         </div>
-        <div className="relative flex justify-center text-[9px] uppercase tracking-[0.2em] font-black">
-            <span className="bg-[#020408] px-4 text-white/20 font-mono">Or continue with</span>
+        <div className="relative flex justify-center text-[10px] uppercase tracking-[0.3em] font-black">
+            <span className="bg-white px-4 text-black/30">OR_EMAIL_TOKEN</span>
         </div>
       </div>
 
       {error && (
-        <div className="p-3 text-[11px] font-bold uppercase tracking-wider text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center">
-          <span className="mr-2 text-base">🚨</span> {error}
+        <div className="p-3 bg-[#FF00FF] text-white border-[2px] border-black font-black uppercase text-[11px] shadow-[4px_4px_0_0_black] flex items-center gap-3">
+          <div className="bg-black text-white p-0.5">
+             <Lock className="w-3 h-3" />
+          </div>
+          {error}
         </div>
       )}
 
-      <form onSubmit={onSubmit} method="post" className="space-y-4">
+      <form onSubmit={onSubmit} method="post" className="space-y-5">
         <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-white/30 ml-1">Work Email</label>
-          <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/10 group-focus-within:text-violet-500 transition-colors" />
+          <label className="text-[11px] font-black uppercase tracking-widest text-black ml-1">EMAIL_ADDRESS</label>
+          <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black/20" />
               <input 
                 type="email" 
                 name="email" 
                 required 
-                className="w-full pl-12 pr-4 py-4 bg-white/[0.02] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-violet-500/50 focus:ring-4 focus:ring-violet-500/5 transition-all text-sm text-white placeholder:text-white/10" 
-                placeholder="name@company.com"
+                className="w-full pl-14 pr-4 py-4 bg-white border-[2px] border-black focus:outline-none focus:bg-[#F0F0F0] focus:shadow-[4px_4px_0_0_black] transition-all text-sm font-bold placeholder:text-black/20" 
+                placeholder="USER@DOMAIN.COM"
               />
           </div>
         </div>
         <div className="space-y-2">
-          <div className="flex justify-between items-end mr-1">
-             <label className="text-[10px] font-black uppercase tracking-[0.15em] text-white/30 ml-1">Password</label>
-             <Link href="#" className="text-[9px] font-black uppercase tracking-widest text-violet-500 hover:text-violet-400 transition-colors">Forgot?</Link>
+          <div className="flex justify-between items-end">
+             <label className="text-[11px] font-black uppercase tracking-widest text-black ml-1">ACCESS_CODE</label>
+             <Link href="#" className="text-[9px] font-black uppercase underline decoration-2 hover:bg-black hover:text-white px-1 transition-all">FORGOT?</Link>
           </div>
-          <div className="relative group">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/10 group-focus-within:text-violet-500 transition-colors" />
+          <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black/20" />
               <input 
                 type="password" 
                 name="password" 
                 required 
-                className="w-full pl-12 pr-4 py-4 bg-white/[0.02] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-violet-500/50 focus:ring-4 focus:ring-violet-500/5 transition-all text-sm text-white placeholder:text-white/10" 
+                className="w-full pl-14 pr-4 py-4 bg-white border-[2px] border-black focus:outline-none focus:bg-[#F0F0F0] focus:shadow-[4px_4px_0_0_black] transition-all text-sm font-bold placeholder:text-black/20" 
                 placeholder="••••••••"
               />
           </div>
@@ -112,18 +119,17 @@ export default function LoginPage() {
         <button 
           type="submit" 
           disabled={loading}
-          className="w-full group flex items-center justify-center h-14 rounded-2xl bg-white text-black font-black hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 transition-all mt-4 shadow-2xl shadow-white/5 uppercase tracking-widest text-xs"
+          className="w-full flex items-center justify-center h-14 bg-[#FFD700] text-black border-[3px] border-black font-[900] text-lg uppercase tracking-tighter hover:bg-black hover:text-white shadow-[6px_6px_0_0_black] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all disabled:opacity-50 mt-2"
         >
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-            <>Sign In <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" /></>
+          {loading ? <Loader2 className="w-7 h-7 animate-spin" /> : (
+            <>AUTHORIZE_SESSION <ArrowRight className="w-5 h-5 ml-4" /></>
           )}
         </button>
       </form>
 
-      <div className="text-center text-[10px] font-bold uppercase tracking-widest text-white/30 pb-2">
-        Don&apos;t have an account? <Link href="/auth/register" className="text-white hover:text-violet-400 underline-offset-4 hover:underline transition-all">Create an organization</Link>
+      <div className="text-center text-[11px] font-black uppercase tracking-widest border-t border-black/10 pt-6">
+        NEW_ORG? <Link href="/auth/register" className="text-black underline underline-offset-4 decoration-2 hover:bg-[#00D1FF] px-2 transition-colors ml-1">CREATE_ACCOUNT</Link>
       </div>
-
     </div>
   );
 }

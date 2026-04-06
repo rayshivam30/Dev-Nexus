@@ -36,6 +36,15 @@ export function ActiveProjects({ projects }: { projects: ProjectStats[] }) {
         {projects.length === 0 && (
           <div className="text-sm text-foreground/50 text-center py-4">No active projects to display.</div>
         )}
+        
+        {projects.length > 0 && (
+          <button 
+            onClick={() => window.location.href = "/dashboard/admin/projects"}
+            className="w-full py-4 text-[10px] font-black uppercase tracking-[0.2em] border-[3px] border-black bg-white text-black hover:bg-black hover:text-white transition-all shadow-[4px_4px_0_0_black] active:translate-x-1 active:translate-y-1 active:shadow-none mt-4"
+          >
+            Show_All_Projects
+          </button>
+        )}
       </div>
     </div>
   );

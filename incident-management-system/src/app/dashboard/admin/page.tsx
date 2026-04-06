@@ -17,35 +17,36 @@ export default async function AdminDashboardPage() {
     );
   }
 
-  const [openIssuesCount, breachedCount, resolvedTodayCount, recentIssuesRaw, projectsRaw, allProjects, allTeams, allDevelopers] = await Promise.all([
-    prisma.issue.count({ where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] } } }),
-    prisma.issue.count({ where: { OR: [{ responseBreached: true }, { resolutionBreached: true }] } }),
-    prisma.issue.count({ 
-      where: { 
-        status: 'RESOLVED', 
-        resolvedAt: { gte: new Date(new Date().setHours(0,0,0,0)) } 
-      } 
-    }),
-    prisma.issue.findMany({
-      where: { assignedToId: null },
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      include: { team: true, assignedTo: true }
-    }),
-    prisma.project.findMany({
-      include: {
-        _count: { 
-          select: { 
-            teams: true,
-            issues: { where: { status: { not: 'RESOLVED' } } }
-          } 
-        }
+  // Fetch queries sequentially to prevent connection pool exhaustion (P2024)
+  const openIssuesCount = await prisma.issue.count({ where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] } } });
+  const breachedCount = await prisma.issue.count({ where: { OR: [{ responseBreached: true }, { resolutionBreached: true }] } });
+  const resolvedTodayCount = await prisma.issue.count({ 
+    where: { 
+      status: 'RESOLVED', 
+      resolvedAt: { gte: new Date(new Date().setHours(0,0,0,0)) } 
+    } 
+  });
+  const recentIssuesRaw = await prisma.issue.findMany({
+    where: { assignedToId: null },
+    take: 5,
+    orderBy: { createdAt: 'desc' },
+    include: { team: true, assignedTo: true }
+  });
+  const projectsRaw = await prisma.project.findMany({
+    take: 5,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      _count: { 
+        select: { 
+          teams: true,
+          issues: { where: { status: { not: 'RESOLVED' } } }
+        } 
       }
-    }),
-    prisma.project.findMany({ select: { id: true, name: true } }),
-    prisma.team.findMany({ select: { id: true, name: true, projectId: true } }),
-    prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER' } })
-  ]);
+    }
+  });
+  const allProjects = await prisma.project.findMany({ select: { id: true, name: true } });
+  const allTeams = await prisma.team.findMany({ select: { id: true, name: true, projectId: true } });
+  const allDevelopers = await prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER' } });
 
   const recentIssues: Issue[] = recentIssuesRaw.map((issue) => {
     return {
