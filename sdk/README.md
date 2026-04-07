@@ -10,6 +10,8 @@ The official lightweight client for reporting errors and incidents to the **DevN
 - **One-liner Setup**: Just call `DevNexus.init` once.
 - **Zero Overhead**: Minimal performance impact.
 - **Auto-Capture**: Catches uncaught exceptions and unhandled rejections automatically.
+- **Deduplication**: Identical errors within 1 minute are suppressed — no duplicate incidents.
+- **Retry with Backoff**: Failed reports are retried up to 3 times with exponential backoff.
 - **Universal**: Works in both **Browser** and **Node.js** environments.
 - **Type-Safe**: Written in TypeScript with full ESM and CommonJS support.
 
@@ -58,11 +60,12 @@ DevNexus.captureMessage('User performed a critical action', {
 
 ## Configuration
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `apiKey` | `string` | **Required**. Your project's unique SDK API Key. |
-| `baseUrl` | `string` | The ingest endpoint URL (Default: `https://dev-nexus-ptnh.vercel.app/api/ingest`). |
-| `autoCapture` | `boolean` | If `true`, the SDK will catch global errors/unhandled rejections (Default: `true`). |
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `apiKey` | `string` | — | **Required**. Your project's SDK API Key (from the dashboard). |
+| `baseUrl` | `string` | `https://devnexus.vercel.app/api/ingest` | The ingest endpoint URL. Change to `http://localhost:3000/api/ingest` for local dev. |
+| `autoCapture` | `boolean` | `true` | Automatically catch global errors and unhandled rejections. |
+| `maxRetries` | `number` | `3` | How many times to retry a failed report before giving up. |
 
 ## Monitoring Issues
 Once integrated, head over to your [DevNexus Dashboard](https://dev-nexus-ptnh.vercel.app/dashboard) to see your incidents organized by service, environment, and severity.

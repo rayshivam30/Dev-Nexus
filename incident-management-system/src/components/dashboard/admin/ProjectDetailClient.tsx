@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Loader2, Copy, Check, UserCircle, Users, 
   ShieldCheck, Mail, ArrowRight,
   Plus, Layout, Github, Activity, ShieldAlert
 } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
@@ -49,8 +49,15 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteLink, setInviteLink] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [npmCopied, setNpmCopied] = useState(false);
+  const [keyCopied, setKeyCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [error, setError] = useState("");
+  const [origin, setOrigin] = useState("");
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   const totalIssues = project._count?.issues || 0;
 
@@ -311,30 +318,36 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
 
             <AnimatePresence>
               {inviteLink && (
-                <div className="mt-10 p-8 border-4 border-black bg-[#F0F0F0] space-y-6 relative overflow-hidden">
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                  className="mt-10 p-8 border-4 border-black bg-[#F0F0F0] space-y-6 relative overflow-hidden"
+                >
                   <div className="absolute top-0 right-0 w-2 h-full bg-[#32CD32]"></div>
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-black text-black flex items-center gap-2 uppercase tracking-tighter italic">
                       <Check className="w-4 h-4 stroke-[3px]" /> LINK_SECURE
                     </p>
-                    <button 
-                      onClick={() => { navigator.clipboard.writeText(inviteLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(inviteLink); setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2000); }}
                       className="text-[10px] font-black uppercase underline decoration-2 hover:bg-black hover:text-white px-2 py-1 transition-colors"
                     >
-                      {copied ? "COPIED" : "COPY_PROTO"}
+                      {linkCopied ? "COPIED" : "COPY_PROTO"}
                     </button>
                   </div>
                   <div className="relative group">
-                    <input 
-                      readOnly 
-                      value={inviteLink} 
-                      className="w-full pr-12 pl-4 py-4 bg-white border-2 border-black text-[10px] font-mono font-bold focus:outline-none cursor-text truncate" 
+                    <input
+                      readOnly
+                      value={inviteLink}
+                      className="w-full pr-12 pl-4 py-4 bg-white border-2 border-black text-[10px] font-mono font-bold focus:outline-none cursor-text truncate"
                     />
                   </div>
                   <p className="text-[9px] text-black/30 text-center uppercase tracking-[0.3em] font-black">
                      AUTO_EXPIRATION: T-7_DAYS
                   </p>
-                </div>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
@@ -379,11 +392,11 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
                         <div className="p-6 pr-16 bg-black border-4 border-black font-mono text-[11px] text-[#00D1FF] font-black italic shadow-[6px_6px_0_0_#F0F0F0]">
                           npm install @devnexus/sdk
                         </div>
-                        <button 
-                          onClick={() => { navigator.clipboard.writeText('npm install @devnexus/sdk'); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                        <button
+                          onClick={() => { navigator.clipboard.writeText('npm install @devnexus/sdk'); setNpmCopied(true); setTimeout(() => setNpmCopied(false), 2000); }}
                           className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white text-black border-2 border-black hover:bg-[#FFD700] transition-colors"
                         >
-                          {copied ? <Check className="w-5 h-5 stroke-[3px]" /> : <Copy className="w-5 h-5" />}
+                          {npmCopied ? <Check className="w-5 h-5 stroke-[3px]" /> : <Copy className="w-5 h-5" />}
                         </button>
                       </div>
                     </div>
@@ -396,11 +409,11 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
                      SYST_INITIALIZATION
                    </p>
                     <div className="p-6 bg-black border-4 border-black font-mono text-[11px] text-[#32CD32] font-black italic shadow-[6px_6px_0_0_#F0F0F0] overflow-x-auto">
-{`import { Nexus } from '@devnexus/sdk';
+{`import { DevNexus } from '@devnexus/sdk';
 
-Nexus.init({ 
-  id: '${project.sdkApiKey}',
-  uri: '${typeof window !== 'undefined' ? window.location.origin : ''}/api/ingest'
+DevNexus.init({
+  apiKey: '${project.sdkApiKey}',
+  baseUrl: '${origin || "<YOUR_APP_URL>"}/api/ingest'
 });`}
                     </div>
                    <p className="text-[10px] font-bold text-black/40 uppercase tracking-widest mt-2 flex items-start gap-3 border-l-2 border-black pl-4">
@@ -421,12 +434,12 @@ Nexus.init({
                       value={project.sdkApiKey} 
                       className="w-full h-14 px-5 pr-14 bg-white border-4 border-black text-xs font-mono font-black italic focus:outline-none" 
                     />
-                    <button 
-                      onClick={() => { navigator.clipboard.writeText(project.sdkApiKey!); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-black text-white hover:bg-[#FFD700] hover:text-black transition-colors"
-                    >
-                      {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                    </button>
+                    <button
+                       onClick={() => { navigator.clipboard.writeText(project.sdkApiKey!); setKeyCopied(true); setTimeout(() => setKeyCopied(false), 2000); }}
+                       className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-black text-white hover:bg-[#FFD700] hover:text-black transition-colors"
+                     >
+                       {keyCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                     </button>
                   </div>
                 </div>
 

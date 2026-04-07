@@ -4,33 +4,36 @@ description: How to use the DevNexus SDK in your project
 
 The DevNexus SDK allows you to easily report exceptions and messages from your JavaScript or TypeScript application to the DevNexus Incident Management System.
 
+> **ADVANCED plan only** — The SDK API Key is only generated for projects on the Advanced tier.
+
 ### 1. Installation
 
-If you are using the local SDK folder:
 ```bash
-npm install ../path/to/sdk
-# or link it
-cd ../path/to/sdk && npm link
-cd your-project && npm link @devnexus/sdk
+npm install devnexus-sdk
+```
+
+Or if testing locally against the SDK source:
+```bash
+cd sdk && npm link
+cd your-project && npm link devnexus-sdk
 ```
 
 ### 2. Initialization
 
-Import and initialize the SDK at the entry point of your application (e.g., `index.ts` or `App.tsx`).
+Import and initialize the SDK at the entry point of your application (e.g., `layout.tsx` / `index.ts`). Call `init()` **once only** — calling it again will log a warning and be ignored.
 
 ```typescript
-import { DevNexus } from '@devnexus/sdk';
+import { DevNexus } from 'devnexus-sdk';
 
 DevNexus.init({
-  apiKey: 'YOUR_PROJECT_API_KEY', // Get this from Project -> SDK Integration
-  baseUrl: 'http://localhost:3000/api/ingest', // Optional: change for local dev
-  autoCapture: true // Optional: automatically capture unhandled errors
+  apiKey: 'YOUR_PROJECT_API_KEY', // Get this from Project → SDK Integration
+  baseUrl: 'http://localhost:3000/api/ingest', // Optional: defaults to production URL
+  autoCapture: true,  // Optional: automatically capture unhandled errors (default: true)
+  maxRetries: 3,      // Optional: retry failed reports with backoff (default: 3)
 });
 ```
 
 ### 3. Capturing Exceptions
-
-You can manually capture exceptions in `try...catch` blocks.
 
 ```typescript
 try {
@@ -45,8 +48,6 @@ try {
 
 ### 4. Capturing Messages
 
-You can also send simple informational messages.
-
 ```typescript
 await DevNexus.captureMessage('User successfully upgraded plan', {
   severity: 'LOW',
@@ -54,9 +55,23 @@ await DevNexus.captureMessage('User successfully upgraded plan', {
 });
 ```
 
-### 5. Automated Testing
+### 5. Deduplication
 
-You can use the built-in test script to verify your integration:
+Identical errors (same message + stack) are automatically suppressed within a 1-minute window. You will see in your console:
+```
+[DevNexus] Suppressed duplicate: "Your Error Message"
+```
+
+### 6. Re-initialization (for testing/reconfiguration)
+
+```typescript
+DevNexus.reset();
+DevNexus.init({ apiKey: 'NEW_KEY' });
+```
+
+### 7. Local Testing
+
+Run the included test script from the `sdk/` directory:
 ```bash
-bun scripts/test-sdk.ts
+npx tsx local-test.ts
 ```

@@ -11,9 +11,9 @@ const managerNavItems: NavItem[] = [
 
 export default function ManagerLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
+    <div className="flex h-screen bg-white text-black overflow-hidden">
       <Sidebar navItems={managerNavItems} roleTitle="Manager Panel" />
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
+      <main className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
         {children}
       </main>
     </div>

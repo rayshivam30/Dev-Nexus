@@ -13,6 +13,7 @@ export interface AIAnalysisResult {
   environment: EnvironmentType;
   rootCause: string;
   suggestedFixes: string;
+  _failed?: boolean;
 }
 
 
@@ -67,15 +68,14 @@ export async function analyzeIncident(
     console.error("AI Analysis Error:", error);
     // Fallback if AI fails
     return {
-
-
       title: `Incident from ${source}`,
       description: "AI analysis failed. Raw data: " + JSON.stringify(rawData).substring(0, 500),
       severity: IssueSeverity.MEDIUM,
       priority: "MEDIUM",
       environment: EnvironmentType.PRODUCTION,
       rootCause: "Unknown - AI Analysis Failed",
-      suggestedFixes: "Review manual logs and stack trace."
+      suggestedFixes: "Review manual logs and stack trace.",
+      _failed: true,
     };
 
 

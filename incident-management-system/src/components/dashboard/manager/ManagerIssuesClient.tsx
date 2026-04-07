@@ -4,6 +4,7 @@ import { useState } from "react";
 import { RecentIssues, Issue } from "@/components/dashboard/shared/RecentIssues";
 import { IssueDetailModal, TeamData, DeveloperData } from "@/components/dashboard/shared/IssueDetailModal";
 import { useRouter } from "next/navigation";
+import { AlertCircle, ShieldAlert, Activity } from "lucide-react";
 
 interface ManagerIssuesClientProps {
   initialIssues: Issue[];
@@ -54,24 +55,49 @@ export function ManagerIssuesClient({ initialIssues, teams, allDevelopers }: Man
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Issues</h1>
-        <p className="text-foreground/60 mt-1">All issues within your project&apos;s teams.</p>
+    <div className="space-y-16 pb-24 max-w-[1600px] mx-auto">
+      {/* ── PAGE HEADER ── */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="flex flex-col gap-4">
+          <h1 className="text-5xl md:text-7xl font-[900] tracking-tighter uppercase italic leading-none border-l-8 border-black pl-8">
+            ISSUE <br />
+            <span className="bg-[#FF3131] text-white border-4 border-black px-4 shadow-[6px_6px_0_0_black] inline-block mt-2">LOG_STREAM</span>
+          </h1>
+          <p className="text-black font-black uppercase text-xs tracking-widest mt-4 opacity-60 max-w-xl border-b-2 border-black/10 pb-4">
+            All active incident logs within your project&apos;s sector teams.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 px-6 py-4 border-4 border-black bg-[#FFD700] shadow-[6px_6px_0_0_black]">
+          <Activity className="w-5 h-5 text-black" />
+          <span className="text-xs font-black uppercase tracking-widest">
+            TOTAL_{initialIssues.length}_LOGS
+          </span>
+        </div>
       </div>
 
-
+      {/* ── ISSUES TABLE ── */}
       {initialIssues.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-12 text-center text-foreground/50 italic">
-          No issues found in this project yet.
+        <div className="p-20 border-4 border-black border-dashed bg-white text-center shadow-[12px_12px_0_0_#F0F0F0]">
+          <ShieldAlert className="w-12 h-12 text-black/10 mx-auto mb-4" />
+          <p className="text-2xl font-black uppercase italic opacity-20">STREAM_CLEAR: NO_INCIDENT_LOGS_DETECTED</p>
+          <p className="text-xs font-black uppercase opacity-10 mt-2 tracking-widest">All sectors reporting nominal operations.</p>
         </div>
       ) : (
-        <div className="mt-4">
-          <RecentIssues 
-            issues={initialIssues} 
-            onRowClick={(issue) => setSelectedIssue(issue)} 
-            onAssignClick={(issue) => setSelectedIssue(issue)}
-          />
+        <div className="bg-white border-4 border-black shadow-[12px_12px_0_0_black]">
+          <div className="flex items-center gap-4 p-6 border-b-4 border-black bg-[#F0F0F0]">
+            <AlertCircle className="w-6 h-6" />
+            <span className="text-xs font-black uppercase tracking-[0.2em]">ACTIVE_INCIDENT_REGISTRY</span>
+            <span className="ml-auto text-[10px] font-black bg-black text-white px-3 py-1 uppercase tracking-widest">
+              TOTAL_{initialIssues.length}
+            </span>
+          </div>
+          <div className="p-6">
+            <RecentIssues
+              issues={initialIssues}
+              onRowClick={(issue) => setSelectedIssue(issue)}
+              onAssignClick={(issue) => setSelectedIssue(issue)}
+            />
+          </div>
         </div>
       )}
 

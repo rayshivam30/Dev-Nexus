@@ -1,6 +1,6 @@
 {
   "name": "devnexus-sdk",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Official SDK for DevNexus Incident Management System",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -18,7 +18,8 @@
   "scripts": {
     "build": "tsup index.ts --format cjs,esm --dts --clean",
     "dev": "tsup index.ts --format cjs,esm --watch --dts",
-    "lint": "eslint src"
+    "lint": "tsc --noEmit",
+    "test": "npx tsx local-test.ts"
   },
   "keywords": [
     "error-tracking",

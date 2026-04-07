@@ -391,11 +391,11 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
                 <div className="text-[11px] font-bold text-black bg-white p-6 border-2 border-black overflow-x-auto whitespace-pre font-mono italic">
 {`npm install @devnexus/sdk
 
-import { Nexus } from '@devnexus/sdk';
+import { DevNexus } from '@devnexus/sdk';
 
-Nexus.init({
-  id: '${createdSdkKey}',
-  env: 'PRODUCTION'
+DevNexus.init({
+  apiKey: '${createdSdkKey}',
+  baseUrl: 'https://your-app.com/api/ingest'
 });`}
                 </div>
               </div>

@@ -25,9 +25,9 @@ export default async function ManagerDashboardPage() {
   // If manager has no project yet assigned (edge case), show a message
   if (!user.projectId || !user.project) {
     return (
-      <div className="p-8 text-center text-foreground/60 border border-border rounded-xl mt-8">
-        <p className="text-lg font-semibold">No project assigned</p>
-        <p className="text-sm mt-2">Ask your Admin to re-send the invite with a project attached.</p>
+      <div className="p-20 border-4 border-black border-dashed bg-white text-center shadow-[12px_12px_0_0_#F0F0F0]">
+        <p className="text-2xl font-black uppercase italic opacity-20">ACCESS_DENIED: NO_PROJECT_NODE_ASSIGNED</p>
+        <p className="text-xs font-black uppercase tracking-widest mt-4 opacity-40">Contact your Admin operator to re-transmit the invite with a valid project node.</p>
       </div>
     );
   }
