@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { IssueSeverity, IssueSource, EnvironmentType } from "@prisma/client";
+import { IssueSeverity, IssueSource, EnvironmentType, IssuePriority } from "@prisma/client";
+import { aiAnalysisSchema } from "@/lib/validations";
 
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
@@ -9,7 +10,7 @@ export interface AIAnalysisResult {
   title: string;
   description: string;
   severity: IssueSeverity;
-  priority: string;
+  priority: IssuePriority;
   environment: EnvironmentType;
   rootCause: string;
   suggestedFixes: string;
@@ -63,7 +64,14 @@ export async function analyzeIncident(
     
     // Clean JSON if needed (sometimes Gemini wraps in ```json)
     const cleanedText = text.replace(/```json/g, "").replace(/```/g, "").trim();
-    return JSON.parse(cleanedText) as AIAnalysisResult;
+    const parsed = JSON.parse(cleanedText);
+    
+    const validated = aiAnalysisSchema.safeParse(parsed);
+    if (!validated.success) {
+      throw new Error("AI schema validation failed: " + JSON.stringify(validated.error.flatten().fieldErrors));
+    }
+    
+    return validated.data as AIAnalysisResult;
   } catch (error) {
     console.error("AI Analysis Error:", error);
     // Fallback if AI fails

@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/db";
-import { EnvironmentType, IssueStatus, IssueSeverity, PlanType, Prisma } from "@prisma/client";
+import { EnvironmentType, IssueStatus, IssueSeverity, PlanType, Prisma, IssuePriority } from "@prisma/client";
 
 export async function createIssue(data: {
   title: string;
   description: string;
   severity: IssueSeverity;
-  priority?: string;
+  priority?: IssuePriority;
   environment?: EnvironmentType;
   projectId: string;
   teamId?: string;
@@ -151,10 +151,12 @@ export async function getIssueDetails(id: string) {
       assignedTo: { select: { id: true, email: true, name: true } },
       team: { select: { id: true, name: true } },
       activities: {
+        take: 50,
         include: { user: { select: { name: true, email: true } } },
         orderBy: { createdAt: "desc" }
       },
       comments: {
+        take: 50,
         include: { user: { select: { name: true, email: true } } },
         orderBy: { createdAt: "asc" }
       }
@@ -178,7 +180,7 @@ export async function getIssuesByProject(projectId: string) {
 }
 
 export async function calculateSLADeadlines(_projectId: string, severity: IssueSeverity, plan?: PlanType) {
-  if (plan !== "ADVANCED") {
+  if (!plan || plan === "BASIC") {
     return { responseSlaDeadline: null, resolutionSlaDeadline: null };
   }
 

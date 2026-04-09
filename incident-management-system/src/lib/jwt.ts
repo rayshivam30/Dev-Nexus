@@ -1,6 +1,12 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error(
+    "[jwt] JWT_SECRET environment variable is not set. " +
+    "Set it in your .env file before starting the server."
+  );
+}
 
 export interface JwtPayload {
   userId?: string;

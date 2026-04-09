@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { signToken, verifyToken } from '@/lib/jwt';
-import { Role } from '@prisma/client';
+import { inviteSchema } from '@/lib/validations';
 
 export async function POST(request: Request) {
   try {
@@ -17,16 +17,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { email, role, projectId, teamId } = await request.json() as {
-      email?: string;
-      role?: Role;
-      projectId?: string;
-      teamId?: string;
-    };
+    const body = await request.json();
+    const result = inviteSchema.safeParse(body);
 
-    if (!email || !role) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!result.success) {
+      return NextResponse.json({ error: 'Missing or invalid fields', details: result.error.flatten().fieldErrors }, { status: 400 });
     }
+
+    const { email, role, projectId, teamId } = result.data;
 
     // Generate an invite token that expires in 24 hours
     const inviteToken = signToken({

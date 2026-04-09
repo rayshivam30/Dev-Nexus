@@ -2,14 +2,18 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifyPassword } from '@/lib/hash';
 import { signToken } from '@/lib/jwt';
+import { loginSchema } from '@/lib/validations';
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
+    const result = loginSchema.safeParse(body);
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Missing credentials' }, { status: 400 });
+    if (!result.success) {
+      return NextResponse.json({ error: 'Missing or invalid credentials', details: result.error.flatten().fieldErrors }, { status: 400 });
     }
+
+    const { email, password } = result.data;
 
     const user = await prisma.user.findUnique({ where: { email } });
     

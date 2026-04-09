@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
 import { registerAdmin } from '@/services/auth-service';
+import { registerSchema } from '@/lib/validations';
 
 export async function POST(request: Request) {
   try {
-    const { email, password, orgName } = await request.json() as {
-      email?: string;
-      password?: string;
-      orgName?: string;
-    };
+    const body = await request.json();
+    const result = registerSchema.safeParse(body);
 
-    if (!email || !password || !orgName) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!result.success) {
+      return NextResponse.json({ error: 'Missing or invalid fields', details: result.error.flatten().fieldErrors }, { status: 400 });
     }
+
+    const { email, password, orgName } = result.data;
 
     const user = await registerAdmin(email, password, orgName);
 

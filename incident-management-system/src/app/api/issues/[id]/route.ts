@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { updateIssue, getIssueDetails } from "@/services/issue-service";
 import { IssueStatus } from "@prisma/client";
+import { updateIssueSchema } from "@/lib/validations";
 
 export const GET = withAuth(async (_req, { params }) => {
   const { id } = await (params as { id: string });
@@ -16,14 +17,13 @@ export const GET = withAuth(async (_req, { params }) => {
 
 export const PATCH = withAuth(async (_req, { decoded, body, params }) => {
   const { id } = await (params as { id: string });
-  const { status, teamId, assignedToId, rootCause } = body as {
-    status?: string;
-    teamId?: string;
-    assignedToId?: string;
-    rootCause?: string;
-  };
+  
+  const result = updateIssueSchema.safeParse(body);
+  if (!result.success) {
+    return apiError(`Invalid fields: ${JSON.stringify(result.error.flatten().fieldErrors)}`, 400);
+  }
 
-
+  const { status, teamId, assignedToId, rootCause } = result.data;
   try {
     const existingIssue = await prisma.issue.findUnique({
       where: { id },

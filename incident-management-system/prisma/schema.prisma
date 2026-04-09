@@ -33,6 +33,13 @@ enum IssueSeverity {
   CRITICAL
 }
 
+enum IssuePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
 enum IssueStatus {
   OPEN
   ASSIGNED
@@ -130,7 +137,7 @@ model Issue {
   description         String
   source              IssueSource   @default(MANUAL)
   severity            IssueSeverity @default(LOW)
-  priority            String?
+  priority            IssuePriority? @default(MEDIUM)
   status              IssueStatus   @default(OPEN)
  
   projectId           String

@@ -2,17 +2,18 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { hashPassword } from '@/lib/hash';
 import { verifyToken, signToken, JwtPayload } from '@/lib/jwt';
+import { acceptInviteSchema } from '@/lib/validations';
 
 export async function POST(request: Request) {
   try {
-    const { token, password } = await request.json() as {
-      token?: string;
-      password?: string;
-    };
+    const body = await request.json();
+    const result = acceptInviteSchema.safeParse(body);
 
-    if (!token || !password) {
-      return NextResponse.json({ error: 'Missing token or password' }, { status: 400 });
+    if (!result.success) {
+      return NextResponse.json({ error: 'Missing or invalid fields', details: result.error.flatten() }, { status: 400 });
     }
+
+    const { token, password } = result.data;
 
     // Verify the invite token
     const decoded = verifyToken(token) as JwtPayload;
