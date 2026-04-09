@@ -175,7 +175,8 @@ export async function getIssuesByProject(projectId: string) {
         select: { id: true, name: true }
       }
     },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: 'desc' },
+    take: 100
   });
 }
 

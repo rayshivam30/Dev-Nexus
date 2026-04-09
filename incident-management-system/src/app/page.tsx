@@ -7,25 +7,25 @@ import { cn } from "@/lib/utils";
 
 const pricing = [
   { 
-    name: "FREE", 
+    name: "BASIC", 
     price: "$0", 
     description: "For indie hackers & tiny experiments.",
     features: ["5 active projects", "Standard priority fields", "Root cause tags", "GitHub integration"],
     color: "bg-white"
   },
   { 
-    name: "PRO", 
+    name: "ADVANCED", 
     price: "$29", 
     description: "Built for scaling dev teams.",
-    features: ["Everything in Free", "SLA Monitoring", "Analytics Suite", "Team Management"],
+    features: ["Everything in Basic", "SLA Monitoring", "Analytics Suite", "Team Management"],
     popular: true,
     color: "bg-[#FFD700]" 
   },
   { 
-    name: "BIZ", 
+    name: "PRO / ENTERPRISE", 
     price: "ASK", 
     description: "For the big league players.",
-    features: ["Everything in Pro", "SSO/SAML", "Multi-region", "Dedicated support"],
+    features: ["Everything in Advanced", "SSO/SAML", "Multi-region", "Dedicated support"],
     color: "bg-[#00D1FF]" 
   }
 ];

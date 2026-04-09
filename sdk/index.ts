@@ -58,8 +58,21 @@ class DevNexusClient {
 
   // ── Deduplication ───────────────────────────────────────────────────────────
 
-  private fingerprint(payload: { message?: string; stack?: string }): string {
+  private async fingerprint(payload: { message?: string; stack?: string }): Promise<string> {
     const raw = `${payload.message ?? ""}::${(payload.stack ?? "").substring(0, 200)}`;
+    
+    if (typeof crypto !== "undefined" && crypto.subtle) {
+      try {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(raw);
+        const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      } catch (e) {
+        // Fallback to djb2 below
+      }
+    }
+
     let h = 5381;
     for (let i = 0; i < raw.length; i++) {
       h = ((h << 5) + h) ^ raw.charCodeAt(i);
@@ -67,8 +80,8 @@ class DevNexusClient {
     return (h >>> 0).toString(36);
   }
 
-  private isDuplicate(payload: { message?: string; stack?: string }): boolean {
-    const fp  = this.fingerprint(payload);
+  private async isDuplicate(payload: { message?: string; stack?: string }): Promise<boolean> {
+    const fp  = await this.fingerprint(payload);
     const now = Date.now();
     const lastSeen = this.recentFingerprints.get(fp);
 
@@ -90,7 +103,7 @@ class DevNexusClient {
   private async sendReport(
     payload: Record<string, unknown>
   ): Promise<{ success: boolean; issueId?: string; error?: string }> {
-    if (this.isDuplicate(payload as { message?: string; stack?: string })) {
+    if (await this.isDuplicate(payload as { message?: string; stack?: string })) {
       console.log(`[DevNexus] Suppressed duplicate: "${payload.message}"`);
       return { success: false, error: "Duplicate suppressed" };
     }

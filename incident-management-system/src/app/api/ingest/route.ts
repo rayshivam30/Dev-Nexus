@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/db";
 import { IssueSource, IssueSeverity, Prisma } from "@prisma/client";
 import { calculateSLADeadlines } from "@/services/issue-service";
@@ -101,39 +101,15 @@ export async function POST(req: Request) {
     // Truncate stack to prevent DB/AI bloat
     const truncatedStack = stack ? String(stack).substring(0, MAX_STACK_CHARS) : undefined;
 
-    // ── AI Analysis ────────────────────────────────────────────────────────
-    const techStack = project.techStack || [];
-    const aiAnalysis = await analyzeIncident(
-      { message, stack: truncatedStack, browserInfo, osInfo, tags, metadata },
-      (customSource as IssueSource) || IssueSource.SDK,
-      techStack
-    );
-    const aiAnalysisFailed = !!aiAnalysis._failed;
-
-    // ── Severity ───────────────────────────────────────────────────────────
-    let severity: IssueSeverity = aiAnalysis.severity;
-    if (severityOverride && Object.values(IssueSeverity).includes(severityOverride as IssueSeverity)) {
-      severity = severityOverride as IssueSeverity;
-    }
-
-    const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(
-      project.id, severity, project.plan
-    );
-
-    // ── Create Issue ───────────────────────────────────────────────────────
+    // ── Create Issue (Initial) ─────────────────────────────────────────────
+    const initialTitle = String(message).substring(0, 100);
     const issue = await prisma.issue.create({
       data: {
-        title: aiAnalysis.title,
-        description: aiAnalysis.description,
-        rootCause: aiAnalysis.rootCause,
-        suggestedFixes: aiAnalysis.suggestedFixes,
-        priority: aiAnalysis.priority,
-        environment: aiAnalysis.environment,
+        title: initialTitle,
+        description: "AI Analysis Pending...",
         projectId: project.id,
         source: (customSource as IssueSource) || IssueSource.SDK,
-        severity,
-        responseSlaDeadline,
-        resolutionSlaDeadline,
+        severity: (severityOverride as IssueSeverity) || IssueSeverity.MEDIUM,
         logs: {
           browser: (browserInfo ?? null) as Prisma.InputJsonValue,
           os: (osInfo ?? null) as Prisma.InputJsonValue,
@@ -141,20 +117,59 @@ export async function POST(req: Request) {
           stackTrace: truncatedStack,
           tags: (tags ?? {}) as Prisma.InputJsonValue,
           metadata: (metadata ?? {}) as Prisma.InputJsonValue,
-          aiAnalysisFailed,
-          aiFullAnalysis: aiAnalysis as unknown as Prisma.InputJsonValue,
         },
       },
+    });
+
+    // ── AI Analysis (Background) ─────────────────────────────────────────
+    after(async () => {
+      try {
+        const techStack = project.techStack || [];
+        const aiAnalysis = await analyzeIncident(
+          { message, stack: truncatedStack, browserInfo, osInfo, tags, metadata },
+          (customSource as IssueSource) || IssueSource.SDK,
+          techStack
+        );
+        const aiAnalysisFailed = !!aiAnalysis._failed;
+
+        let finalSeverity = aiAnalysis.severity;
+        if (severityOverride && Object.values(IssueSeverity).includes(severityOverride as IssueSeverity)) {
+          finalSeverity = severityOverride as IssueSeverity;
+        }
+
+        const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(
+          project.id, finalSeverity, project.plan
+        );
+
+        await prisma.issue.update({
+          where: { id: issue.id },
+          data: {
+            title: aiAnalysis.title,
+            description: aiAnalysis.description,
+            rootCause: aiAnalysis.rootCause,
+            suggestedFixes: aiAnalysis.suggestedFixes,
+            priority: aiAnalysis.priority,
+            environment: aiAnalysis.environment,
+            severity: finalSeverity,
+            responseSlaDeadline,
+            resolutionSlaDeadline,
+            logs: {
+              ...(issue.logs as Record<string, unknown>),
+              aiAnalysisFailed,
+              aiFullAnalysis: aiAnalysis as unknown as Prisma.InputJsonValue,
+            }
+          }
+        });
+      } catch (e) {
+        console.error("Background AI Analysis error: ", e);
+      }
     });
 
     return NextResponse.json(
       {
         success: true,
         issueId: issue.id,
-        message: "Issue reported successfully.",
-        ...(aiAnalysisFailed && {
-          warning: "AI analysis failed; issue created with fallback data. Review manually.",
-        }),
+        message: "Issue reported successfully. Analysis pending.",
       },
       { status: 201, headers: corsHeaders }
     );
