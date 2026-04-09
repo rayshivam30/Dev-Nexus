@@ -5,8 +5,10 @@ import { StatCard } from "@/components/dashboard/shared/StatCard";
 import { RecentIssues, Issue } from "@/components/dashboard/shared/RecentIssues";
 import { ActiveProjects, ProjectStats } from "@/components/dashboard/shared/ActiveProjects";
 import { CreateIssueModal, ProjectData, TeamData, DeveloperData } from "@/components/dashboard/shared/CreateIssueModal";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import useSWR from "swr";
+import { fetcher } from "@/lib/utils";
 
 interface DashboardClientProps {
   orgName: string;
@@ -22,10 +24,10 @@ interface DashboardClientProps {
 
 export function DashboardClient({
   orgName,
-  openIssuesCount,
-  breachedCount,
-  resolvedTodayCount,
-  recentIssues,
+  openIssuesCount: initialOpenIssues,
+  breachedCount: initialBreached,
+  resolvedTodayCount: initialResolved,
+  recentIssues: initialRecentIssues,
   activeProjects,
   allProjects,
   allTeams,
@@ -34,12 +36,28 @@ export function DashboardClient({
   const router = useRouter();
   const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false);
 
-  const stats = [
+  // Poll for live stats and recent issues every 10 seconds
+  const { data } = useSWR("/api/dashboard/stats", fetcher, {
+    refreshInterval: 10000,
+    fallbackData: {
+      stats: {
+        openIssuesCount: initialOpenIssues,
+        breachedCount: initialBreached,
+        resolvedTodayCount: initialResolved,
+      },
+      recentIssues: initialRecentIssues
+    }
+  });
+
+  const { openIssuesCount, breachedCount, resolvedTodayCount } = data.stats;
+  const recentIssues = data.recentIssues;
+
+  const stats = useMemo(() => [
     { title: "LIVE_INCIDENTS", value: openIssuesCount, icon: AlertTriangle, color: "text-black", bgClass: "bg-[#FFD700]" },
     { title: "BREACH_CRITICAL", value: breachedCount, icon: ShieldAlert, color: "text-white", bgClass: "bg-[#FF3131]" },
     { title: "STABILIZED_24H", value: resolvedTodayCount, icon: CheckCircle, color: "text-black", bgClass: "bg-[#32CD32]" },
     { title: "SYSTEM_LATENCY", value: "2.4h", icon: Clock, color: "text-black", bgClass: "bg-[#00D1FF]" },
-  ];
+  ], [openIssuesCount, breachedCount, resolvedTodayCount]);
 
   return (
     <div className="space-y-16 pb-24 max-w-[1600px] mx-auto">

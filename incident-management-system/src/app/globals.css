@@ -48,3 +48,19 @@
     @apply antialiased font-sans;
   }
 }
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-left: 2px solid black;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: black;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #444;
+  }
+}

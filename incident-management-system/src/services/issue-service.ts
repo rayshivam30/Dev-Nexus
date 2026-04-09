@@ -18,7 +18,7 @@ export async function createIssue(data: {
     projectId, teamId, assignedToId, role, userId 
   } = data;
 
-  // Calculate SLA deadlines if project is on ADVANCED plan
+  // Calculate SLA deadlines
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: { plan: true }
@@ -26,46 +26,43 @@ export async function createIssue(data: {
 
   const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(projectId, severity, project?.plan || undefined);
 
-  const issueData: Prisma.IssueCreateInput = {
-    title,
-    description,
-    severity,
-    priority: priority || "MEDIUM",
-    environment: environment || "PRODUCTION",
-    project: { connect: { id: projectId } },
-    source: "MANUAL",
-    status: "OPEN",
-    responseSlaDeadline,
-    resolutionSlaDeadline
-  };
+  return await prisma.$transaction(async (tx) => {
+    const issueData: Prisma.IssueCreateInput = {
+      title,
+      description,
+      severity,
+      priority: priority || "MEDIUM",
+      environment: environment || "PRODUCTION",
+      project: { connect: { id: projectId } },
+      source: "MANUAL",
+      status: "OPEN",
+      responseSlaDeadline,
+      resolutionSlaDeadline
+    };
 
-  if (teamId) {
-    issueData.team = { connect: { id: teamId } };
-  }
+    if (teamId) issueData.team = { connect: { id: teamId } };
 
-  if (assignedToId) {
-    if (role === "MANAGER" || role === "ADMIN") {
-      issueData.assignedTo = { connect: { id: assignedToId } };
-      issueData.status = "ASSIGNED";
-      issueData.acceptedAt = new Date();
-    } else {
-      issueData.logs = { suggestedAssigneeId: assignedToId };
+    if (assignedToId) {
+      if (role === "MANAGER" || role === "ADMIN") {
+        issueData.assignedTo = { connect: { id: assignedToId } };
+        issueData.status = "ASSIGNED";
+        issueData.acceptedAt = new Date();
+      }
     }
-  }
 
+    const issue = await tx.issue.create({ data: issueData });
 
-  const issue = await prisma.issue.create({
-    data: issueData,
+    // Log creation activity within same transaction
+    await tx.issueActivity.create({
+      data: {
+        issueId: issue.id,
+        userId,
+        action: `Issue created by ${role.toLowerCase()}${issue.status === "ASSIGNED" ? " and auto-assigned" : ""}`
+      }
+    });
+
+    return issue;
   });
-
-  // Log creation activity
-  await logActivity(issue.id, userId, `Issue created by ${role.toLowerCase()}`);
-
-  if (issue.status === "ASSIGNED") {
-    await logActivity(issue.id, userId, `Issue automatically assigned during creation`);
-  }
-
-  return issue;
 }
 
 export async function updateIssue(id: string, data: {
@@ -80,40 +77,43 @@ export async function updateIssue(id: string, data: {
   const oldIssue = await prisma.issue.findUnique({ where: { id } });
   if (!oldIssue) throw new Error("Issue not found");
 
-  const updateData: Prisma.IssueUpdateInput = {};
-  if (status) updateData.status = status;
-  if (teamId) updateData.team = { connect: { id: teamId } };
-  if (assignedToId) updateData.assignedTo = { connect: { id: assignedToId } };
-  if (rootCause) updateData.rootCause = rootCause;
+  return await prisma.$transaction(async (tx) => {
+    const updateData: Prisma.IssueUpdateInput = {};
+    if (status) updateData.status = status;
+    if (teamId) updateData.team = { connect: { id: teamId } };
+    if (assignedToId) updateData.assignedTo = { connect: { id: assignedToId } };
+    if (rootCause) updateData.rootCause = rootCause;
 
-  if (status === "RESOLVED") {
-    updateData.resolvedAt = new Date();
-  }
-
-  if ((status === "ASSIGNED" || status === "IN_PROGRESS" || assignedToId) && !oldIssue.acceptedAt) {
-    updateData.acceptedAt = new Date();
-  }
-
-  const updatedIssue = await prisma.issue.update({
-    where: { id },
-    data: updateData,
-    include: {
-      team: { select: { name: true } },
-      assignedTo: { select: { email: true } }
+    if (status === "RESOLVED") updateData.resolvedAt = new Date();
+    if ((status === "ASSIGNED" || status === "IN_PROGRESS" || assignedToId) && !oldIssue.acceptedAt) {
+      updateData.acceptedAt = new Date();
     }
+
+    const updatedIssue = await tx.issue.update({
+      where: { id },
+      data: updateData,
+      include: {
+        team: { select: { name: true } },
+        assignedTo: { select: { email: true } }
+      }
+    });
+
+    // Log status change
+    if (status && status !== oldIssue.status) {
+      await tx.issueActivity.create({
+        data: { issueId: id, userId, action: `Status changed from ${oldIssue.status} to ${status}` }
+      });
+    }
+
+    // Log assignment
+    if (assignedToId && assignedToId !== oldIssue.assignedToId) {
+      await tx.issueActivity.create({
+        data: { issueId: id, userId, action: `Assigned to developer` }
+      });
+    }
+
+    return updatedIssue;
   });
-
-  // Log status change
-  if (status && status !== oldIssue.status) {
-    await logActivity(id, userId, `Status changed from ${oldIssue.status} to ${status}`);
-  }
-
-  // Log assignment
-  if (assignedToId && assignedToId !== oldIssue.assignedToId) {
-    await logActivity(id, userId, `Assigned to developer`);
-  }
-
-  return updatedIssue;
 }
 
 export async function logActivity(issueId: string, userId: string | null, action: string) {
@@ -127,21 +127,16 @@ export async function logActivity(issueId: string, userId: string | null, action
 }
 
 export async function addComment(issueId: string, userId: string, text: string) {
-  const comment = await prisma.issueComment.create({
-    data: {
-      issueId,
-      userId,
-      text
-    },
-    include: {
-      user: { select: { name: true, email: true } }
-    }
+  return await prisma.$transaction(async (tx) => {
+    const comment = await tx.issueComment.create({
+      data: { issueId, userId, text },
+      include: { user: { select: { name: true, email: true } } }
+    });
+    await tx.issueActivity.create({
+      data: { issueId, userId, action: "Comment added" }
+    });
+    return comment;
   });
-
-  // Also log that a comment was added
-  await logActivity(issueId, userId, "Comment added");
-  
-  return comment;
 }
 
 export async function getIssueDetails(id: string) {
@@ -164,20 +159,32 @@ export async function getIssueDetails(id: string) {
   });
 }
 
-export async function getIssuesByProject(projectId: string) {
-  return await prisma.issue.findMany({
-    where: { projectId },
-    include: {
-      assignedTo: {
-        select: { id: true, email: true }
+export async function getIssuesByProject(projectId: string, page = 1, limit = 50) {
+  const skip = (page - 1) * limit;
+  
+  const [issues, totalCount] = await Promise.all([
+    prisma.issue.findMany({
+      where: { projectId },
+      include: {
+        assignedTo: { select: { id: true, email: true } },
+        team: { select: { id: true, name: true } }
       },
-      team: {
-        select: { id: true, name: true }
-      }
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 100
-  });
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit
+    }),
+    prisma.issue.count({ where: { projectId } })
+  ]);
+
+  return {
+    issues,
+    pagination: {
+      page,
+      limit,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit)
+    }
+  };
 }
 
 export async function calculateSLADeadlines(_projectId: string, severity: IssueSeverity, plan?: PlanType) {

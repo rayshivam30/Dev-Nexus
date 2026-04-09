@@ -4,7 +4,7 @@
   - Can be extended with caching logic for offline availability as the project matures.
 */
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', (_event) => {
   self.skipWaiting();
 });
 
@@ -12,7 +12,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', (_event) => {
   // Pass-through for now
   return;
 });
