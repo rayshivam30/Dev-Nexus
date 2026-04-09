@@ -1,121 +1,53 @@
 "use client";
 
-import { useState } from "react";
-import { IssueDetailModal } from "@/components/dashboard/shared/IssueDetailModal";
-import { Issue } from "@/components/dashboard/shared/RecentIssues";
+import { useRouter } from "next/navigation";
+import { RecentIssues, Issue } from "@/components/dashboard/shared/RecentIssues";
+import { Zap } from "lucide-react";
 
-interface DeveloperIssuesClientProps {
-  issues: Issue[];
-}
-
-export function DeveloperIssuesClient({ issues }: DeveloperIssuesClientProps) {
-  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
-  const [statusUpdating, setStatusUpdating] = useState(false);
+export function DeveloperIssuesClient({ issues }: { issues: Issue[] }) {
+  const router = useRouter();
 
   async function handleStatusChange(issueId: string, newStatus: string, rootCause?: string) {
-    setStatusUpdating(true);
     try {
       const token = localStorage.getItem("incident_token") || "";
       const res = await fetch(`/api/issues/${issueId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: newStatus, rootCause: rootCause || undefined }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus, rootCause }),
       });
-      if (!res.ok) throw new Error("Failed to update status");
-      window.location.reload();
+      if (res.ok) router.refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update status");
-    } finally {
-      setStatusUpdating(false);
+      console.error(err);
     }
   }
 
-  const severityColor: Record<string, string> = {
-    CRITICAL: "text-red-500 bg-red-500/10 border-red-500/20",
-    HIGH: "text-orange-500 bg-orange-500/10 border-orange-500/20",
-    MEDIUM: "text-amber-500 bg-amber-500/10 border-amber-500/20",
-    LOW: "text-blue-500 bg-blue-500/10 border-blue-500/20",
-  };
-
-  const statusColor: Record<string, string> = {
-    OPEN: "text-foreground/60 bg-foreground/10",
-    ASSIGNED: "text-blue-400 bg-blue-400/10",
-    IN_PROGRESS: "text-amber-400 bg-amber-400/10",
-    RESOLVED: "text-emerald-400 bg-emerald-400/10",
-  };
-
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">My Issues</h1>
-        <p className="text-foreground/60 mt-1">Issues currently assigned to you.</p>
+    <div className="space-y-12">
+      {/* ── HEADER BOARD ── */}
+      <div className="bg-black border-4 border-black p-1 shadow-[12px_12px_0_0_black]">
+        <div className="bg-white border-4 border-black p-8 md:p-12 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#FFD700] border-l-4 border-b-4 border-black rotate-45 -mr-16 -mt-16"></div>
+          <div className="relative z-10 space-y-4">
+            <span className="bg-black text-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2 w-fit">
+              <Zap className="w-4 h-4 text-[#FFD700]" /> ACTIVE_STACK
+            </span>
+            <h1 className="text-4xl md:text-7xl font-[1000] tracking-tighter uppercase italic leading-none text-black">
+              ASSIGNED_INCIDENTS
+            </h1>
+          </div>
+        </div>
       </div>
 
-      {issues.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-16 text-center space-y-3">
-          <p className="text-xl font-semibold text-foreground">You&apos;re all caught up! 🎉</p>
-          <p className="text-sm text-foreground/50">No open issues are assigned to you right now.</p>
-        </div>
-
-      ) : (
-        <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
-          {issues.map((issue) => (
-            <div
-              key={issue.id}
-              onClick={() => setSelectedIssue(issue)}
-              className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 hover:bg-accent/30 transition-colors cursor-pointer"
-            >
-              <div className="space-y-1 flex-1">
-                <p className="font-medium text-foreground">{issue.title}</p>
-                <p className="text-sm text-foreground/50 line-clamp-1">{issue.description}</p>
-                <div className="flex gap-2 text-[10px] mt-1">
-                  {issue.teamName && (
-                    <span className="text-foreground/40">Team: <span className="text-foreground/60">{issue.teamName}</span></span>
-                  )}
-                  {issue.rootCause && (
-                    <span className="text-emerald-500/80 italic">· Resolved with Root Cause</span>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className={`text-xs px-2 py-1 rounded border font-medium ${severityColor[issue.severity || ""] ?? ""}`}>
-                  {issue.severity}
-                </span>
-                <span className={`text-xs px-2 py-1 rounded font-medium ${statusColor[issue.status || ""] ?? ""}`}>
-                  {(issue.status || "").replace("_", " ")}
-                </span>
-                {issue.status === "ASSIGNED" && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleStatusChange(issue.id, "IN_PROGRESS"); }}
-                    disabled={statusUpdating}
-                    className="px-3 py-1.5 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-md text-sm font-medium transition disabled:opacity-50"
-                  >
-                    Start Progress
-                  </button>
-                )}
-                {issue.status === "IN_PROGRESS" && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setSelectedIssue(issue); }} // Open modal to show resolution flow
-                    disabled={statusUpdating}
-                    className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-md text-sm font-medium transition disabled:opacity-50"
-                  >
-                    Resolve
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {selectedIssue && (
-        <IssueDetailModal
-          issue={selectedIssue}
-          onClose={() => setSelectedIssue(null)}
-          allowAssign={false}
-          onStatusChange={handleStatusChange}
+      <div className="bg-white border-4 border-black p-8 shadow-[12px_12px_0_0_black]">
+        <RecentIssues 
+          issues={issues} 
+          onStatusChange={handleStatusChange} 
+          onRowClick={(issue) => router.push(`/dashboard/developer/issues/${issue.id}`)} 
         />
-      )}
+      </div>
     </div>
   );
 }

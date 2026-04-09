@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { verifyToken } from "@/lib/jwt";
-import { DeveloperResolvedClient } from "./DeveloperResolvedClient";
+import { DeveloperResolvedClient } from "@/components/dashboard/developer/DeveloperResolvedClient";
 import { formatTimeAgo } from "@/lib/utils";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
 

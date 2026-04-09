@@ -1,71 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle } from "lucide-react";
-import { IssueDetailModal } from "@/components/dashboard/shared/IssueDetailModal";
-import { Issue } from "@/components/dashboard/shared/RecentIssues";
+import { Zap } from "lucide-react";
+import { RecentIssues, Issue } from "@/components/dashboard/shared/RecentIssues";
+import { useRouter } from "next/navigation";
 
-interface DeveloperResolvedClientProps {
-  resolvedIssues: Issue[];
-}
-
-export function DeveloperResolvedClient({ resolvedIssues }: DeveloperResolvedClientProps) {
-  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
+export function DeveloperResolvedClient({ resolvedIssues }: { resolvedIssues: Issue[] }) {
+  const router = useRouter();
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Resolved Issues</h1>
-        <p className="text-foreground/60 mt-1">
-          Issues you&apos;ve resolved. Total: <span className="font-semibold text-foreground">{resolvedIssues.length}</span>
-        </p>
+    <div className="space-y-12 pb-24">
+      {/* ── HEADER BOARD ── */}
+      <div className="bg-black border-4 border-black p-1 shadow-[12px_12px_0_0_black]">
+        <div className="bg-white border-4 border-black p-8 md:p-12 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#32CD32] border-l-4 border-b-4 border-black rotate-45 -mr-16 -mt-16"></div>
+          <div className="relative z-10 space-y-4">
+            <span className="bg-black text-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2 w-fit">
+              <Zap className="w-4 h-4 text-[#32CD32]" /> STABILIZED_NODES
+            </span>
+            <h1 className="text-4xl md:text-7xl font-[1000] tracking-tighter uppercase italic leading-none text-black">
+              HISTORY_LOG
+            </h1>
+          </div>
+        </div>
       </div>
 
-      {resolvedIssues.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-16 text-center space-y-3">
-          <p className="text-foreground/50 text-sm">No resolved issues yet.</p>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
-          {resolvedIssues.map((issue) => {
-            const resolvedAt = issue.resolvedAt
-              ? new Date(issue.resolvedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
-              : "—";
-            return (
-              <div
-                key={issue.id}
-                onClick={() => setSelectedIssue(issue)}
-                className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 hover:bg-accent/30 transition-colors cursor-pointer"
-              >
-                <div className="flex items-start gap-3 flex-1">
-                  <CheckCircle className="w-4 h-4 text-emerald-500 mt-1 shrink-0" />
-                  <div className="space-y-1">
-                    <p className="font-medium text-foreground">{issue.title}</p>
-                    <p className="text-sm text-foreground/50 line-clamp-1">{issue.description}</p>
-                    {issue.team && (
-                      <p className="text-xs text-foreground/40">Team: <span className="text-foreground/60">{issue.team.name}</span></p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded font-medium">
-                    RESOLVED
-                  </span>
-                  <span suppressHydrationWarning className="text-xs text-foreground/40 font-mono">{resolvedAt}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {selectedIssue && (
-        <IssueDetailModal
-          issue={selectedIssue}
-          onClose={() => setSelectedIssue(null)}
-          allowAssign={false}
+      <div className="bg-white border-4 border-black p-8 shadow-[12px_12px_0_0_black]">
+        <RecentIssues 
+          issues={resolvedIssues} 
+          onRowClick={(issue) => router.push(`/dashboard/developer/issues/${issue.id}`)} 
         />
-      )}
+      </div>
     </div>
   );
 }

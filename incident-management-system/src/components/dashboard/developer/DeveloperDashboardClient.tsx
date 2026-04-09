@@ -1,10 +1,9 @@
 "use client";
 
-import { AlertTriangle, CheckCircle, Clock, Activity, Plus } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, Activity, Plus, Zap, Terminal } from "lucide-react";
 import { StatCard } from "@/components/dashboard/shared/StatCard";
 import { RecentIssues, Issue } from "@/components/dashboard/shared/RecentIssues";
 import { CreateIssueModal, DeveloperData } from "@/components/dashboard/shared/CreateIssueModal";
-import { IssueDetailModal } from "@/components/dashboard/shared/IssueDetailModal";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -33,7 +32,6 @@ export function DeveloperDashboardClient({
 }: DeveloperDashboardClientProps) {
   const router = useRouter();
   const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false);
-  const [viewingIssue, setViewingIssue] = useState<Issue | null>(null);
 
 
   async function handleStatusChange(issueId: string, newStatus: string, rootCause?: string) {
@@ -61,49 +59,94 @@ export function DeveloperDashboardClient({
   }
 
   const stats = [
-    { title: "Assigned to Me", value: openCount + inProgressCount, icon: AlertTriangle, color: "text-amber-500", bgClass: "bg-amber-500/10" },
-    { title: "In Progress", value: inProgressCount, icon: Activity, color: "text-blue-500", bgClass: "bg-blue-500/10" },
-    { title: "Resolved by Me", value: resolvedCount, icon: CheckCircle, color: "text-emerald-500", bgClass: "bg-emerald-500/10" },
-    { title: "Pending Review", value: openCount, icon: Clock, color: "text-purple-500", bgClass: "bg-purple-500/10" },
+    { title: "ASSIGNED_TASKS", value: openCount + inProgressCount, icon: AlertTriangle, color: "text-black", bgClass: "bg-[#FFD700]" },
+    { title: "IN_PROGRESS", value: inProgressCount, icon: Activity, color: "text-white", bgClass: "bg-[#00D1FF]" },
+    { title: "STABILIZED_NODES", value: resolvedCount, icon: CheckCircle, color: "text-black", bgClass: "bg-[#32CD32]" },
+    { title: "RESPONSE_PENDING", value: openCount, icon: Clock, color: "text-white", bgClass: "bg-[#FF3131]" },
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Developer Overview
-          </h1>
-          <p className="text-foreground/60 mt-1">
-            Team: <span className="font-semibold text-foreground">{teamName || "Not assigned to a team"}</span>
-            {" · "}Logged in as <span className="font-mono text-sm">{developerEmail}</span>
-          </p>
-        </div>
-        <button 
-          onClick={() => setIsCreateIssueOpen(true)}
-          className="bg-foreground text-background px-4 py-2 mt-2 rounded-md font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" /> Create Issue
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, idx) => (
-          <StatCard key={stat.title} index={idx} {...stat} />
-        ))}
-      </div>
-
-      <div>
-        <h2 className="text-xl font-semibold text-white mb-4">My Assigned Issues</h2>
-        {recentIssues.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card p-12 text-center">
-            <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-            <p className="font-semibold text-foreground">All clear!</p>
-            <p className="text-sm text-foreground/50 mt-1">No issues are currently assigned to you.</p>
+    <div className="space-y-16 pb-24 max-w-[1500px] mx-auto">
+      {/* ── MASSIVE HEADER BOARD ── */}
+      <div className="relative group">
+        {/* Outer Shadow Layer */}
+        <div className="absolute inset-0 bg-black translate-x-4 translate-y-4 -z-10 group-hover:translate-x-2 group-hover:translate-y-2 transition-all"></div>
+        
+        <div className="bg-white border-4 border-black p-8 md:p-12 relative overflow-hidden">
+          {/* Aesthetic UI Lines */}
+          <div className="absolute top-0 right-0 w-24 h-24 bg-[#FFD700] border-l-4 border-b-4 border-black rotate-45 -mr-12 -mt-12"></div>
+          <div className="absolute bottom-4 left-4 flex gap-1">
+             <div className="w-1 h-1 bg-black/20"></div>
+             <div className="w-1 h-1 bg-black/20"></div>
+             <div className="w-1 h-1 bg-black/20"></div>
           </div>
-        ) : (
-          <RecentIssues issues={recentIssues} onStatusChange={handleStatusChange} onRowClick={(issue) => setViewingIssue(issue)} />
-        )}
+          
+          <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-end gap-10">
+            <div className="space-y-10 max-w-3xl">
+              <div className="flex flex-wrap gap-3">
+                <span className="bg-black text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5 text-[#FFD700]" /> NODE: {teamName || "SYS"}_WORKSPACE
+                </span>
+                <span className="bg-[#00D1FF] border-2 border-black px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.3em]">
+                  USER: {developerEmail.split('@')[0].toUpperCase()}
+                </span>
+                <span className="border-2 border-black/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-black/40">
+                  SEC_LEVEL: 04
+                </span>
+              </div>
+              
+              <div className="space-y-2">
+                <p className="text-black/40 font-black text-xs uppercase tracking-[0.4em] mb-4 flex items-center gap-2">
+                  <span className="w-8 h-[2px] bg-black/10"></span> SYSTEM_OVERVIEW_MOD_01
+                </p>
+                <h1 className="text-6xl md:text-7xl lg:text-8xl font-[1000] tracking-tighter uppercase italic leading-[0.8] text-black">
+                  ENGINEER <br />
+                  <span className="relative">
+                    WORKSPACE_
+                    <div className="absolute -bottom-2 left-0 w-full h-4 bg-[#FFD700] -z-10 -rotate-1"></div>
+                  </span>
+                </h1>
+              </div>
+              
+              <div className="flex items-start gap-4 p-5 bg-[#F8F8F8] border-l-8 border-black text-black max-w-2xl">
+                <Terminal className="w-6 h-6 shrink-0 mt-1 opacity-40" />
+                <p className="text-[11px] font-black uppercase tracking-widest opacity-60 leading-relaxed">
+                  Active session established. Monitoring stream diagnostics for {teamName || "global"} sector. 
+                  SLA response buffers are currently stable.
+                </p>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setIsCreateIssueOpen(true)}
+              className="w-full xl:w-auto h-20 px-10 bg-[#FFD700] text-black border-4 border-black font-[900] text-xl uppercase italic tracking-tighter hover:bg-black hover:text-white shadow-[8px_8px_0_0_black] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all flex items-center justify-center gap-6 active:scale-95 group"
+            >
+              <Plus className="w-8 h-8 stroke-[4px] group-hover:rotate-90 transition-transform" /> 
+              <span>INIT_LOG_ENTRY</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── STATS BOARD ── */}
+      <div className="bg-black border-4 border-black p-1 shadow-[20px_20px_0_0_#00D1FF]">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1 bg-black">
+          {stats.map((stat, idx) => (
+            <div key={stat.title} className="bg-white p-2">
+               <StatCard index={idx} {...stat} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-8">
+        <div className="bg-white border-4 border-black p-8 shadow-[12px_12px_0_0_black]">
+          <RecentIssues 
+            issues={recentIssues} 
+            onStatusChange={handleStatusChange} 
+            onRowClick={(issue) => router.push(`/dashboard/developer/issues/${issue.id}`)} 
+          />
+        </div>
       </div>
 
       <CreateIssueModal 
@@ -114,15 +157,6 @@ export function DeveloperDashboardClient({
         fixedTeamId={teamId || undefined}
         developers={allDevelopers}
       />
-
-      {viewingIssue && (
-        <IssueDetailModal
-          issue={viewingIssue}
-          onClose={() => setViewingIssue(null)}
-          allowAssign={false}
-          onStatusChange={handleStatusChange}
-        />
-      )}
     </div>
   );
 }
