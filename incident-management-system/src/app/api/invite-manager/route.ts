@@ -4,7 +4,7 @@ import { Resend } from "resend";
 
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Resend instantiation moved inside handler to prevent build-time crashes
 
 export const POST = withAuth(async (req, { decoded }) => {
   const { email, projectId } = await req.json();
@@ -42,6 +42,7 @@ export const POST = withAuth(async (req, { decoded }) => {
 
   //  EMAIL SEND
   if (process.env.RESEND_API_KEY) {
+    const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
       from: "onboarding@resend.dev",
       to: email,
