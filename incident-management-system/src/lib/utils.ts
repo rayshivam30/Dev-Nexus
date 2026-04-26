@@ -5,6 +5,23 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Gets the base URL of the application.
+ * Priority: Env Var > Headers (Server) > Window (Client)
+ */
+export function getBaseUrl() {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+
+  // Fallback for server-side where env might be missing
+  return `http://localhost:${process.env.PORT || 3000}`;
+}
+
 export function formatTimeAgo(date: Date) {
   const diffMins = Math.floor((Date.now() - date.getTime()) / 60000);
   if (diffMins < 1) return "just now";

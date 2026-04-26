@@ -24,26 +24,48 @@ export interface AIAnalysisResult {
 
 
 export async function analyzeIncident(
-  rawData: unknown,
+  rawData: Record<string, unknown>,
   source: IssueSource,
   techStack: string[] = ["React", "Next.js", "TypeScript"]
 ): Promise<AIAnalysisResult> {
+  const history = rawData.history as { last24hCount: number; isFirstOccurrence: boolean } | undefined;
+  const breadcrumbs = rawData.breadcrumbs as unknown[] | undefined;
+  
+  const incident = { ...rawData };
+  delete incident.history;
+  delete incident.breadcrumbs;
+  
+  const historyContext = history 
+    ? `
+    HISTORICAL CONTEXT:
+    - This error has occurred ${history.last24hCount} times in the last 24 hours.
+    - Is first occurrence: ${history.isFirstOccurrence}
+    ` : "";
+
+  const breadcrumbsContext = breadcrumbs && breadcrumbs.length > 0
+    ? `
+    BREADCRUMBS (User Actions/Logs before error):
+    ${JSON.stringify(breadcrumbs, null, 2)}
+    ` : "";
+
   const prompt = `
     You are an expert site reliability engineer and software architect.
     Analyze the following incident data from source: ${source}.
     The project tech stack is: ${techStack.join(", ")}.
 
     Incident Data:
-    ${JSON.stringify(rawData, null, 2)}
+    ${JSON.stringify(incident, null, 2)}
+
+    ${historyContext}
+    ${breadcrumbsContext}
 
     Your task is to:
-    1. Provide a concise, professional title for the issue.
-    2. Provide a detailed description of what happened.
+    1. Provide a concise, professional title for the issue. If it's recurring, mention it might be a regression or a spike.
+    2. Provide a detailed description of what happened, incorporating breadcrumb context if available.
     3. Categorize the severity as one of: ${Object.values(IssueSeverity).join(", ")}.
-    4. Suggest a priority level (one of: LOW, MEDIUM, HIGH, URGENT).
+    4. Suggest a priority level (one of: LOW, MEDIUM, HIGH, URGENT). If occurrences are high, escalate priority.
     5. Identify the Environment (one of: ${Object.values(EnvironmentType).join(", ")}).
-       Use branch names, hostnames, or tags in the data to decide.
-    6. Identify the likely root cause.
+    6. Identify the likely root cause using both the stack trace and breadcrumbs.
     7. Suggest potential fixes or investigation steps.
 
     Return the result in JSON format with these exact keys:

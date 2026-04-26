@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/db";
 import { Resend } from "resend";
+import { getBaseUrl } from "@/lib/utils";
 
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 
@@ -35,8 +36,8 @@ export const POST = withAuth(async (req, { decoded }) => {
     },
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const inviteLink = `${appUrl}/invite/${token}`;
+  const baseUrl = getBaseUrl();
+  const inviteLink = `${baseUrl}/invite/${token}`;
 
   console.log("🔥 Invite link:", inviteLink);
 

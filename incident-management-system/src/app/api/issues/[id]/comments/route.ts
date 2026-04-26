@@ -1,5 +1,7 @@
+import { prisma } from "@/lib/db";
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { addComment } from "@/services/issue-service";
+import { eventEmitter, EVENTS } from "@/lib/events";
 
 export const POST = withAuth(async (_req, { decoded, body, params }) => {
   const { id } = await (params as { id: string });
@@ -10,7 +12,25 @@ export const POST = withAuth(async (_req, { decoded, body, params }) => {
   }
 
   try {
+    const issue = await prisma.issue.findUnique({
+      where: { id },
+      include: { project: { select: { orgId: true } } }
+    });
+
+    if (!issue) return apiError("Issue not found", 404);
+
     const comment = await addComment(id, decoded.userId as string, text);
+
+    // ── Emit Notification ───────────────────────────────────────────────
+    eventEmitter.emit(EVENTS.COMMENT_ADDED, {
+      issueId: id,
+      orgId: issue.project.orgId,
+      projectId: issue.projectId,
+      title: issue.title,
+      userId: decoded.userId,
+      text: text.substring(0, 50) + (text.length > 50 ? "..." : "")
+    });
+
     return apiResponse("Comment added successfully", { comment }, 201);
   } catch (error) {
     console.error("Comment creation error:", error);

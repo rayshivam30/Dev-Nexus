@@ -3,6 +3,7 @@ import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { updateIssue, getIssueDetails } from "@/services/issue-service";
 import { IssueStatus } from "@prisma/client";
 import { updateIssueSchema } from "@/lib/validations";
+import { eventEmitter, EVENTS } from "@/lib/events";
 
 export const GET = withAuth(async (_req, { params }) => {
   const { id } = await (params as { id: string });
@@ -27,6 +28,7 @@ export const PATCH = withAuth(async (_req, { decoded, body, params }) => {
   try {
     const existingIssue = await prisma.issue.findUnique({
       where: { id },
+      include: { project: { select: { orgId: true } } }
     });
 
     if (!existingIssue) return apiError("Issue not found", 404);
@@ -60,6 +62,29 @@ export const PATCH = withAuth(async (_req, { decoded, body, params }) => {
     }
 
     const issue = await updateIssue(id, updateData);
+
+    // ── Emit Notifications ───────────────────────────────────────────────
+    const orgId = existingIssue.project.orgId;
+    
+    if (assignedToId && assignedToId !== existingIssue.assignedToId) {
+       eventEmitter.emit(EVENTS.INCIDENT_ASSIGNED, {
+         issueId: issue.id,
+         orgId,
+         projectId: issue.projectId,
+         title: issue.title,
+         assignedToId
+       });
+    } else {
+       eventEmitter.emit(EVENTS.INCIDENT_UPDATED, {
+         issueId: issue.id,
+         orgId,
+         projectId: issue.projectId,
+         title: issue.title,
+         status: issue.status,
+         severity: issue.severity
+       });
+    }
+
     return apiResponse("Issue updated successfully", { issue });
   } catch (error) {
     console.error("Issue update error:", error);

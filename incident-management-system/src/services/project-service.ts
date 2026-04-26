@@ -2,6 +2,13 @@ import { prisma } from "@/lib/db";
 import { PlanType } from "@prisma/client";
 import crypto from "crypto";
 
+/**
+ * Hashes an API key for secure storage.
+ */
+function hashApiKey(key: string): string {
+  return crypto.createHash("sha256").update(key).digest("hex");
+}
+
 export async function createProject(
   name: string, 
   orgId: string, 
@@ -11,19 +18,31 @@ export async function createProject(
   createdBy?: string
 ) {
   const projectPlan = plan || "BASIC";
-  const sdkApiKey = projectPlan === "ADVANCED" ? `devnexus_sk_${crypto.randomUUID()}` : null;
+  let plainTextKey: string | null = null;
+  let hashedKey: string | null = null;
 
-  return await prisma.project.create({
+  if (projectPlan === "ADVANCED") {
+    plainTextKey = `devnexus_sk_${crypto.randomUUID().replace(/-/g, "")}`;
+    hashedKey = hashApiKey(plainTextKey);
+  }
+
+  const project = await prisma.project.create({
     data: {
       name,
       orgId,
       description: description || "",
       plan: projectPlan,
       githubRepoUrl: githubRepoUrl || null,
-      sdkApiKey,
+      sdkApiKey: hashedKey,
       createdBy
     },
   });
+
+  // Return the plainTextKey so the UI can show it once
+  return {
+    ...project,
+    sdkApiKey: plainTextKey
+  };
 }
 
 export async function getProjectsByOrg(orgId: string) {

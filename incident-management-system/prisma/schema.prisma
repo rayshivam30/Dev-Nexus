@@ -17,6 +17,7 @@ enum UserStatus {
   PENDING_APPROVAL
   ACTIVE
   INACTIVE
+  UNVERIFIED
 }
 
 enum PlanType {
@@ -76,7 +77,7 @@ model User {
   email          String       @unique
   passwordHash   String
   role           Role
-  status         UserStatus   @default(PENDING_APPROVAL)
+  status         UserStatus   @default(UNVERIFIED)
   name           String?
   bio            String?
   image          String?
@@ -91,6 +92,9 @@ model User {
   project        Project?      @relation("ManagedBy", fields: [projectId], references: [id])
   teamId         String?
   team           Team?         @relation("TeamMembers", fields: [teamId], references: [id])
+  
+  emailVerifiedAt DateTime?
+  
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -98,6 +102,31 @@ model User {
   activities     IssueActivity[]
   comments       IssueComment[]
   createdProjects Project[]   @relation("CreatedProjects")
+  notifications  Notification[]
+}
+
+model VerificationToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // 'INCIDENT_CREATED', 'ASSIGNMENT', 'COMMENT', 'SLA'
+  title     String
+  message   String
+  link      String?  // e.g., '/dashboard/issues/id'
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
 }
 
 model Project {
@@ -171,6 +200,10 @@ model Issue {
   activities          IssueActivity[]
 
   comments            IssueComment[]
+
+  @@index([projectId, status])
+  @@index([projectId, severity])
+  @@index([createdAt(sort: Desc)])
 }
 
 model IssueActivity {

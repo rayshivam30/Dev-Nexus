@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Loader2, Layout, Mail, Info, Layers, X, Activity, Github } from "lucide-react";
+import { Loader2, Layout, Mail, Info, Layers, X, Activity, Github, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ProjectCreateModalProps {
   onClose: () => void;
-  onSuccess: (sdkApiKey?: string) => void;
+  onSuccess: (sdkApiKey?: string, projectId?: string) => void;
 }
 
 export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalProps) {
@@ -14,6 +14,8 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
   const [plan, setPlan] = useState("BASIC");
   const [githubRepoUrl, setGithubRepoUrl] = useState("");
   const [createProjectLoading, setCreateProjectLoading] = useState(false);
+  const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
+  const [createdSdkKey, setCreatedSdkKey] = useState<string | null>(null);
 
   async function handleCreateProject(e: React.FormEvent) {
     e.preventDefault();
@@ -31,6 +33,8 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
       if (!projectRes.ok) throw new Error(projectData.error);
       
       const newProjectId = projectData.project.id;
+      setCreatedProjectId(newProjectId);
+      setCreatedSdkKey(projectData.project?.sdkApiKey);
 
       if (inviteManagerEmail.trim()) {
         const inviteRes = await fetch("/api/auth/invite", {
@@ -49,12 +53,56 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
         if (!inviteRes.ok) throw new Error(`Project created, but failed to invite manager: ${inviteData.error}`);
       }
 
-      onSuccess(projectData.project?.sdkApiKey);
+      // If they didn't provide a URL, we'll show the GitHub App connect screen
+      if (!githubRepoUrl.trim()) {
+          // Stay in modal to show "Connect GitHub" button
+      } else {
+          onSuccess(projectData.project?.sdkApiKey, newProjectId);
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create project");
     } finally {
       setCreateProjectLoading(false);
     }
+  }
+
+  const handleConnectGitHub = () => {
+      // Use the actual GitHub App name for the installation link
+      const githubAppUrl = `https://github.com/apps/DevNexus-Monitor/installations/new?state=${createdProjectId}`;
+      window.open(githubAppUrl, "_blank");
+      onSuccess(createdSdkKey || undefined, createdProjectId || undefined);
+  };
+
+  if (createdProjectId && !githubRepoUrl) {
+      return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white border-8 border-black shadow-[30px_30px_0_0_#32CD32] w-full max-w-lg p-12 text-center space-y-8 animate-in zoom-in-95">
+             <div className="w-20 h-20 bg-[#32CD32] border-4 border-black mx-auto flex items-center justify-center shadow-[6px_6px_0_0_black]">
+                <Check className="w-12 h-12 text-black stroke-[3px]" />
+             </div>
+             <div className="space-y-2">
+                <h2 className="text-3xl font-black uppercase italic tracking-tighter">PROJECT_CREATED</h2>
+                <p className="text-xs font-bold uppercase opacity-60">Success. Now, automate your repository monitoring.</p>
+             </div>
+             
+             <div className="space-y-4">
+                <button 
+                  onClick={handleConnectGitHub}
+                  className="w-full py-6 bg-black text-white font-black uppercase italic tracking-widest hover:bg-[#FFD700] hover:text-black transition-colors shadow-[8px_8px_0_0_#32CD32] flex items-center justify-center gap-4"
+                >
+                  <Github className="w-6 h-6" />
+                  INSTALL_GITHUB_APP
+                </button>
+                <button 
+                  onClick={() => onSuccess(createdSdkKey || undefined, createdProjectId)}
+                  className="text-[10px] font-black uppercase tracking-widest underline decoration-2 underline-offset-4 hover:bg-black hover:text-white px-2 py-1 transition-colors"
+                >
+                  SKIP_FOR_NOW
+                </button>
+             </div>
+          </div>
+        </div>
+      );
   }
 
   return (
@@ -158,18 +206,18 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
             ) : (
               <div className="space-y-4 pt-4 border-t-2 border-black">
                 <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                  <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-black/40">
                     <Github className="w-4 h-4" />
-                    REPOSITORY_LINK*
+                    REPOSITORY_LINK (OPTIONAL_FOR_AUTO_MODE)
                   </label>
                   <input 
                     type="url"
-                    required
                     value={githubRepoUrl} 
                     onChange={e=>setGithubRepoUrl(e.target.value)} 
-                    className="w-full px-6 py-4 bg-white border-4 border-black font-bold uppercase text-sm focus:outline-none focus:bg-[#32CD32] transition-colors placeholder:text-black/20" 
+                    className="w-full px-6 py-4 bg-white border-4 border-black font-bold uppercase text-sm focus:outline-none focus:bg-[#32CD32] transition-colors placeholder:text-black/10" 
                     placeholder="HTTPS://GITHUB.COM/ORG/REPO" 
                   />
+                  <p className="text-[10px] font-black uppercase opacity-40">Leave empty to use the one-click GitHub App installer.</p>
                 </div>
               </div>
             )}
@@ -185,7 +233,7 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
             </button>
             <button 
               type="submit" 
-              disabled={createProjectLoading || !newProjectName.trim() || plan === 'PRO' || (['BASIC', 'ADVANCED'].includes(plan) && !githubRepoUrl.trim())} 
+              disabled={createProjectLoading || !newProjectName.trim() || plan === 'PRO'} 
               className="px-10 py-4 bg-[#FFD700] text-black border-4 border-black font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-[6px_6px_0_0_black] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-50"
             >
               {createProjectLoading ? (

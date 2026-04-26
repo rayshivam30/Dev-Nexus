@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { signToken, verifyToken } from '@/lib/jwt';
 import { inviteSchema } from '@/lib/validations';
+import { getBaseUrl } from '@/lib/utils';
 
 export async function POST(request: Request) {
   try {
@@ -37,7 +38,8 @@ export async function POST(request: Request) {
     }, '24h');
 
 
-    const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/accept-invite?token=${inviteToken}`;
+    const baseUrl = getBaseUrl();
+    const inviteLink = `${baseUrl}/auth/accept-invite?token=${inviteToken}`;
 
     // Here we would use Nodemailer to send the email.
     // For MVP, we return the link directly in the response.

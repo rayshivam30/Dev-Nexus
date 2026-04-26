@@ -5,17 +5,18 @@ The official lightweight client for reporting errors and incidents to the **DevN
 [![NPM Version](https://img.shields.io/npm/v/devnexus-sdk.svg)](https://www.npmjs.com/package/devnexus-sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Features
+## 🚀 Features
 
-- **One-liner Setup**: Just call `DevNexus.init` once.
-- **Zero Overhead**: Minimal performance impact.
-- **Auto-Capture**: Catches uncaught exceptions and unhandled rejections automatically.
-- **Deduplication**: Identical errors within 1 minute are suppressed — no duplicate incidents.
-- **Retry with Backoff**: Failed reports are retried up to 3 times with exponential backoff.
-- **Universal**: Works in both **Browser** and **Node.js** environments.
-- **Type-Safe**: Written in TypeScript with full ESM and CommonJS support.
+- **⚡ One-liner Setup**: Just call `DevNexus.init` once.
+- **🧩 React Integration**: Built-in Error Boundary component for seamless React support.
+- **🛡️ Deduplication**: Identical errors within a 60-second window are suppressed.
+- **📦 Offline Support**: Queues reports while offline and flushes them when the connection is restored.
+- **📉 Breadcrumbs**: Automatically tracks console logs and navigation events for easier debugging.
+- **🔄 Retry with Backoff**: Failed reports are retried with exponential backoff.
+- **🌍 Universal**: Works in both **Browser** and **Node.js** environments.
+- **TypeScript First**: Full type safety for all configurations and reporting methods.
 
-## Installation
+## 📦 Installation
 
 ```bash
 npm install devnexus-sdk
@@ -25,50 +26,77 @@ yarn add devnexus-sdk
 bun add devnexus-sdk
 ```
 
-## Quick Start
+## 🛠️ Quick Start
 
 ### 1. Initialize the SDK
-Initialize the client as early as possible in your application entry point.
+Initialize the client as early as possible (e.g., `index.ts` or `main.tsx`).
 
 ```typescript
 import { DevNexus } from 'devnexus-sdk';
 
 DevNexus.init({
-  apiKey: 'dn_live_YOUR_API_KEY', // Get this from your DevNexus Project Dashboard
-  autoCapture: true // Automatically capture global errors (default: true)
+  apiKey: 'dn_live_YOUR_API_KEY', // Get this from your Project Dashboard
+  autoCapture: true // Default: true
 });
 ```
 
-### 2. Manual Reporting
-You can also manually report exceptions or custom messages from anywhere in your code.
+### 2. React Error Boundary
+Wrap your application or specific components to catch rendering errors.
 
+```tsx
+import { DevNexusErrorBoundary } from 'devnexus-sdk/react';
+
+function App() {
+  return (
+    <DevNexusErrorBoundary 
+      tags={{ version: "1.0.0" }}
+      fallback={({ error, reset }) => (
+        <div>
+          <h1>Oops! An incident occurred.</h1>
+          <button onClick={reset}>Try Again</button>
+        </div>
+      )}
+    >
+      <MyAppLogic />
+    </DevNexusErrorBoundary>
+  );
+}
+```
+
+### 3. Manual Reporting
 ```typescript
 try {
-  // Your logic here
+  throw new Error("Critical payment failure");
 } catch (error) {
   DevNexus.captureException(error, {
-    severity: 'HIGH',
-    tags: { component: 'checkout' }
+    severity: 'CRITICAL',
+    tags: { feature: 'billing' },
+    metadata: { orderId: '12345' }
   });
 }
-
-// Or just send a message
-DevNexus.captureMessage('User performed a critical action', {
-  severity: 'LOW'
-});
 ```
 
-## Configuration
+## ⚙️ Configuration
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `apiKey` | `string` | — | **Required**. Your project's SDK API Key (from the dashboard). |
-| `baseUrl` | `string` | `https://devnexus.vercel.app/api/ingest` | The ingest endpoint URL. Change to `http://localhost:3000/api/ingest` for local dev. |
-| `autoCapture` | `boolean` | `true` | Automatically catch global errors and unhandled rejections. |
-| `maxRetries` | `number` | `3` | How many times to retry a failed report before giving up. |
+| `apiKey` | `string` | — | **Required**. Your project's API Key. |
+| `baseUrl` | `string` | `https://devnexus.vercel.app/api/ingest` | The ingest endpoint URL. |
+| `autoCapture` | `boolean` | `true` | Catch global errors automatically. |
+| `maxRetries` | `number` | `3` | Retries for failed reports. |
+| `beforeSend` | `function` | — | Hook to scrub/modify data before sending. Return `null` to cancel. |
+| `flushInterval`| `number` | `5000` | How often (ms) to flush the report queue. |
 
-## Monitoring Issues
-Once integrated, head over to your [DevNexus Dashboard](https://dev-nexus-ptnh.vercel.app/dashboard) to see your incidents organized by service, environment, and severity.
+## 🛠️ Advanced Usage: Breadcrumbs
+Manual breadcrumbs help you understand the events leading up to an error.
 
-## License
-MIT © [DevNexus Team](https://dev-nexus-ptnh.vercel.app/)
+```typescript
+DevNexus.addBreadcrumb({
+  message: 'User added item to cart',
+  type: 'manual',
+  level: 'info'
+});
+```
+
+## 📄 License
+MIT © [DevNexus Team](https://devnexus-omega.vercel.app/)

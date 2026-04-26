@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 
-import { IssueSource, Prisma } from "@prisma/client";
+import { IssueSource, Prisma, IssueSeverity } from "@prisma/client";
 
 import { analyzeIncident } from "@/lib/ai-service";
 import { calculateSLADeadlines } from "@/services/issue-service";
+import { eventEmitter, EVENTS } from "@/lib/events";
 
 export async function POST(req: Request) {
   try {
@@ -24,86 +25,130 @@ export async function POST(req: Request) {
 
     const payload = JSON.parse(rawBody);
     const event = req.headers.get("x-github-event");
+    const installationId = payload.installation?.id?.toString();
 
-    // Identify project by the githubRepoUrl
-    const repoUrl = payload.repository?.html_url;
-    if (!repoUrl) return NextResponse.json({ message: "No repository in payload or unsupported event" }, { status: 200 });
+    // Identify project by Installation ID (GitHub App Flow) OR Repo URL (Manual Flow)
+    let project = null;
 
-    const project = await prisma.project.findFirst({
-      where: { githubRepoUrl: repoUrl }
-    });
+    if (installationId) {
+      project = await prisma.project.findFirst({
+        where: { githubInstallationId: installationId }
+      });
+    }
 
     if (!project) {
-      return NextResponse.json({ message: "Project not linked to this repo" }, { status: 404 });
+      const repoUrl = payload.repository?.html_url;
+      if (repoUrl) {
+        project = await prisma.project.findFirst({
+          where: { githubRepoUrl: repoUrl }
+        });
+      }
+    }
+
+    if (!project) {
+      return NextResponse.json({ message: "Project not linked or installation unknown" }, { status: 200 });
     }
 
     const techStack = project.techStack || [];
 
-    // 1. CI/CD Failures (workflow_run)
+    // Helper function to create initial issue and trigger AI analysis
+    const handleGitHubIncident = async (data: Record<string, unknown>, title: string, description: string) => {
+        const issue = await prisma.issue.create({
+            data: {
+              title,
+              description: "AI Analysis Pending...",
+              projectId: project.id,
+              source: IssueSource.GITHUB,
+              severity: IssueSeverity.MEDIUM,
+              logs: {
+                github_raw: data,
+              },
+            }
+          });
+
+          // Trigger real-time notification
+          eventEmitter.emit(EVENTS.INCIDENT_CREATED, { 
+            issueId: issue.id, 
+            orgId: project.orgId,
+            projectId: project.id,
+            title: issue.title,
+            severity: issue.severity
+          });
+
+          // Background AI Analysis
+          after(async () => {
+            try {
+                const aiAnalysis = await analyzeIncident(data, IssueSource.GITHUB, techStack);
+                const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(project.id, aiAnalysis.severity, project.plan);
+
+                const updated = await prisma.issue.update({
+                    where: { id: issue.id },
+                    data: {
+                        title: aiAnalysis.title,
+                        description: `${aiAnalysis.description}\n\n[GitHub Ref](${description})`,
+                        rootCause: aiAnalysis.rootCause,
+                        suggestedFixes: aiAnalysis.suggestedFixes,
+                        priority: aiAnalysis.priority,
+                        environment: aiAnalysis.environment,
+                        severity: aiAnalysis.severity,
+                        responseSlaDeadline,
+                        resolutionSlaDeadline,
+                        logs: {
+                            github_raw: data,
+                            aiFullAnalysis: aiAnalysis as unknown as Prisma.InputJsonValue,
+                        }
+                    }
+                });
+
+                eventEmitter.emit(EVENTS.INCIDENT_UPDATED, { 
+                    issueId: updated.id, 
+                    orgId: project.orgId,
+                    projectId: project.id,
+                    title: updated.title,
+                    severity: updated.severity,
+                    status: updated.status
+                });
+            } catch (e) {
+                console.error("GitHub AI analysis background error:", e);
+            }
+          });
+
+          return issue;
+    };
+
+    // 1. CI/CD Failures
     if (event === "workflow_run" && payload.action === "completed" && payload.workflow_run?.conclusion === "failure") {
-      const aiAnalysis = await analyzeIncident(payload.workflow_run, IssueSource.GITHUB, techStack);
-      
-      const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(project.id, aiAnalysis.severity, project.plan);
-
-      await prisma.issue.create({
-        data: {
-          title: aiAnalysis.title,
-          description: `${aiAnalysis.description}\n\n[View GitHub Workflow](${payload.workflow_run.html_url})`,
-          rootCause: aiAnalysis.rootCause,
-          suggestedFixes: aiAnalysis.suggestedFixes,
-          priority: aiAnalysis.priority,
-          environment: aiAnalysis.environment,
-          projectId: project.id,
-          source: IssueSource.GITHUB,
-
-
-          severity: aiAnalysis.severity,
-          responseSlaDeadline,
-          resolutionSlaDeadline,
-          logs: {
-            workflow_run: payload.workflow_run,
-            aiFullAnalysis: aiAnalysis as unknown as Prisma.InputJsonValue,
-          },
-        }
-      });
-      return NextResponse.json({ created: true, type: "workflow_run_failure", aiAnalyzed: true });
+      await handleGitHubIncident(
+          payload.workflow_run, 
+          `CI Failure: ${payload.workflow_run.name}`, 
+          payload.workflow_run.html_url
+      );
+      return NextResponse.json({ created: true, type: "workflow_run_failure" });
     }
 
-    // 2. Merge Conflicts (pull_request)
-    if (event === "pull_request" && payload.pull_request) {
-      if (payload.pull_request.mergeable_state === "dirty" || payload.action === "opened") {
-        // Only create issue if it's dirty or we want to analyze a new PR
-        if (payload.pull_request.mergeable_state !== "dirty" && payload.action !== "opened") {
-           return NextResponse.json({ success: true, message: "PR event ignored" });
-        }
+    // 2. PR Conflicts & Auto-detection
+    if (event === "pull_request") {
+      const pr = payload.pull_request;
+      const isConflict = pr.mergeable_state === "dirty";
+      
+      if (isConflict) {
+          await handleGitHubIncident(
+              pr, 
+              `MERGE CONFLICT: PR #${pr.number}`, 
+              pr.html_url
+          );
+          return NextResponse.json({ created: true, type: "pr_conflict" });
+      }
 
-        const aiAnalysis = await analyzeIncident(payload.pull_request, IssueSource.GITHUB, techStack);
-        
-        const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(project.id, aiAnalysis.severity, project.plan);
-
-        await prisma.issue.create({
-          data: {
-            title: aiAnalysis.title,
-            description: `${aiAnalysis.description}\n\n[View PR](${payload.pull_request.html_url})`,
-            rootCause: aiAnalysis.rootCause,
-            suggestedFixes: aiAnalysis.suggestedFixes,
-            priority: aiAnalysis.priority,
-            environment: aiAnalysis.environment,
-            projectId: project.id,
-            source: IssueSource.GITHUB,
-            severity: aiAnalysis.severity,
-            responseSlaDeadline,
-            resolutionSlaDeadline,
-            logs: {
-              pull_request: payload.pull_request,
-              aiFullAnalysis: aiAnalysis as unknown as Prisma.InputJsonValue,
-            },
-          }
-        });
-        return NextResponse.json({ created: true, type: "pull_request_event", aiAnalyzed: true });
+      if (payload.action === "opened") {
+          await handleGitHubIncident(
+              pr, 
+              `New PR: ${pr.title}`, 
+              pr.html_url
+          );
+          return NextResponse.json({ created: true, type: "pr_opened" });
       }
     }
-
 
     return NextResponse.json({ success: true, message: "Event ignored" });
   } catch (error) {

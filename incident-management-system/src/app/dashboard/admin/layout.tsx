@@ -1,10 +1,11 @@
 "use client";
 
 import { Sidebar, NavItem } from "@/components/dashboard/shared/Sidebar";
-import { LayoutDashboard, FolderKanban, AlertCircle, Activity, ShieldCheck, Terminal } from "lucide-react";
+import { LayoutDashboard, FolderKanban, AlertCircle, Activity, ShieldCheck, Terminal, Bell } from "lucide-react";
 
 const adminNavItems: NavItem[] = [
   { href: "/dashboard/admin", icon: LayoutDashboard, label: "Overview" },
+  { href: "/dashboard/admin/notifications", icon: Bell, label: "Notifications" },
   { href: "/dashboard/admin/issues", icon: AlertCircle, label: "Issues" },
   { href: "/dashboard/admin/projects", icon: FolderKanban, label: "Projects" },
 ];

@@ -15,6 +15,9 @@ export interface DevNexusConfig {
   baseUrl?: string;
   autoCapture?: boolean;
   maxRetries?: number;
+  flushInterval?: number; // ms
+  /** Hook to modify or scrub data before it is sent. Return null to cancel. */
+  beforeSend?: (payload: any) => any | null;
 }
 
 export interface ReportContext {
@@ -23,25 +26,49 @@ export interface ReportContext {
   severity?: IssueSeverity;
 }
 
+export interface Breadcrumb {
+  type: "console" | "navigation" | "error" | "manual";
+  level: "info" | "warn" | "error";
+  message: string;
+  timestamp: number;
+  metadata?: Record<string, unknown>;
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DEFAULT_BASE_URL   = "https://devnexus.vercel.app/api/ingest";
 const DEDUP_WINDOW_MS    = 60_000; // suppress identical errors within 1 min
 const DEDUP_MAX_SIZE     = 100;    // max fingerprints to keep in memory
+const MAX_BREADCRUMBS    = 20;
+const DEFAULT_FLUSH_INT  = 5000;
+const STORAGE_KEY        = "devnexus_offline_queue";
 
 class DevNexusClient {
   private apiKey: string;
   private baseUrl: string;
   private maxRetries: number;
+  private beforeSend?: (payload: any) => any | null;
   private recentFingerprints = new Map<string, number>();
+  private breadcrumbs: Breadcrumb[] = [];
+  private queue: any[] = [];
+  private flushTimer: any = null;
+  private flushInterval: number;
 
   constructor(config: DevNexusConfig) {
     this.apiKey     = config.apiKey;
     this.baseUrl    = config.baseUrl ?? DEFAULT_BASE_URL;
     this.maxRetries = config.maxRetries ?? 3;
+    this.flushInterval = config.flushInterval ?? DEFAULT_FLUSH_INT;
+    this.beforeSend = config.beforeSend;
+
+    this.loadFromStorage();
 
     if (config.autoCapture !== false) {
       this.setupAutoCapture();
+      this.setupBreadcrumbs();
     }
+
+    this.startFlushTimer();
+    this.setupNetworkListeners();
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -49,11 +76,51 @@ class DevNexusClient {
   async captureException(error: Error | unknown, context: ReportContext = {}) {
     const message = error instanceof Error ? error.message : String(error);
     const stack   = error instanceof Error ? error.stack  : undefined;
-    return this.sendReport({ message, stack, ...context });
+    
+    this.addBreadcrumb({
+      type: "error",
+      level: "error",
+      message: `Exception captured: ${message}`,
+    });
+
+    return this.queueReport({ message, stack, ...context });
   }
 
   async captureMessage(message: string, context: ReportContext = {}) {
-    return this.sendReport({ message, ...context });
+    this.addBreadcrumb({
+      type: "manual",
+      level: "info",
+      message: `Message captured: ${message}`,
+    });
+    return this.queueReport({ message, ...context });
+  }
+
+  /** Add a manual breadcrumb to the trail. */
+  addBreadcrumb(crumb: Omit<Breadcrumb, "timestamp">) {
+    this.breadcrumbs.push({
+      ...crumb,
+      timestamp: Date.now(),
+    });
+
+    if (this.breadcrumbs.length > MAX_BREADCRUMBS) {
+      this.breadcrumbs.shift();
+    }
+  }
+
+  /** Force flush the current queue. */
+  async flush() {
+    if (this.queue.length === 0) return;
+    
+    // Check if offline (Browser only)
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+        return; 
+    }
+
+    const batch = [...this.queue];
+    this.queue = [];
+    this.saveToStorage(); 
+
+    return this.sendBatch(batch);
   }
 
   // ── Deduplication ───────────────────────────────────────────────────────────
@@ -68,9 +135,7 @@ class DevNexusClient {
         const hashBuffer = await crypto.subtle.digest('SHA-1', data);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      } catch (e) {
-        // Fallback to djb2 below
-      }
+      } catch (e) {}
     }
 
     let h = 5381;
@@ -87,7 +152,6 @@ class DevNexusClient {
 
     if (lastSeen && now - lastSeen < DEDUP_WINDOW_MS) return true;
 
-    // Evict stale entries when the map gets too large
     if (this.recentFingerprints.size >= DEDUP_MAX_SIZE) {
       for (const [key, ts] of this.recentFingerprints) {
         if (now - ts >= DEDUP_WINDOW_MS) this.recentFingerprints.delete(key);
@@ -100,28 +164,41 @@ class DevNexusClient {
 
   // ── Network ─────────────────────────────────────────────────────────────────
 
-  private async sendReport(
-    payload: Record<string, unknown>
-  ): Promise<{ success: boolean; issueId?: string; error?: string }> {
+  private async queueReport(payload: Record<string, unknown>) {
     if (await this.isDuplicate(payload as { message?: string; stack?: string })) {
-      console.log(`[DevNexus] Suppressed duplicate: "${payload.message}"`);
       return { success: false, error: "Duplicate suppressed" };
     }
+    
+    const browserInfo = typeof navigator !== "undefined" ? navigator.userAgent : "Node.js";
+    const osInfo = typeof process !== "undefined" ? `${process.platform} ${process.arch}` : "Browser";
 
-    console.log(
-      `%c[DevNexus] 🚨 Reporting: ${payload.message}`,
-      "color: #ff4d4d; font-weight: bold;"
-    );
-    if (payload.stack) console.error(payload.stack);
+    let report = {
+        ...payload,
+        browserInfo,
+        osInfo,
+        breadcrumbs: [...this.breadcrumbs],
+        timestamp: Date.now()
+    };
 
-    const browserInfo =
-      typeof navigator !== "undefined" ? navigator.userAgent : "Node.js";
-    const osInfo =
-      typeof process !== "undefined"
-        ? `${process.platform} ${process.arch}`
-        : "Browser";
+    // Scrub data if hook exists
+    if (this.beforeSend) {
+        try {
+            const scrubbed = this.beforeSend(report);
+            if (!scrubbed) return { success: false, error: "Cancelled by beforeSend" };
+            report = scrubbed;
+        } catch (e) {
+            console.error("[DevNexus] beforeSend hook failed:", e);
+        }
+    }
 
-    const body = JSON.stringify({ ...payload, browserInfo, osInfo });
+    this.queue.push(report);
+    this.saveToStorage();
+
+    return { success: true, message: "Report queued" };
+  }
+
+  private async sendBatch(batch: any[]) {
+    const body = JSON.stringify({ isBatch: true, reports: batch });
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
@@ -135,61 +212,127 @@ class DevNexusClient {
         });
 
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({})) as Record<string, unknown>;
-          const errMsg  = String(errData.error ?? `HTTP ${res.status}`);
-
-          // 4xx = client error, no point retrying
-          if (res.status >= 400 && res.status < 500) {
-            console.error(`[DevNexus] Client error (${res.status}):`, errMsg);
-            return { success: false, error: errMsg };
-          }
-
-          // 5xx = server error, retry with backoff
-          if (attempt < this.maxRetries) {
-            await this.sleep(attempt * 1000);
-            continue;
-          }
-          console.error("[DevNexus] Failed after retries:", errMsg);
-          return { success: false, error: errMsg };
+           if (res.status >= 500 && attempt < this.maxRetries) {
+             await this.sleep(attempt * 1000);
+             continue;
+           }
+           // On failure, put back in queue if it's potentially recoverable
+           this.queue = [...batch, ...this.queue];
+           this.saveToStorage();
+           return { success: false };
         }
 
-        const data = await res.json() as { issueId?: string; warning?: string };
-        if (data.warning) console.warn("[DevNexus] ⚠️", data.warning);
-        return { success: true, issueId: data.issueId };
+        return { success: true };
       } catch (err) {
         if (attempt < this.maxRetries) {
           await this.sleep(attempt * 1000);
           continue;
         }
-        console.error("[DevNexus] Network error:", err);
-        return { success: false, error: "Network error" };
+        this.queue = [...batch, ...this.queue];
+        this.saveToStorage();
+        return { success: false };
       }
     }
+  }
 
-    return { success: false, error: "Max retries exceeded" };
+  // ── Persistence ─────────────────────────────────────────────────────────────
+
+  private saveToStorage() {
+      if (typeof window === "undefined" || !window.localStorage) return;
+      try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue.slice(-50)));
+      } catch (e) {}
+  }
+
+  private loadFromStorage() {
+      if (typeof window === "undefined" || !window.localStorage) return;
+      try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+              this.queue = JSON.parse(stored);
+          }
+      } catch (e) {}
+  }
+
+  private setupNetworkListeners() {
+      if (typeof window === "undefined") return;
+      window.addEventListener("online", () => this.flush());
+  }
+
+  private startFlushTimer() {
+    if (this.flushTimer) clearInterval(this.flushTimer);
+    this.flushTimer = setInterval(() => this.flush(), this.flushInterval);
+    
+    if (typeof window !== "undefined") {
+        window.addEventListener("beforeunload", () => this.flush());
+    }
   }
 
   private sleep(ms: number) {
     return new Promise<void>((resolve) => setTimeout(resolve, ms));
   }
 
+  // ── Instrumentation ─────────────────────────────────────────────────────────
+
+  private setupBreadcrumbs() {
+    if (typeof window === "undefined") return;
+
+    const levels: ("log" | "warn" | "error")[] = ["log", "warn", "error"];
+    levels.forEach(level => {
+      const original = (console as any)[level];
+      (console as any)[level] = (...args: any[]) => {
+        this.addBreadcrumb({
+          type: "console",
+          level: level === "log" ? "info" : level,
+          message: args.map(a => String(a)).join(" "),
+        });
+        original.apply(console, args);
+      };
+    });
+
+    window.addEventListener("popstate", () => {
+      this.addBreadcrumb({
+        type: "navigation",
+        level: "info",
+        message: `Navigated to ${window.location.pathname}`,
+      });
+    });
+
+    const originalPushState = window.history.pushState;
+    window.history.pushState = function(...args) {
+      originalPushState.apply(this, args);
+      (DevNexus as any)._instance?.addBreadcrumb({
+        type: "navigation",
+        level: "info",
+        message: `Navigated to ${window.location.pathname}`,
+      });
+    };
+
+    const originalReplaceState = window.history.replaceState;
+    window.history.replaceState = function(...args) {
+      originalReplaceState.apply(this, args);
+      (DevNexus as any)._instance?.addBreadcrumb({
+        type: "navigation",
+        level: "info",
+        message: `Navigated (replaced) to ${window.location.pathname}`,
+      });
+    };
+  }
+
   // ── Auto-capture ────────────────────────────────────────────────────────────
 
   private setupAutoCapture() {
     if (typeof window !== "undefined") {
-      // Browser: global error
       const prevOnError = window.onerror;
       window.onerror = (message, source, lineno, _colno, error) => {
-        // Use HIGH (not CRITICAL) — onerror fires for many non-fatal things
         this.captureException(error || message, {
           tags: { source: "window.onerror", file: String(source), line: String(lineno) },
           severity: IssueSeverity.HIGH,
-        }).catch(() => {}); // prevent unhandled rejection from the SDK itself
+        }).catch(() => {});
         if (prevOnError) return prevOnError(message, source, lineno, _colno, error);
         return false;
       };
 
-      // Browser: unhandled promise rejection
       window.addEventListener("unhandledrejection", (event) => {
         this.captureException(event.reason, {
           tags: { source: "unhandledrejection" },
@@ -197,7 +340,6 @@ class DevNexusClient {
         }).catch(() => {});
       });
     } else if (typeof process !== "undefined" && process.on) {
-      // Node.js: unhandled rejection
       process.on("unhandledRejection", (reason) => {
         this.captureException(reason, {
           tags: { source: "unhandledRejection" },
@@ -205,7 +347,6 @@ class DevNexusClient {
         }).catch(() => {});
       });
 
-      // Node.js: uncaught exception
       process.on("uncaughtException", (error) => {
         this.captureException(error, {
           tags: { source: "uncaughtException" },
@@ -221,15 +362,11 @@ class DevNexusClient {
 let instance: DevNexusClient | null = null;
 
 export const DevNexus = {
-  /**
-   * Initialize the DevNexus SDK. Call this once at your app's entry point.
-   */
+  get _instance() { return instance; },
+
   init(config: DevNexusConfig): DevNexusClient {
     if (instance) {
-      console.warn(
-        "[DevNexus] Already initialized. Ignoring duplicate init() call. " +
-          "Call DevNexus.reset() first if you need to re-configure."
-      );
+      console.warn("[DevNexus] Already initialized.");
       return instance;
     }
     instance = new DevNexusClient(config);
@@ -237,17 +374,29 @@ export const DevNexus = {
   },
 
   captureException(error: unknown, context?: ReportContext) {
-    if (!instance) throw new Error("[DevNexus] Not initialized. Call DevNexus.init() first.");
+    if (!instance) throw new Error("[DevNexus] Not initialized.");
     return instance.captureException(error, context);
   },
 
   captureMessage(message: string, context?: ReportContext) {
-    if (!instance) throw new Error("[DevNexus] Not initialized. Call DevNexus.init() first.");
+    if (!instance) throw new Error("[DevNexus] Not initialized.");
     return instance.captureMessage(message, context);
   },
 
-  /** Reset the singleton (useful for testing or reconfiguration). */
+  addBreadcrumb(crumb: Omit<Breadcrumb, "timestamp">) {
+    if (!instance) throw new Error("[DevNexus] Not initialized.");
+    return instance.addBreadcrumb(crumb);
+  },
+
+  async flush() {
+    if (!instance) throw new Error("[DevNexus] Not initialized.");
+    return instance.flush();
+  },
+
   reset() {
+    if (instance && (instance as any).flushTimer) {
+        clearInterval((instance as any).flushTimer);
+    }
     instance = null;
   },
 };

@@ -27,6 +27,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
+    if (user.status === 'UNVERIFIED') {
+      return NextResponse.json({ error: 'Please verify your email before logging in.' }, { status: 403 });
+    }
+
     if (user.status === 'PENDING_APPROVAL') {
       return NextResponse.json({ error: 'Account pending approval by Admin' }, { status: 403 });
     }

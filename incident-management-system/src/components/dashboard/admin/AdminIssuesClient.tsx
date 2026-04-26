@@ -4,6 +4,8 @@ import { Issue } from "@/components/dashboard/shared/RecentIssues";
 import { TeamData, DeveloperData } from "@/components/dashboard/shared/CreateIssueModal";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { useNotifications } from "@/hooks/use-notifications";
+import { useState } from "react";
 
 interface AdminIssuesClientProps {
   issues: Issue[];
@@ -13,9 +15,33 @@ interface AdminIssuesClientProps {
 
 export function AdminIssuesClient({ issues }: AdminIssuesClientProps) {
   const router = useRouter();
+  const [lastNotification, setLastNotification] = useState<string | null>(null);
+
+  useNotifications(
+    (data) => {
+      setLastNotification(`🚨 NEW INCIDENT: ${data.title}`);
+      setTimeout(() => setLastNotification(null), 5000);
+    },
+    (data) => {
+      setLastNotification(`🔄 UPDATED: ${data.title}`);
+      setTimeout(() => setLastNotification(null), 5000);
+    }
+  );
 
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-8 relative">
+      {/* Real-time Toast Notification */}
+      {lastNotification && (
+        <div className="fixed top-8 right-8 z-[100] animate-in slide-in-from-right-8 duration-300">
+           <div className="bg-[#FF00FF] border-4 border-black p-6 shadow-[8px_8px_0_0_black] flex items-center gap-4">
+              <div className="w-4 h-4 bg-white border-2 border-black animate-ping" />
+              <p className="text-white font-black uppercase italic tracking-tighter text-sm">
+                {lastNotification}
+              </p>
+           </div>
+        </div>
+      )}
+
       {issues.map((issue) => (
         <div
           key={issue.id}
@@ -50,7 +76,7 @@ export function AdminIssuesClient({ issues }: AdminIssuesClientProps) {
             <div className="flex items-center gap-4 shrink-0 justify-end">
               <div className={cn(
                 "px-4 py-2 border-2 border-black font-black uppercase text-xs shadow-[3px_3px_0_0_black]",
-                issue.severity === 'CRITICAL' ? 'bg-[#FF00FF] text-white' : 'bg-white text-black'
+                issue.severity === 'CRITICAL' || issue.severity === 'Critical' ? 'bg-[#FF00FF] text-white' : 'bg-white text-black'
               )}>
                 {issue.severity}
               </div>
