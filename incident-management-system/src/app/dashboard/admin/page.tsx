@@ -3,6 +3,7 @@ import { DashboardClient } from "@/components/dashboard/admin/DashboardClient";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
 import { ProjectStats } from "@/components/dashboard/shared/ActiveProjects";
 import { formatTimeAgo } from "@/lib/utils";
+import { getCurrentUser } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -17,22 +18,33 @@ export default async function AdminDashboardPage() {
     );
   }
 
+  const currentUser = await getCurrentUser();
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    return (
+      <div className="p-8 text-center text-foreground/60 w-full rounded border border-border mt-8">
+        Unauthorized access.
+      </div>
+    );
+  }
+
   // Fetch queries sequentially to prevent connection pool exhaustion (P2024)
-  const openIssuesCount = await prisma.issue.count({ where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] } } });
-  const breachedCount = await prisma.issue.count({ where: { OR: [{ responseBreached: true }, { resolutionBreached: true }] } });
+  const openIssuesCount = await prisma.issue.count({ where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] }, project: { createdBy: currentUser.userId } } });
+  const breachedCount = await prisma.issue.count({ where: { OR: [{ responseBreached: true }, { resolutionBreached: true }], project: { createdBy: currentUser.userId } } });
   const resolvedTodayCount = await prisma.issue.count({ 
     where: { 
       status: 'RESOLVED', 
-      resolvedAt: { gte: new Date(new Date().setHours(0,0,0,0)) } 
+      resolvedAt: { gte: new Date(new Date().setHours(0,0,0,0)) },
+      project: { createdBy: currentUser.userId }
     } 
   });
   const recentIssuesRaw = await prisma.issue.findMany({
-    where: { assignedToId: null },
+    where: { assignedToId: null, project: { createdBy: currentUser.userId } },
     take: 5,
     orderBy: { createdAt: 'desc' },
     include: { team: true, assignedTo: true }
   });
   const projectsRaw = await prisma.project.findMany({
+    where: { createdBy: currentUser.userId },
     take: 5,
     orderBy: { createdAt: 'desc' },
     include: {
@@ -44,9 +56,9 @@ export default async function AdminDashboardPage() {
       }
     }
   });
-  const allProjects = await prisma.project.findMany({ select: { id: true, name: true } });
-  const allTeams = await prisma.team.findMany({ select: { id: true, name: true, projectId: true } });
-  const allDevelopers = await prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER' } });
+  const allProjects = await prisma.project.findMany({ where: { createdBy: currentUser.userId }, select: { id: true, name: true } });
+  const allTeams = await prisma.team.findMany({ where: { project: { createdBy: currentUser.userId } }, select: { id: true, name: true, projectId: true } });
+  const allDevelopers = await prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER', project: { createdBy: currentUser.userId } } });
 
   const recentIssues: Issue[] = recentIssuesRaw.map((issue) => {
     return {

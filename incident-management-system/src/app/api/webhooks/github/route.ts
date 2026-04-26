@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import crypto from "crypto";
 
 import { IssueSource, Prisma } from "@prisma/client";
 
@@ -8,7 +9,20 @@ import { calculateSLADeadlines } from "@/services/issue-service";
 
 export async function POST(req: Request) {
   try {
-    const payload = await req.json();
+    const rawBody = await req.text();
+    const signature = req.headers.get("x-hub-signature-256");
+
+    if (process.env.GITHUB_WEBHOOK_SECRET) {
+      if (!signature) {
+        return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+      }
+      const expected = "sha256=" + crypto.createHmac("sha256", process.env.GITHUB_WEBHOOK_SECRET).update(rawBody).digest("hex");
+      if (signature !== expected) {
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+    }
+
+    const payload = JSON.parse(rawBody);
     const event = req.headers.get("x-github-event");
 
     // Identify project by the githubRepoUrl

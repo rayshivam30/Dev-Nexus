@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     }, '7d');
 
     // Return the token. In a real app we might set this in an HttpOnly cookie.
-    return NextResponse.json({
+    const response = NextResponse.json({
       message: 'Login successful',
       token,
       user: {
@@ -52,6 +52,16 @@ export async function POST(request: Request) {
         orgId: user.orgId
       }
     }, { status: 200 });
+
+    response.cookies.set('incident_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    return response;
 
   } catch (error) {
     console.error('Login error:', error);

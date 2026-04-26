@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Loader2, Mail, Lock, Github, Chrome } from "lucide-react";
+import { ArrowRight, Loader2, Mail, Lock } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,8 +32,7 @@ export default function LoginPage() {
         throw new Error(data.error || "Failed to login");
       }
 
-      localStorage.setItem("incident_token", data.token);
-      document.cookie = `incident_token=${data.token}; path=/; max-age=604800`;
+      // Note: The token is now set securely via an HttpOnly cookie from the server.
 
       router.push("/dashboard/profile?source=login");
       router.refresh();
@@ -56,25 +55,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-          <button className="flex items-center justify-center space-x-3 py-3 border-[2px] border-black bg-white hover:bg-black hover:text-white transition-all font-black text-[11px] uppercase tracking-widest shadow-[3px_3px_0_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none">
-            <Github className="w-5 h-5" />
-            <span>GITHUB_ID</span>
-          </button>
-          <button className="flex items-center justify-center space-x-3 py-3 border-[2px] border-black bg-white hover:bg-black hover:text-white transition-all font-black text-[11px] uppercase tracking-widest shadow-[3px_3px_0_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none">
-            <Chrome className="w-5 h-5" />
-            <span>GOOGLE_ID</span>
-          </button>
-      </div>
-
-      <div className="relative py-1">
-        <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t-[2px] border-black/10" />
-        </div>
-        <div className="relative flex justify-center text-[10px] uppercase tracking-[0.3em] font-black">
-            <span className="bg-white px-4 text-black/30">OR_EMAIL_TOKEN</span>
-        </div>
-      </div>
+      {/* OAuth integration removed for production readiness */}
 
       {error && (
         <div className="p-3 bg-[#FF00FF] text-white border-[2px] border-black font-black uppercase text-[11px] shadow-[4px_4px_0_0_black] flex items-center gap-3">
@@ -102,7 +83,6 @@ export default function LoginPage() {
         <div className="space-y-2">
           <div className="flex justify-between items-end">
              <label className="text-[11px] font-black uppercase tracking-widest text-black ml-1">ACCESS_CODE</label>
-             <Link href="#" className="text-[9px] font-black uppercase underline decoration-2 hover:bg-black hover:text-white px-1 transition-all">FORGOT?</Link>
           </div>
           <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black/20" />

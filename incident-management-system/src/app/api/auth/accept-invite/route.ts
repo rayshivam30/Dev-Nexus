@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       '7d'
     );
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       message: 'Account created successfully',
       token: sessionToken,
       user: {
@@ -66,6 +66,16 @@ export async function POST(request: Request) {
         orgId: user.orgId,
       },
     }, { status: 201 });
+
+    response.cookies.set('incident_token', sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    return response;
 
   } catch (error) {
     console.error('Accept invite error:', error);

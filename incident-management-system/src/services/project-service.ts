@@ -7,7 +7,8 @@ export async function createProject(
   orgId: string, 
   description?: string,
   plan?: PlanType,
-  githubRepoUrl?: string
+  githubRepoUrl?: string,
+  createdBy?: string
 ) {
   const projectPlan = plan || "BASIC";
   const sdkApiKey = projectPlan === "ADVANCED" ? `devnexus_sk_${crypto.randomUUID()}` : null;
@@ -19,7 +20,8 @@ export async function createProject(
       description: description || "",
       plan: projectPlan,
       githubRepoUrl: githubRepoUrl || null,
-      sdkApiKey
+      sdkApiKey,
+      createdBy
     },
   });
 }

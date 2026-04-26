@@ -2,24 +2,27 @@ import { prisma } from "@/lib/db";
 import { withAuth, apiResponse } from "@/lib/api-utils";
 import { formatTimeAgo } from "@/lib/utils";
 
-export const GET = withAuth(async () => {
+export const GET = withAuth(async (req, { decoded }) => {
+  const { orgId } = decoded;
+
   const openIssuesCount = await prisma.issue.count({ 
-    where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] } } 
+    where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] }, project: { orgId } } 
   });
   
   const breachedCount = await prisma.issue.count({ 
-    where: { OR: [{ responseBreached: true }, { resolutionBreached: true }] } 
+    where: { OR: [{ responseBreached: true }, { resolutionBreached: true }], project: { orgId } } 
   });
   
   const resolvedTodayCount = await prisma.issue.count({ 
     where: { 
       status: 'RESOLVED', 
-      resolvedAt: { gte: new Date(new Date().setHours(0,0,0,0)) } 
+      resolvedAt: { gte: new Date(new Date().setHours(0,0,0,0)) },
+      project: { orgId }
     } 
   });
 
   const recentIssuesRaw = await prisma.issue.findMany({
-    where: { assignedToId: null },
+    where: { assignedToId: null, project: { orgId } },
     take: 5,
     orderBy: { createdAt: 'desc' },
     include: { team: true, assignedTo: true }

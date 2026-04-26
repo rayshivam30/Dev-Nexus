@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, JwtPayload } from "@/lib/jwt";
+import { logger } from "@/lib/logger";
 
 export interface HandlerContext {
   decoded: JwtPayload;
@@ -16,12 +17,21 @@ export function withAuth(handler: ApiHandler, allowedRoles?: string[]) {
   return async (req: NextRequest, context?: { params: unknown }) => {
     try {
       const params = context?.params;
+      let token = "";
       const authHeader = req.headers.get("Authorization");
-      if (!authHeader?.startsWith("Bearer ")) {
+      if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.split(" ")[1];
+      } else {
+        const cookieToken = req.cookies?.get("incident_token")?.value;
+        if (cookieToken) {
+          token = cookieToken;
+        }
+      }
+
+      if (!token) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 
-      const token = authHeader.split(" ")[1];
       const decoded = verifyToken(token);
 
       if (!decoded) {
@@ -50,7 +60,7 @@ export function withAuth(handler: ApiHandler, allowedRoles?: string[]) {
         params: params || {} 
       });
     } catch (error) {
-      console.error("API Error:", error);
+      logger.error({ err: error }, "API Error");
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
   };
@@ -62,4 +72,11 @@ export function apiResponse(message: string, data?: Record<string, unknown>, sta
 
 export function apiError(error: string, status = 400) {
   return NextResponse.json({ error }, { status });
+}
+export async function getCurrentUser(): Promise<JwtPayload | null> {
+  const { cookies } = await import("next/headers");
+  const cookieStore = await cookies();
+  const token = cookieStore.get("incident_token")?.value;
+  if (!token) return null;
+  return verifyToken(token);
 }

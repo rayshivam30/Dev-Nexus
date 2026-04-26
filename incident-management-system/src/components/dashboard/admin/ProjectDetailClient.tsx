@@ -67,12 +67,11 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
     setInviteLink("");
     setError("");
     try {
-      const token = localStorage.getItem("incident_token") || "";
-      const res = await fetch("/api/auth/invite", {
+      const res = await fetch("/api/invite-manager", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          
         },
         body: JSON.stringify({
           email: inviteEmail,

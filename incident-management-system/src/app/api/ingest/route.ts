@@ -1,8 +1,17 @@
 import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import { IssueSource, IssueSeverity, Prisma } from "@prisma/client";
 import { calculateSLADeadlines } from "@/services/issue-service";
 import { analyzeIncident } from "@/lib/ai-service";
+import { Redis } from "@upstash/redis";
+
+const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  ? new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    })
+  : null;
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 const corsHeaders = {
@@ -17,7 +26,25 @@ const RATE_MAX_REQS  = 30;       // max requests per window
 
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
-function checkRateLimit(key: string): { allowed: boolean; retryAfter?: number } {
+async function checkRateLimit(key: string): Promise<{ allowed: boolean; retryAfter?: number }> {
+  if (redis) {
+    try {
+      const redisKey = `ratelimit:ingest:${key}`;
+      const count = await redis.incr(redisKey);
+      if (count === 1) {
+        await redis.pexpire(redisKey, RATE_WINDOW_MS);
+      }
+      if (count > RATE_MAX_REQS) {
+        const pttl = await redis.pttl(redisKey);
+        const retryAfter = Math.max(1, Math.ceil(pttl / 1000));
+        return { allowed: false, retryAfter };
+      }
+      return { allowed: true };
+    } catch (e) {
+      logger.error({ err: e }, "Redis rate limit error, skipping");
+    }
+  }
+
   const now = Date.now();
   const entry = rateLimitStore.get(key);
   if (!entry || now > entry.resetAt) {
@@ -61,7 +88,7 @@ export async function POST(req: Request) {
     const apiKey = authHeader.split(" ")[1];
 
     // ── Rate limit ─────────────────────────────────────────────────────────
-    const rateCheck = checkRateLimit(apiKey);
+    const rateCheck = await checkRateLimit(apiKey);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: `Rate Limit Exceeded: Try again in ${rateCheck.retryAfter}s.` },
@@ -161,7 +188,7 @@ export async function POST(req: Request) {
           }
         });
       } catch (e) {
-        console.error("Background AI Analysis error: ", e);
+        logger.error({ err: e }, "Background AI Analysis error");
       }
     });
 
@@ -174,7 +201,7 @@ export async function POST(req: Request) {
       { status: 201, headers: corsHeaders }
     );
   } catch (error) {
-    console.error("SDK Ingest API Error:", error);
+    logger.error({ err: error }, "SDK Ingest API Error");
     const detail = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { error: "Internal Server Error", detail },
