@@ -61,7 +61,7 @@ export async function POST(req: Request) {
               source: IssueSource.GITHUB,
               severity: IssueSeverity.MEDIUM,
               logs: {
-                github_raw: data as any,
+                github_raw: data as unknown as Prisma.InputJsonValue,
               } as Prisma.InputJsonValue,
             }
           });
@@ -94,8 +94,8 @@ export async function POST(req: Request) {
                         responseSlaDeadline,
                         resolutionSlaDeadline,
                         logs: {
-                            github_raw: data as any,
-                            aiFullAnalysis: aiAnalysis as any,
+                            github_raw: data as unknown as Prisma.InputJsonValue,
+                            aiFullAnalysis: aiAnalysis as unknown as Prisma.InputJsonValue,
                         } as Prisma.InputJsonValue
                     }
                 });
