@@ -13,6 +13,25 @@ export default function ErrorBoundary({
 }) {
   useEffect(() => {
     console.error("Global Error Boundary caught:", error);
+    
+    // Telemetry - Ingest our own crashes into DevNexus!
+    const sdkKey = process.env.NEXT_PUBLIC_DEVNEXUS_SDK_KEY;
+    if (sdkKey) {
+      fetch("/api/ingest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sdkKey}`,
+        },
+        body: JSON.stringify({
+          message: `Frontend Crash: ${error.message}`,
+          stack: error.stack,
+          source: "SDK",
+          browserInfo: { url: window.location.href, userAgent: navigator.userAgent },
+          tags: { component: "ErrorBoundary", route: window.location.pathname }
+        })
+      }).catch((e) => console.error("Telemetry failed:", e));
+    }
   }, [error]);
 
   return (

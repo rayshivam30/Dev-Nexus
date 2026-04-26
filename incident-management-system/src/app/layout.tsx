@@ -1,21 +1,27 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+// Removed next/font/google imports due to network fetch errors during build
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "DevNexus",
-  description: "Incident Management System",
+  title: {
+    template: '%s | DevNexus',
+    default: 'DevNexus - Incident Management',
+  },
+  description: "Enterprise-grade incident tracking and resolution nexus. Pinpoint errors, utilize Gemini AI root-cause analysis, and enforce organizational SLA standards instantly.",
   manifest: "/manifest.json",
+  authors: [{ name: "DevNexus Team" }],
+  openGraph: {
+    title: 'DevNexus - Incident Management',
+    description: 'Enterprise-grade incident tracking and resolution nexus powered by Gemini AI.',
+    url: process.env.NEXT_PUBLIC_APP_URL || 'https://devnexus.io',
+    siteName: 'DevNexus',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DevNexus - Incident Management',
+    description: 'Enterprise-grade incident tracking and resolution nexus.',
+  },
 };
 
 export default function RootLayout({
@@ -26,7 +32,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`font-sans h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
