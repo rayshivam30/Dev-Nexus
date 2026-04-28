@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Trash2, Activity, Plus } from "lucide-react";
+import { Loader2, Trash2, FolderKanban, Plus } from "lucide-react";
 import { ProjectCreateModal } from "./ProjectCreateModal";
 import { ProjectSdkKeyModal } from "./ProjectSdkKeyModal";
 import Link from "next/link";
@@ -50,47 +50,41 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
     }
   }
 
-
-
   return (
-    <div className="space-y-12 pb-20">
+    <div className="space-y-8 pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div className="flex flex-col gap-4">
-          <h1 className="text-5xl md:text-7xl font-[900] tracking-tighter uppercase italic leading-none border-l-8 border-black pl-8">
-            PROJECTS <br />
-            <span className="bg-[#FFD700] border-4 border-black px-4 shadow-[6px_6px_0_0_black]">INFRA_UNITS</span>
-          </h1>
-          <p className="text-black font-black uppercase text-xs tracking-widest mt-4 opacity-60 max-w-xl border-b-2 border-black/10 pb-4">
-            Manage your operational containers and organization-level deployments.
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight">Projects</h1>
+          <p className="text-sm text-zinc-500 mt-1">
+            Manage your operational containers and deployments.
           </p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-[#FFD700] text-black h-16 px-8 border-4 border-black font-[900] text-xl uppercase tracking-tighter hover:bg-black hover:text-white shadow-[8px_8px_0_0_black] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all flex items-center gap-4 active:scale-95"
+          className="flex items-center gap-2 h-11 px-6 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-500 transition-all"
         >
-          <Plus className="w-6 h-6 stroke-[4px]" /> NEW_PROJECT
+          <Plus className="w-4 h-4" /> New Project
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {initialProjects.length === 0 ? (
-          <div className="col-span-full p-20 border-4 border-black border-dashed bg-white text-center shadow-[12px_12px_0_0_#F0F0F0]">
-            <p className="text-2xl font-black uppercase italic opacity-20">NO_DATA_CONTAINERS_DETECTED</p>
+          <div className="col-span-full p-16 border border-white/[0.06] border-dashed rounded-2xl bg-white/[0.02] text-center">
+            <p className="text-sm text-zinc-500">No projects found</p>
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="mt-8 text-xs font-black uppercase underline underline-offset-4 decoration-2 hover:bg-black hover:text-white px-4 py-2 transition-colors"
+              className="mt-4 text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
             >
-              INITIALIZE_FIRST_PROJECT
+              Create your first project
             </button>
           </div>
         ) : (
           initialProjects.map(p => (
-            <div key={p.id} className="group relative">
-               <div className="absolute inset-0 bg-black translate-x-3 translate-y-3 -z-10 group-hover:translate-x-1 group-hover:translate-y-1 transition-all"></div>
-               <div className="p-8 bg-white border-4 border-black flex flex-col h-full hover:translate-x-1 hover:translate-y-1 transition-all">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="w-12 h-12 bg-[#00D1FF] border-2 border-black flex items-center justify-center -rotate-3 group-hover:rotate-0 transition-transform">
-                        <Activity className="w-6 h-6 text-black" />
+            <div key={p.id} className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all flex flex-col">
+               <div className="p-6 flex-1">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                        <FolderKanban className="w-5 h-5 text-emerald-400" />
                     </div>
                     <button
                       type="button"
@@ -100,40 +94,40 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
                         handleDeleteProject(p.id);
                       }}
                       disabled={deleteLoadingId === p.id}
-                      className="text-black/20 hover:text-[#FF3131] transition-colors p-2"
+                      className="text-zinc-700 hover:text-red-400 transition-colors p-1"
                     >
-                      {deleteLoadingId === p.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+                      {deleteLoadingId === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                     </button>
                   </div>
                   
                   <Link href={`/dashboard/admin/projects/${p.id}`} className="block">
-                    <h2 className="text-3xl font-[900] uppercase tracking-tighter italic leading-none group-hover:underline decoration-4 mb-4">
+                    <h2 className="text-lg font-bold tracking-tight group-hover:text-emerald-400 transition-colors mb-1">
                       {p.name}
                     </h2>
                   </Link>
                   
-                  <p className="text-xs font-bold text-black/60 mb-8 flex-1 line-clamp-3 italic">
-                    {p.description || "NO_DESCRIPTION_PROVIDED_BY_OPERATOR"}
+                  <p className="text-xs text-zinc-600 mb-6 line-clamp-2">
+                    {p.description || "No description provided"}
                   </p>
                   
-                  <div className="grid grid-cols-2 border-t-2 border-black pt-6 gap-4">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase text-black/40">TEAMS</span>
-                      <span className="text-xl font-black italic">{String(p.teams?.length || 0).padStart(2, '0')}</span>
+                  <div className="flex items-center gap-6 text-xs text-zinc-500">
+                    <div>
+                      <span className="text-white font-bold text-sm">{p.teams?.length || 0}</span>
+                      <span className="ml-1 text-zinc-600">teams</span>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase text-black/40">MANAGERS</span>
-                      <span className="text-xl font-black italic">{String(p.managers?.length || 0).padStart(2, '0')}</span>
+                    <div>
+                      <span className="text-white font-bold text-sm">{p.managers?.length || 0}</span>
+                      <span className="ml-1 text-zinc-600">managers</span>
                     </div>
                   </div>
-                  
-                  <Link 
-                    href={`/dashboard/admin/projects/${p.id}`}
-                    className="mt-8 flex items-center justify-center w-full py-4 border-2 border-black bg-black text-white font-black uppercase text-[10px] tracking-widest hover:bg-[#FFD700] hover:text-black transition-colors"
-                  >
-                    ACCESS_PROJECT_NODE
-                  </Link>
                </div>
+                  
+               <Link 
+                 href={`/dashboard/admin/projects/${p.id}`}
+                 className="m-4 mt-0 flex items-center justify-center py-2.5 rounded-xl text-sm font-medium text-zinc-500 border border-white/[0.06] hover:bg-white/[0.04] hover:text-white transition-all"
+               >
+                 Open project
+               </Link>
             </div>
           ))
         )}

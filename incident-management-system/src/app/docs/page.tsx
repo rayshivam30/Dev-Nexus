@@ -1,120 +1,151 @@
 import Link from "next/link";
-import { ArrowLeft, Terminal, LayoutList, ShieldAlert, Cpu } from "lucide-react";
+import { ArrowLeft, Terminal, LayoutList, ShieldAlert, Cpu, Copy, Command } from "lucide-react";
 
 export default function DocsPage() {
   return (
-    <div className="min-h-screen bg-[#F0F0F0] text-black font-mono selection:bg-black selection:text-white pb-24">
-      {/* Brutalist Grid Background */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+    <div className="min-h-screen bg-black text-white selection:bg-white/10 pb-24 font-sans">
+      {/* Subtle grid */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(#1a1a1e_1px,transparent_1px)] [background-size:32px_32px] opacity-30" />
+      </div>
       
-      {/* HEADER */}
-      <div className="bg-black text-white pt-24 pb-16 relative z-10 border-b-8 border-black shadow-[0_8px_0_0_rgba(0,0,0,1)]">
-        <div className="max-w-5xl mx-auto px-6">
-          <Link href="/" className="inline-flex items-center space-x-2 text-[#FFD700] hover:text-white transition-colors mb-12 font-black uppercase text-sm group">
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            <span>RETURN_TO_NEXUS</span>
-          </Link>
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 bg-[#FF00FF] border-2 border-white shadow-[4px_4px_0_0_white] transform -rotate-3">
-               <Terminal className="w-10 h-10 text-white" />
+      {/* Nav */}
+      <nav className="fixed top-0 w-full z-[100] border-b border-white/[0.06] bg-black/80 backdrop-blur-xl">
+        <div className="max-w-5xl mx-auto flex items-center justify-between px-6 h-16">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center group-hover:rotate-12 transition-transform">
+              <Command className="w-4 h-4 text-black" />
             </div>
-            <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter">SDK_REFERENCE</h1>
+            <span className="font-bold text-lg tracking-tight">DevNexus</span>
+          </Link>
+          <Link href="/" className="text-xs font-medium text-zinc-500 hover:text-white flex items-center gap-2 border border-white/[0.06] rounded-full px-4 py-2 hover:bg-white/5 transition-all">
+            <ArrowLeft className="w-3 h-3" /> Back
+          </Link>
+        </div>
+      </nav>
+
+      {/* HEADER */}
+      <div className="relative z-10 pt-32 pb-16 border-b border-white/[0.06]">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-start gap-6 mb-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+               <Terminal className="w-7 h-7 text-white" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">SDK Reference</h1>
+              <p className="text-lg text-zinc-500 max-w-2xl font-medium leading-relaxed">
+                Integrate DevNexus incident tracking into your engineering stack.
+              </p>
+            </div>
           </div>
-          <p className="text-xl md:text-2xl text-white/80 max-w-2xl font-bold uppercase tracking-widest border-l-4 border-[#00D1FF] pl-4">
-             Integrate DevNexus Incident tracking directly into your React, Node, or Edge environments.
-          </p>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-6 mt-16 space-y-16 relative z-10">
         
         {/* INSTALLATION */}
-        <section className="bg-white p-8 md:p-12 border-4 border-black shadow-[8px_8px_0_0_black]">
-          <h2 className="text-3xl font-black uppercase mb-6 flex items-center gap-3">
-             <Cpu className="text-[#00D1FF] w-8 h-8" />
-             Core Installation
-          </h2>
-          <p className="font-bold opacity-80 mb-6">Currently the SDK is available locally or via the root ingest protocol. To push an event via standard fetch, use the endpoint mapping.</p>
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
+              <Cpu className="text-white w-5 h-5" />
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight">Installation</h2>
+          </div>
           
-          <div className="bg-black text-[#FFD700] p-6 border-2 border-black font-mono text-sm overflow-x-auto selection:bg-[#FF00FF] selection:text-white shadow-inner">
-            <code className="text-green-400"># Next.js / Node Environment</code><br/>
-            <code>npm install @devnexus/sdk</code>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 space-y-6">
+            <p className="text-zinc-500 leading-relaxed text-sm">The SDK is optimized for modern JavaScript environments, including Node.js, Next.js, and Edge Runtimes.</p>
+            
+            <div className="bg-[#111113] rounded-xl border border-white/[0.06] p-5 font-mono text-sm">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[10px] uppercase tracking-widest text-zinc-600 font-medium">Bash</span>
+                <Copy className="w-4 h-4 text-zinc-700 hover:text-white cursor-pointer transition-colors" />
+              </div>
+              <div className="text-zinc-500 italic text-xs"># Install core SDK</div>
+              <div className="mt-1 text-zinc-300">npm install <span className="text-white">@devnexus/sdk</span></div>
+            </div>
           </div>
         </section>
 
         {/* INGEST API */}
-        <section className="bg-white p-8 md:p-12 border-4 border-black shadow-[8px_8px_0_0_black]">
-          <h2 className="text-3xl font-black uppercase mb-6 flex items-center gap-3">
-             <LayoutList className="text-[#FF00FF] w-8 h-8" />
-             Ingest API
-          </h2>
-
-          <div className="mb-6 pb-6 border-b-2 border-black/10">
-            <div className="flex items-center gap-4 mb-4">
-               <span className="bg-[#FFD700] text-black font-black px-3 py-1 border-2 border-black text-xs uppercase shadow-[2px_2px_0_0_black]">POST</span>
-               <span className="font-bold text-lg">/api/ingest</span>
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
+              <LayoutList className="text-white w-5 h-5" />
             </div>
-            <p className="font-bold opacity-80">Requires an <code className="bg-black text-white px-2 py-0.5 text-xs">Authorization: Bearer [SDK_API_KEY]</code> header.</p>
+            <h2 className="text-2xl font-bold tracking-tight">Ingest API</h2>
           </div>
 
-          <h3 className="text-xl font-black uppercase mb-4">Payload Interface</h3>
-          <div className="bg-[#F0F0F0] border-2 border-black p-6 font-mono text-sm mb-6">
-            <pre className="overflow-x-auto text-black">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8">
+            <div className="mb-8 pb-8 border-b border-white/[0.04]">
+              <div className="flex items-center gap-4 mb-4">
+                 <span className="bg-white/10 text-white font-semibold px-3 py-1 rounded-lg border border-white/20 text-xs uppercase tracking-wider">POST</span>
+                 <span className="font-mono text-base text-zinc-300">/api/ingest</span>
+              </div>
+              <p className="text-zinc-500 text-sm">Secure your requests by including your project token in the Authorization header.</p>
+              <div className="mt-4 p-3 rounded-lg bg-white/[0.03] border border-white/[0.04] font-mono text-xs text-zinc-500">
+                Authorization: Bearer [SDK_API_KEY]
+              </div>
+            </div>
+
+            <h3 className="text-base font-bold mb-4 text-zinc-300">Payload Schema</h3>
+            <div className="bg-[#111113] rounded-xl border border-white/[0.06] p-6 font-mono text-sm relative">
+              <div className="absolute top-4 right-4 text-[10px] font-medium uppercase tracking-widest text-zinc-700">JSON</div>
+              <pre className="text-zinc-400 leading-relaxed overflow-x-auto">
 {`{
   // Required
-  "message": "Error details or incident description",
+  "message": `}<span className="text-zinc-300">&quot;Error details or incident description&quot;</span>{`,
   
-  // Optional (Highly Recommended for Context)
-  "stack": "Stack trace string",
-  "browserInfo": {
-    "userAgent": "string",
-    "url": "string"
-  },
-  "osInfo": {
-    "platform": "string"
-  },
+  // Optional Context
+  "stack": `}<span className="text-zinc-300">&quot;Full stack trace string&quot;</span>{`,
   "tags": {
-    "component": "cart",
-    "action": "checkout"
+    "component": `}<span className="text-zinc-300">&quot;cart&quot;</span>{`,
+    "environment": `}<span className="text-zinc-300">&quot;production&quot;</span>{`
   },
   "metadata": {
-    "userId": "123",
-    "theme": "dark"
+    "userId": `}<span className="text-zinc-300">&quot;user_9210&quot;</span>{`
   }
 }`}
-            </pre>
+              </pre>
+            </div>
           </div>
         </section>
 
-        {/* SECURITY & RATES */}
-        <section className="bg-white p-8 md:p-12 border-4 border-black shadow-[8px_8px_0_0_black]">
-           <h2 className="text-3xl font-black uppercase mb-6 flex items-center gap-3">
-             <ShieldAlert className="text-[#FFD700] w-8 h-8" />
-             Limits & Architecture
-          </h2>
-          <ul className="space-y-4 font-bold opacity-90">
-             <li className="flex items-start gap-3">
-                <span className="bg-black text-white w-6 h-6 flex items-center justify-center flex-shrink-0 border border-black shadow-[2px_2px_0_0_#FFD700] text-xs">1</span>
-                <div>
-                   <span className="text-[#FF00FF] font-black uppercase">Rate Limiting:</span> Endpoints allow up to 30 requests per minute per SDK Key. Overages return a 429 Retry-After.
-                </div>
-             </li>
-             <li className="flex items-start gap-3">
-                <span className="bg-black text-white w-6 h-6 flex items-center justify-center flex-shrink-0 border border-black shadow-[2px_2px_0_0_#00D1FF] text-xs">2</span>
-                <div>
-                   <span className="text-[#00D1FF] font-black uppercase">Background AI Analysis:</span> Incident payloads trigger an asynchronous queue. Google Gemini calculates root cause, severity, and assignments based on the team&apos;s tech stack.
-                </div>
-             </li>
-             <li className="flex items-start gap-3">
-                <span className="bg-black text-white w-6 h-6 flex items-center justify-center flex-shrink-0 border border-black shadow-[2px_2px_0_0_#00D1FF] text-xs">3</span>
-                <div>
-                   <span className="text-[#FFD700] font-black uppercase">Data Size Restraints:</span> Payloads exceeding 256KB are heavily truncated or summarily blocked to prevent database blowout. Keep stack traces clean.
-                </div>
-             </li>
-          </ul>
+        {/* ARCHITECTURE */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
+              <ShieldAlert className="text-white w-5 h-5" />
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight">Limits &amp; Reliability</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { 
+                title: "Rate Limiting", 
+                desc: "Endpoints allow up to 30 requests per minute per SDK Key. Overages return a 429 status.",
+                num: "01"
+              },
+              { 
+                title: "AI Analysis", 
+                desc: "Incident payloads trigger an asynchronous Gemini queue for root cause identification.",
+                num: "02"
+              },
+              { 
+                title: "Data Integrity", 
+                desc: "Payloads exceeding 256KB are truncated to ensure high performance ingestion.",
+                num: "03"
+              }
+            ].map((item, i) => (
+              <div key={i} className="p-6 rounded-2xl border border-white/[0.06] bg-white/[0.02] group hover:bg-white/[0.04] transition-all">
+                <div className="text-3xl font-extrabold text-white/[0.04] mb-4 group-hover:text-white/10 transition-colors">{item.num}</div>
+                <h3 className="text-base font-bold mb-2">{item.title}</h3>
+                <p className="text-sm text-zinc-500 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
         </section>
       </div>
-
     </div>
   );
 }

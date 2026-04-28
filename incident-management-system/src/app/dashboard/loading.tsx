@@ -1,19 +1,18 @@
 "use client";
 
-import { Activity } from "lucide-react";
+import { Command } from "lucide-react";
 
 export default function Loading() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
-      <div className="w-24 h-24 bg-white border-8 border-black flex items-center justify-center shadow-[10px_10px_0_0_#FFD700] animate-bounce">
-        <Activity className="w-12 h-12 text-black animate-pulse" />
+      <div className="w-14 h-14 bg-emerald-600/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center animate-pulse">
+        <Command className="w-7 h-7 text-emerald-400" />
       </div>
       <div className="flex flex-col text-center">
-        <h2 className="text-4xl font-[900] uppercase italic tracking-tighter animate-pulse">LOADING_DATA</h2>
-        <p className="text-xs font-black uppercase text-black/40 tracking-widest mt-2">Connecting to nexus nodes...</p>
+        <p className="text-sm text-zinc-500 animate-pulse">Loading...</p>
       </div>
-      <div className="w-64 h-4 border-2 border-black p-0.5 bg-white overflow-hidden flex">
-        <div className="h-full bg-black animate-[slide_1s_ease-in-out_infinite]" style={{ width: '40%' }}></div>
+      <div className="w-48 h-1 bg-white/[0.04] rounded-full overflow-hidden">
+        <div className="h-full bg-emerald-500/50 rounded-full animate-[slide_1.2s_ease-in-out_infinite]" style={{ width: '40%' }}></div>
       </div>
       <style jsx>{`
         @keyframes slide {

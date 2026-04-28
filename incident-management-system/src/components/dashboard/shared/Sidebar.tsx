@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, LucideIcon, User, ChevronRight, Activity, Menu, X } from "lucide-react";
+import { LogOut, LucideIcon, User, Command, Menu, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { BrutalButton } from "@/components/ui/BrutalButton";
-import { BrutalBadge } from "@/components/ui/BrutalBadge";
 import { motion, AnimatePresence } from "framer-motion";
 
 export interface NavItem {
@@ -24,6 +22,11 @@ export function Sidebar({ navItems, roleTitle }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Derive role-specific profile path from the current route
+  const roleBase = pathname.match(/\/dashboard\/(admin|manager|developer)/)?.[0] || "/dashboard";
+  const profileHref = `${roleBase}/profile`;
+  const isProfileActive = pathname.includes("/profile");
 
   // Real-time updates simulation: refresh server components every 15s
   useEffect(() => {
@@ -49,16 +52,16 @@ export function Sidebar({ navItems, roleTitle }: SidebarProps) {
   return (
     <>
       {/* Mobile Top Nav */}
-      <div className="md:hidden flex items-center justify-between p-4 border-b-4 border-black bg-[#FFD700] sticky top-0 z-50">
-        <Link href="/dashboard/admin" className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-black border-2 border-white flex items-center justify-center">
-            <Activity className="w-5 h-5 text-[#FFD700]" />
+      <div className="md:hidden flex items-center justify-between p-4 border-b border-white/[0.06] bg-[#0a0a0c] sticky top-0 z-50">
+        <Link href="/dashboard" className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+            <Command className="w-4 h-4 text-white" />
           </div>
-          <span className="font-[900] text-lg uppercase tracking-tighter italic">DevNexus_</span>
+          <span className="font-bold text-lg tracking-tight">DevNexus</span>
         </Link>
         <button 
           onClick={() => setIsMobileMenuOpen(true)}
-          className="p-2 bg-black text-white border-2 border-white focus:outline-none active:scale-95 transition-transform"
+          className="p-2 text-white hover:bg-white/5 rounded-lg transition-colors"
         >
           <Menu className="w-6 h-6" />
         </button>
@@ -72,143 +75,142 @@ export function Sidebar({ navItems, roleTitle }: SidebarProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="md:hidden fixed inset-0 z-[100] bg-white flex flex-col"
+            className="md:hidden fixed inset-0 z-[100] bg-[#0a0a0c] flex flex-col"
           >
-            <div className="flex items-center justify-between p-6 border-b-4 border-black bg-[#FFD700]">
+            <div className="flex items-center justify-between p-6 border-b border-white/[0.06]">
               <div className="flex flex-col">
-                <span className="font-[900] text-xl uppercase tracking-tighter italic leading-none">DevNexus_</span>
-                <BrutalBadge variant="black" size="sm" className="mt-1 w-fit">{roleTitle}</BrutalBadge>
+                <span className="font-bold text-xl tracking-tight">DevNexus</span>
+                <span className="text-[10px] font-medium text-zinc-500 mt-1">{roleTitle}</span>
               </div>
               <button 
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2 border-4 border-black bg-white hover:bg-black hover:text-white transition-colors"
+                className="p-2 text-white hover:bg-white/5 rounded-lg"
               >
-                <X className="w-6 h-6 stroke-[3px]" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <nav className="flex-1 p-6 space-y-4 overflow-y-auto">
+            <nav className="flex-1 p-6 space-y-1 overflow-y-auto">
               {navItems.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                const isActive = (pathname === item.href || pathname.startsWith(item.href + '/')) && !pathname.includes('/profile');
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={cn(
-                      "flex items-center justify-between px-6 py-4 border-4 border-black font-black uppercase text-sm tracking-widest transition-all",
+                      "flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all",
                       isActive
-                        ? "bg-black text-white shadow-none translate-x-1 translate-y-1" 
-                        : "bg-[#F0F0F0] text-black shadow-[6px_6px_0_0_black]"
+                        ? "bg-white/10 text-white" 
+                        : "text-zinc-500 hover:text-white hover:bg-white/[0.03]"
                     )}
                   >
                     <div className="flex items-center space-x-4">
-                      <item.icon className={cn("w-6 h-6", isActive ? "text-[#FFD700]" : "text-black")} />
+                      <item.icon className={cn("w-5 h-5", isActive ? "text-emerald-400" : "text-zinc-500")} />
                       <span>{item.label}</span>
                     </div>
-                    {isActive && <ChevronRight className="w-5 h-5 text-[#FFD700]" />}
+                    {isActive && <div className="w-1 h-4 bg-emerald-500 rounded-full" />}
                   </Link>
                 );
               })}
             </nav>
 
-            <div className="p-6 border-t-4 border-black bg-white space-y-4">
+            <div className="p-6 border-t border-white/[0.06] space-y-3">
               <Link
-                href="/dashboard/profile"
+                href={profileHref}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
-                  "flex items-center justify-between px-6 py-4 border-4 border-black font-black uppercase text-sm tracking-widest transition-all",
-                  pathname === "/dashboard/profile"
-                    ? "bg-black text-white shadow-none translate-x-1 translate-y-1" 
-                    : "bg-white text-black shadow-[6px_6px_0_0_black]"
+                  "flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all",
+                  isProfileActive
+                    ? "bg-white/10 text-white" 
+                    : "text-zinc-500 hover:text-white hover:bg-white/[0.03]"
                 )}
               >
                 <div className="flex items-center space-x-4">
-                   <User className={cn("w-6 h-6", pathname === "/dashboard/profile" ? "text-[#00D1FF]" : "text-black")} />
-                   <span>Profile</span>
+                   <User className="w-5 h-5 text-zinc-500" />
+                   <span>Profile Settings</span>
                 </div>
               </Link>
 
-              <BrutalButton
-                variant="danger"
-                fullWidth
-                icon={LogOut}
+              <button
                 onClick={handleLogout}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-all"
               >
-                Log_Out
-              </BrutalButton>
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Desktop Sidebar */}
-      <aside className="w-72 border-r-4 border-black bg-white flex-col h-full hidden md:flex z-50">
-        <div className="p-8 border-b-4 border-black bg-[#FFD700]">
-          <Link href="/dashboard/admin" className="flex items-center space-x-3 group">
+      <aside className="w-72 border-r border-white/[0.06] bg-[#0a0a0c] flex-col h-full hidden md:flex z-50">
+        <div className="p-8 border-b border-white/[0.06]">
+          <Link href="/dashboard" className="flex items-center space-x-3 group">
             <motion.div 
-              whileHover={{ rotate: 5 }}
-              className="w-12 h-12 bg-black border-2 border-black flex items-center justify-center shadow-[4px_4px_0_0_white]"
+              whileHover={{ rotate: 12 }}
+              className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center"
             >
-              <Activity className="w-7 h-7 text-[#FFD700]" />
+              <Command className="w-5 h-5 text-white" />
             </motion.div>
             <div className="flex flex-col">
-              <span className="font-[900] text-xl uppercase tracking-tighter italic leading-none">DevNexus_</span>
-              <BrutalBadge variant="black" size="sm" className="mt-1 w-fit">{roleTitle}</BrutalBadge>
+              <span className="font-bold text-lg tracking-tight">DevNexus</span>
+              <span className="text-[10px] font-medium text-zinc-500">{roleTitle}</span>
             </div>
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 py-10 space-y-4 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-4 py-8 space-y-1 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            const isActive = (pathname === item.href || pathname.startsWith(item.href + '/')) && !pathname.includes('/profile');
             
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "group relative flex items-center justify-between px-4 py-3 border-2 border-black font-black uppercase text-xs tracking-widest transition-all",
+                  "group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
                   isActive
-                    ? "bg-black text-white shadow-none translate-x-1 translate-y-1" 
-                    : "bg-white text-black shadow-[4px_4px_0_0_black] hover:bg-[#00D1FF] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none"
+                    ? "bg-white/[0.06] text-white" 
+                    : "text-zinc-500 hover:text-white hover:bg-white/[0.03]"
                 )}
               >
-                <div className="flex items-center space-x-4">
-                  <item.icon className={cn("w-5 h-5", isActive ? "text-[#FFD700]" : "text-black")} />
+                <div className="flex items-center space-x-3">
+                  <item.icon className={cn("w-4 h-4 transition-colors", isActive ? "text-emerald-400" : "text-zinc-600 group-hover:text-white")} />
                   <span>{item.label}</span>
                 </div>
-                {isActive && <ChevronRight className="w-4 h-4 text-[#FFD700]" />}
+                {isActive && (
+                  <motion.div layoutId="active-pill" className="w-1 h-4 bg-emerald-500 rounded-full" />
+                )}
               </Link>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t-4 border-black space-y-4 bg-[#F0F0F0]">
+        <div className="p-6 border-t border-white/[0.06] space-y-3">
           <Link
-            href="/dashboard/profile"
+            href={profileHref}
             className={cn(
-              "group flex items-center justify-between px-4 py-3 border-2 border-black font-black uppercase text-xs tracking-widest transition-all",
-              pathname === "/dashboard/profile"
-                ? "bg-black text-white shadow-none translate-x-1 translate-y-1"
-                : "bg-white text-black shadow-[4px_4px_0_0_black] hover:bg-[#FF00FF] hover:text-white hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none"
+              "flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
+              isProfileActive
+                ? "bg-white/[0.06] text-white"
+                : "text-zinc-500 hover:text-white hover:bg-white/[0.03]"
             )}
           >
-            <div className="flex items-center space-x-4">
-               <User className={cn("w-5 h-5", pathname === "/dashboard/profile" ? "text-[#00D1FF]" : "text-black")} />
-               <span>Profile</span>
+            <div className="flex items-center space-x-3">
+               <User className="w-4 h-4 text-zinc-600" />
+               <span>Profile Settings</span>
             </div>
           </Link>
 
-          <BrutalButton
-            variant="danger"
-            fullWidth
-            icon={LogOut}
+          <button
             onClick={handleLogout}
-            className="py-2.5 text-xs"
+            className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-medium text-zinc-500 hover:text-red-400 hover:bg-red-500/10 border border-white/[0.06] transition-all"
           >
-            Security_Log_Out
-          </BrutalButton>
+            <LogOut className="w-4 h-4" />
+            <span>Sign out</span>
+          </button>
         </div>
       </aside>
     </>

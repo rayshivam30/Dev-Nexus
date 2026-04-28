@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Loader2, Mail, Lock } from "lucide-react";
+import { ArrowRight, Loader2, Mail, Lock, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,53 +44,46 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-4xl font-[900] tracking-tighter uppercase italic leading-none text-black">
-          User <br /> 
-          <span className="bg-[#FFD700] border-[2px] border-black px-2 shadow-[4px_4px_0_0_black]">AUTH_LOG:</span>
+    <div className="space-y-8 bg-white/[0.02] border border-white/10 p-10 rounded-[32px] backdrop-blur-3xl shadow-2xl">
+      <div className="space-y-3">
+        <h1 className="text-4xl font-black tracking-tighter">
+          Welcome back
         </h1>
-        <p className="text-black font-bold uppercase text-[10px] border-l-2 border-black pl-3 opacity-60">
-          Access the primary resolution nexus.
+        <p className="text-base text-white/50 font-medium">
+          Sign in to access your incident dashboard.
         </p>
       </div>
 
-      {/* OAuth integration removed for production readiness */}
-
       {error && (
-        <div className="p-3 bg-[#FF00FF] text-white border-[2px] border-black font-black uppercase text-[11px] shadow-[4px_4px_0_0_black] flex items-center gap-3">
-          <div className="bg-black text-white p-0.5">
-             <Lock className="w-3 h-3" />
-          </div>
+        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 flex items-center gap-3">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
           {error}
         </div>
       )}
 
       <form onSubmit={onSubmit} method="post" className="space-y-5">
         <div className="space-y-2">
-          <label className="text-[11px] font-black uppercase tracking-widest text-black ml-1">EMAIL_ADDRESS</label>
+          <label className="text-xs font-medium text-zinc-500 ml-1">Email</label>
           <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black/20" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
               <input 
                 type="email" 
                 name="email" 
                 required 
-                className="w-full pl-14 pr-4 py-4 bg-white border-[2px] border-black focus:outline-none focus:bg-[#F0F0F0] focus:shadow-[4px_4px_0_0_black] transition-all text-sm font-bold placeholder:text-black/20" 
-                placeholder="USER@DOMAIN.COM"
+                className="w-full pl-12 pr-4 py-4 bg-white/[0.03] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-white/30 focus:bg-white/[0.05] transition-all text-sm placeholder:text-zinc-600 backdrop-blur-md" 
+                placeholder="you@company.com"
               />
           </div>
         </div>
         <div className="space-y-2">
-          <div className="flex justify-between items-end">
-             <label className="text-[11px] font-black uppercase tracking-widest text-black ml-1">ACCESS_CODE</label>
-          </div>
+          <label className="text-xs font-medium text-zinc-500 ml-1">Password</label>
           <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-black/20" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
               <input 
                 type="password" 
                 name="password" 
                 required 
-                className="w-full pl-14 pr-4 py-4 bg-white border-[2px] border-black focus:outline-none focus:bg-[#F0F0F0] focus:shadow-[4px_4px_0_0_black] transition-all text-sm font-bold placeholder:text-black/20" 
+                className="w-full pl-12 pr-4 py-4 bg-white/[0.03] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-white/30 focus:bg-white/[0.05] transition-all text-sm placeholder:text-zinc-600 backdrop-blur-md" 
                 placeholder="••••••••"
               />
           </div>
@@ -99,16 +92,19 @@ export default function LoginPage() {
         <button 
           type="submit" 
           disabled={loading}
-          className="w-full flex items-center justify-center h-14 bg-[#FFD700] text-black border-[3px] border-black font-[900] text-lg uppercase tracking-tighter hover:bg-black hover:text-white shadow-[6px_6px_0_0_black] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all disabled:opacity-50 mt-2"
+          className="w-full flex items-center justify-center h-14 bg-white text-black rounded-full font-bold text-base hover:bg-white/90 transition-all disabled:opacity-50 mt-6 shadow-[0_0_20px_rgba(255,255,255,0.2)]"
         >
-          {loading ? <Loader2 className="w-7 h-7 animate-spin" /> : (
-            <>AUTHORIZE_SESSION <ArrowRight className="w-5 h-5 ml-4" /></>
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+            <>Sign in <ArrowRight className="w-5 h-5 ml-2" /></>
           )}
         </button>
       </form>
 
-      <div className="text-center text-[11px] font-black uppercase tracking-widest border-t border-black/10 pt-6">
-        NEW_ORG? <Link href="/auth/register" className="text-black underline underline-offset-4 decoration-2 hover:bg-[#00D1FF] px-2 transition-colors ml-1">CREATE_ACCOUNT</Link>
+      <div className="text-center text-sm text-zinc-500 border-t border-white/[0.06] pt-6 font-medium">
+        New to DevNexus?{" "}
+        <Link href="/auth/register" className="text-white hover:text-white/80 font-bold transition-colors">
+          Create an account
+        </Link>
       </div>
     </div>
   );

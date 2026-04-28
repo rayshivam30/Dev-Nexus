@@ -47,12 +47,12 @@ function AcceptInviteContent() {
 
   if (!token) {
     return (
-      <div className="w-full max-w-md p-8 border border-border bg-card rounded-xl text-center space-y-4 shadow-xl">
+      <div className="space-y-8 py-10 text-center">
         <div className="flex justify-center">
-          <AlertCircle className="w-12 h-12 text-destructive" />
+          <AlertCircle className="w-12 h-12 text-red-500" />
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">Invalid Invite Link</h1>
-        <p className="text-sm text-foreground/60">
+        <h1 className="text-3xl font-extrabold tracking-tight">Invalid Invite Link</h1>
+        <p className="text-sm text-zinc-500">
           This invite link is missing or malformed. Please ask your admin to resend the invite.
         </p>
       </div>
@@ -109,30 +109,27 @@ function AcceptInviteContent() {
 
   if (success) {
     return (
-      <div className="w-full max-w-md p-8 border border-border bg-card rounded-xl text-center space-y-4 shadow-xl animate-in fade-in duration-500">
+      <div className="space-y-8 py-10 text-center animate-in fade-in duration-500">
         <div className="flex justify-center">
-          <ShieldCheck className="w-12 h-12 text-emerald-500" />
+          <ShieldCheck className="w-12 h-12 text-white" />
         </div>
-        <h2 className="text-2xl font-bold tracking-tight">Account Created!</h2>
-        <p className="text-foreground/60 text-sm">
+        <h2 className="text-3xl font-extrabold tracking-tight">Account Created!</h2>
+        <p className="text-zinc-500 text-sm">
           Welcome aboard. Redirecting you to your dashboard…
         </p>
-        <Loader2 className="w-5 h-5 animate-spin mx-auto text-foreground/40" />
+        <Loader2 className="w-5 h-5 animate-spin mx-auto text-zinc-500" />
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-md p-8 border border-border bg-card rounded-xl space-y-6 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="space-y-2 text-center">
-        <div className="flex justify-center mb-2">
-          <ShieldCheck className="w-10 h-10 text-foreground/70" />
-        </div>
-        <h1 className="text-3xl font-bold tracking-tight">Accept Invite</h1>
-        <p className="text-sm text-foreground/60">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="space-y-3">
+        <h1 className="text-3xl font-extrabold tracking-tight">Accept Invite</h1>
+        <p className="text-sm text-zinc-500">
           You&apos;ve been invited as a{" "}
 
-          <span className="font-semibold text-foreground capitalize">
+          <span className="font-semibold text-white capitalize">
             {role.toLowerCase()}
           </span>
           . Set your password to get started.
@@ -140,46 +137,46 @@ function AcceptInviteContent() {
       </div>
 
       {error && (
-        <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md flex items-start gap-2">
+        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 flex items-center gap-3">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
           {error}
         </div>
       )}
 
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="space-y-5">
         {/* Pre-filled email — read only */}
-        <div className="space-y-1">
-          <label className="text-sm font-medium">Email</label>
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-zinc-500 ml-1">Email</label>
           <input
             type="email"
             value={email}
             readOnly
-            className="w-full px-3 py-2 bg-accent/30 border border-border rounded-md text-foreground/70 cursor-not-allowed focus:outline-none"
+            className="w-full px-4 py-3.5 bg-white/[0.02] border border-white/[0.04] rounded-xl text-zinc-500 cursor-not-allowed focus:outline-none text-sm"
           />
         </div>
 
-        <div className="space-y-1">
-          <label className="text-sm font-medium">Password</label>
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-zinc-500 ml-1">Password</label>
           <input
             type="password"
             required
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
+            className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/[0.08] rounded-xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] transition-all text-sm placeholder:text-zinc-700"
             placeholder="••••••••"
           />
         </div>
 
-        <div className="space-y-1">
-          <label className="text-sm font-medium">Confirm Password</label>
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-zinc-500 ml-1">Confirm Password</label>
           <input
             type="password"
             required
             minLength={6}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
+            className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/[0.08] rounded-xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] transition-all text-sm placeholder:text-zinc-700"
             placeholder="••••••••"
           />
         </div>
@@ -187,10 +184,10 @@ function AcceptInviteContent() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center h-10 rounded-md bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 transition-opacity mt-2"
+          className="w-full flex items-center justify-center h-12 bg-white text-black rounded-xl font-semibold text-sm hover:bg-white/90 transition-all disabled:opacity-50 mt-2"
         >
           {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
             <>
               Create Account <ArrowRight className="w-4 h-4 ml-2" />
@@ -205,8 +202,8 @@ function AcceptInviteContent() {
 export default function AcceptInvitePage() {
   return (
     <Suspense fallback={
-      <div className="w-full max-w-md p-8 border border-border bg-card rounded-xl text-center">
-        <Loader2 className="w-6 h-6 animate-spin mx-auto text-foreground/40" />
+      <div className="space-y-8 py-10 text-center">
+        <Loader2 className="w-6 h-6 animate-spin mx-auto text-zinc-500" />
       </div>
     }>
       <AcceptInviteContent />

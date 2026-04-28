@@ -13,14 +13,14 @@ test.describe('Authentication End-to-End', () => {
     await expect(page.locator('input[type="password"]')).toBeVisible();
     
     // Check for the login button
-    await expect(page.getByRole('button', { name: /AUTHORIZE_SESSION/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Sign in/i })).toBeVisible();
   });
 
   test('Register page navigation works', async ({ page }) => {
     await page.goto('/auth/login');
     
     // Click on the register link
-    await page.getByText(/CREATE_ACCOUNT/i).click();
+    await page.getByText(/Create an account/i).click();
     
     // Should be on register page
     await expect(page).toHaveURL(/.*\/auth\/register/);
@@ -29,6 +29,6 @@ test.describe('Authentication End-to-End', () => {
     await expect(page.locator('input[name="orgName"]')).toBeVisible();
     await expect(page.locator('input[name="email"]')).toBeVisible();
     await expect(page.locator('input[name="password"]')).toBeVisible();
-    await expect(page.getByRole('button', { name: /CREATE_ORGANIZATION/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Create organization/i })).toBeVisible();
   });
 });

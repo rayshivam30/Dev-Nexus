@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Layout, Mail, Info, Layers, X, Activity, Github, Check } from "lucide-react";
+import { Loader2, Layout, Mail, Info, Layers, X, Github, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ProjectCreateModalProps {
@@ -12,7 +12,6 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
   const [newProjectDesc, setNewProjectDesc] = useState("");
   const [inviteManagerEmail, setInviteManagerEmail] = useState("");
   const [plan, setPlan] = useState("BASIC");
-  const [githubRepoUrl, setGithubRepoUrl] = useState("");
   const [createProjectLoading, setCreateProjectLoading] = useState(false);
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [createdSdkKey, setCreatedSdkKey] = useState<string | null>(null);
@@ -26,7 +25,7 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
       const projectRes = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ name: newProjectName, description: newProjectDesc, plan, githubRepoUrl })
+        body: JSON.stringify({ name: newProjectName, description: newProjectDesc, plan })
       });
       
       const projectData = await projectRes.json();
@@ -53,12 +52,7 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
         if (!inviteRes.ok) throw new Error(`Project created, but failed to invite manager: ${inviteData.error}`);
       }
 
-      // If they didn't provide a URL, we'll show the GitHub App connect screen
-      if (!githubRepoUrl.trim()) {
-          // Stay in modal to show "Connect GitHub" button
-      } else {
-          onSuccess(projectData.project?.sdkApiKey, newProjectId);
-      }
+      // Always stay in modal to show GitHub install step
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create project");
     } finally {
@@ -67,179 +61,143 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
   }
 
   const handleConnectGitHub = () => {
-      // Use the actual GitHub App name for the installation link
-      const githubAppUrl = `https://github.com/apps/DevNexus-Monitor/installations/new?state=${createdProjectId}`;
+      const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG;
+      const githubAppUrl = `https://github.com/apps/${appSlug}/installations/new?state=${createdProjectId}`;
       window.open(githubAppUrl, "_blank");
       onSuccess(createdSdkKey || undefined, createdProjectId || undefined);
   };
 
-  if (createdProjectId && !githubRepoUrl) {
+  const inputClass = "w-full px-4 py-3 bg-white/[0.03] border border-white/[0.08] rounded-xl focus:outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all text-sm text-white placeholder:text-zinc-700";
+
+  // Step 2: GitHub connection step (shown after project is created)
+  if (createdProjectId) {
       return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white border-8 border-black shadow-[30px_30px_0_0_#32CD32] w-full max-w-lg p-12 text-center space-y-8 animate-in zoom-in-95">
-             <div className="w-20 h-20 bg-[#32CD32] border-4 border-black mx-auto flex items-center justify-center shadow-[6px_6px_0_0_black]">
-                <Check className="w-12 h-12 text-black stroke-[3px]" />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-md">
+          <div className="bg-[#111113] border border-white/[0.08] rounded-2xl w-full max-w-lg p-10 text-center space-y-6 animate-in zoom-in-95">
+             <div className="w-16 h-16 bg-emerald-600/10 border border-emerald-500/20 rounded-2xl mx-auto flex items-center justify-center">
+                <Check className="w-8 h-8 text-emerald-400" />
              </div>
              <div className="space-y-2">
-                <h2 className="text-3xl font-black uppercase italic tracking-tighter">PROJECT_CREATED</h2>
-                <p className="text-xs font-bold uppercase opacity-60">Success. Now, automate your repository monitoring.</p>
+                <h2 className="text-2xl font-extrabold tracking-tight">Project Created</h2>
+                <p className="text-sm text-zinc-500">Connect your GitHub repository to enable automatic incident tracking from CI failures, PR conflicts, and more.</p>
              </div>
              
-             <div className="space-y-4">
+             <div className="space-y-3">
                 <button 
                   onClick={handleConnectGitHub}
-                  className="w-full py-6 bg-black text-white font-black uppercase italic tracking-widest hover:bg-[#FFD700] hover:text-black transition-colors shadow-[8px_8px_0_0_#32CD32] flex items-center justify-center gap-4"
+                  className="w-full py-3.5 bg-white text-black rounded-xl text-sm font-semibold hover:bg-white/90 transition-all flex items-center justify-center gap-3"
                 >
-                  <Github className="w-6 h-6" />
-                  INSTALL_GITHUB_APP
+                  <Github className="w-5 h-5" />
+                  Install GitHub App
                 </button>
                 <button 
                   onClick={() => onSuccess(createdSdkKey || undefined, createdProjectId)}
-                  className="text-[10px] font-black uppercase tracking-widest underline decoration-2 underline-offset-4 hover:bg-black hover:text-white px-2 py-1 transition-colors"
+                  className="text-xs text-zinc-600 hover:text-white transition-colors"
                 >
-                  SKIP_FOR_NOW
+                  Skip — I&apos;ll connect later
                 </button>
              </div>
+
+             <p className="text-[10px] text-zinc-700">You can always connect GitHub from your project settings.</p>
           </div>
         </div>
       );
   }
 
+  // Step 1: Project creation form
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white border-8 border-black shadow-[30px_30px_0_0_black] w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="flex justify-between items-center p-8 bg-black text-white">
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-[#FFD700] border-2 border-white">
-              <Layout className="w-6 h-6 text-black" />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-md">
+      <div className="bg-[#111113] border border-white/[0.08] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="flex justify-between items-center p-6 border-b border-white/[0.06]">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center">
+              <Layout className="w-4 h-4 text-emerald-400" />
             </div>
-            <h2 className="text-4xl font-[900] uppercase italic tracking-tighter">PROJECT_INIT</h2>
+            <h2 className="text-xl font-bold tracking-tight">New Project</h2>
           </div>
-          <button 
-            onClick={onClose} 
-            className="p-2 hover:bg-white hover:text-black transition-colors border-2 border-white"
-          >
-            <X className="w-8 h-8 stroke-[3px]" />
+          <button onClick={onClose} className="p-2 text-zinc-600 hover:text-white hover:bg-white/[0.06] rounded-lg transition-all">
+            <X className="w-5 h-5" />
           </button>
         </div>
         
-        <form onSubmit={handleCreateProject} className="p-10 space-y-8 overflow-y-auto custom-scrollbar">
-          <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                  <Layout className="w-4 h-4" />
-                  PROJECT_NAME*
-                </label>
-                <input 
-                  required 
-                  value={newProjectName} 
-                  onChange={e=>setNewProjectName(e.target.value)} 
-                  className="w-full px-6 py-4 bg-white border-4 border-black font-bold uppercase text-sm focus:outline-none focus:bg-[#00D1FF] transition-colors placeholder:text-black/20" 
-                  placeholder="CORE_SYSTEM" 
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  INITIAL_MANAGER_EMAIL
-                </label>
-                <input 
-                  type="email"
-                  value={inviteManagerEmail} 
-                  onChange={e=>setInviteManagerEmail(e.target.value)} 
-                  className="w-full px-6 py-4 bg-white border-4 border-black font-bold uppercase text-sm focus:outline-none focus:bg-[#FF00FF] focus:text-white transition-colors placeholder:text-black/20" 
-                  placeholder="OPERATOR@DOMAIN.COM" 
-                />
-              </div>
-            </div>
-            
+        <form onSubmit={handleCreateProject} className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                <Info className="w-4 h-4" />
-                PROJECT_SPECS
+              <label className="text-xs font-medium text-zinc-500 ml-1 flex items-center gap-1.5">
+                <Layout className="w-3 h-3" /> Project name *
               </label>
-              <textarea 
-                value={newProjectDesc} 
-                onChange={e=>setNewProjectDesc(e.target.value)} 
-                rows={3}
-                className="w-full px-6 py-4 bg-white border-4 border-black font-bold uppercase text-sm focus:outline-none focus:bg-[#F0F0F0] transition-colors resize-none placeholder:text-black/20" 
-                placeholder="DEFINE_PURPOSE_OF_THIS_CONTAINER..." 
+              <input 
+                required value={newProjectName} onChange={e=>setNewProjectName(e.target.value)} 
+                className={inputClass} placeholder="My Project" 
               />
             </div>
 
-            <div className="space-y-4">
-              <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                <Layers className="w-4 h-4" />
-                TIER_SELECTION*
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-zinc-500 ml-1 flex items-center gap-1.5">
+                <Mail className="w-3 h-3" /> Manager email (optional)
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[
-                  { id: "BASIC", name: "TIER_01", desc: "INDIE_OPS", color: "bg-[#00D1FF]" },
-                  { id: "ADVANCED", name: "TIER_02", desc: "UNIT_DEPLOYS", color: "bg-[#FFD700]" },
-                  { id: "PRO", name: "TIER_XX", desc: "CORE_LEAGUE", color: "bg-[#FF00FF]" }
-                ].map((p) => (
-                  <div 
-                    key={p.id}
-                    onClick={() => setPlan(p.id)}
-                    className={cn(
-                      "relative p-6 border-4 cursor-pointer transition-all flex flex-col items-center text-center gap-2",
-                      plan === p.id 
-                        ? `border-black ${p.color} shadow-none translate-x-1 translate-y-1 font-black` 
-                        : 'border-black bg-white shadow-[4px_4px_0_0_black] hover:bg-[#F0F0F0]'
-                    )}
-                  >
-                    <div className="text-lg font-black uppercase tracking-tighter italic">{p.name}</div>
-                    <div className="text-[10px] font-bold uppercase tracking-widest opacity-60 leading-tight">{p.desc}</div>
-                  </div>
-                ))}
-              </div>
+              <input 
+                type="email" value={inviteManagerEmail} onChange={e=>setInviteManagerEmail(e.target.value)} 
+                className={inputClass} placeholder="manager@company.com" 
+              />
             </div>
-
-            {plan === 'PRO' ? (
-              <div className="py-12 border-4 border-black bg-black text-white flex flex-col items-center justify-center text-center space-y-4">
-                <Activity className="w-12 h-12 text-[#FF00FF] animate-pulse" />
-                <h3 className="text-2xl font-black uppercase italic tracking-tighter">ACCESS_DENIED</h3>
-                <p className="text-xs font-bold uppercase opacity-40 max-w-[280px]">Tier_XX capabilities are currently restricted to early alpha users.</p>
-              </div>
-            ) : (
-              <div className="space-y-4 pt-4 border-t-2 border-black">
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-black/40">
-                    <Github className="w-4 h-4" />
-                    REPOSITORY_LINK (OPTIONAL_FOR_AUTO_MODE)
-                  </label>
-                  <input 
-                    type="url"
-                    value={githubRepoUrl} 
-                    onChange={e=>setGithubRepoUrl(e.target.value)} 
-                    className="w-full px-6 py-4 bg-white border-4 border-black font-bold uppercase text-sm focus:outline-none focus:bg-[#32CD32] transition-colors placeholder:text-black/10" 
-                    placeholder="HTTPS://GITHUB.COM/ORG/REPO" 
-                  />
-                  <p className="text-[10px] font-black uppercase opacity-40">Leave empty to use the one-click GitHub App installer.</p>
-                </div>
-              </div>
-            )}
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-zinc-500 ml-1 flex items-center gap-1.5">
+              <Info className="w-3 h-3" /> Description
+            </label>
+            <textarea 
+              value={newProjectDesc} onChange={e=>setNewProjectDesc(e.target.value)} rows={3}
+              className={cn(inputClass, "resize-none")} placeholder="Describe this project..." 
+            />
           </div>
 
-          <div className="pt-10 flex flex-col sm:flex-row justify-end gap-6 border-t-4 border-black bg-[#F0F0F0] -mx-10 -mb-10 p-10 mt-10">
-            <button 
-              type="button" 
-              onClick={onClose} 
-              className="px-8 py-4 border-4 border-black bg-white font-black uppercase text-xs tracking-widest hover:bg-black hover:text-white transition-colors shadow-[4px_4px_0_0_black] active:shadow-none active:translate-x-1 active:translate-y-1"
-            >
-              ABORT_INIT
+          <div className="space-y-3">
+            <label className="text-xs font-medium text-zinc-500 ml-1 flex items-center gap-1.5">
+              <Layers className="w-3 h-3" /> Plan *
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { id: "BASIC", name: "Basic", desc: "Indie" },
+                { id: "ADVANCED", name: "Advanced", desc: "Teams" },
+                { id: "PRO", name: "Pro", desc: "Enterprise" }
+              ].map((p) => (
+                <div 
+                  key={p.id}
+                  onClick={() => setPlan(p.id)}
+                  className={cn(
+                    "p-4 rounded-xl border cursor-pointer transition-all text-center",
+                    plan === p.id 
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-white" 
+                      : "border-white/[0.06] bg-white/[0.02] text-zinc-400 hover:bg-white/[0.04]"
+                  )}
+                >
+                  <div className="text-sm font-bold">{p.name}</div>
+                  <div className="text-[10px] text-zinc-600 mt-0.5">{p.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {plan === 'PRO' && (
+            <div className="p-8 rounded-xl border border-white/[0.06] bg-white/[0.02] text-center space-y-2">
+              <p className="text-sm font-semibold text-zinc-400">Enterprise tier coming soon</p>
+              <p className="text-xs text-zinc-600">Contact us for early access.</p>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.06]">
+            <button type="button" onClick={onClose} 
+              className="px-5 py-2.5 rounded-xl text-sm font-medium text-zinc-400 border border-white/[0.06] hover:bg-white/[0.04] transition-all">
+              Cancel
             </button>
-            <button 
-              type="submit" 
-              disabled={createProjectLoading || !newProjectName.trim() || plan === 'PRO'} 
-              className="px-10 py-4 bg-[#FFD700] text-black border-4 border-black font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-[6px_6px_0_0_black] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-50"
-            >
+            <button type="submit" disabled={createProjectLoading || !newProjectName.trim() || plan === 'PRO'} 
+              className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-500 transition-all disabled:opacity-50 flex items-center gap-2">
               {createProjectLoading ? (
-                <><Loader2 className="w-4 h-4 animate-spin stroke-[3px]" /> INITIALIZING...</>
+                <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</>
               ) : (
-                "FINALIZE_DEPLOYMENT"
+                "Create Project"
               )}
             </button>
           </div>

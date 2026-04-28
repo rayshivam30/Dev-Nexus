@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Loader2, X, AlertCircle, Plus, Terminal, Database, Shield, ChevronDown } from "lucide-react";
+import { Loader2, X, AlertCircle, Plus, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ProjectData { id: string; name: string; }
@@ -65,7 +65,7 @@ export function CreateIssueModal({
     setError("");
 
     if (projectRequired && !selectedProjectId) {
-      setError("CRITICAL: PROJECT_ID_MISSING");
+      setError("Please select a project.");
       return;
     }
 
@@ -92,237 +92,191 @@ export function CreateIssueModal({
       });
       
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "UPLINK_FAILURE: DATA_REJECTED");
+      if (!res.ok) throw new Error(data.error || "Failed to create issue");
       
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "UPLINK_FAILURE: SYSTEM_TIMEOUT");
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setSubmitting(false);
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 md:p-8 overflow-y-auto custom-scrollbar animate-in fade-in duration-300 backdrop-blur-sm">
-      <div className="bg-white border-[10px] border-black shadow-[30px_30px_0_0_#FFD700] w-full max-w-4xl animate-in zoom-in-95 duration-300 my-auto relative">
-        
-        {/* TOP STATUS BAR */}
-        <div className="bg-black text-white px-6 py-2 flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-           <div className="flex items-center gap-4">
-              <span className="text-[#FFD700] animate-pulse">● LIVE_CONNECTION</span>
-              <span>BUFFER_ID: {Math.random().toString(36).substring(7).toUpperCase()}</span>
-           </div>
-           <div className="opacity-40">ENCRYPTION: AES_256_ACTIVE</div>
-        </div>
+  const inputClass = "w-full px-4 py-3 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm transition-all focus:outline-none focus:border-white/20 placeholder:text-zinc-700";
+  const selectClass = "w-full px-4 py-3 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm transition-all focus:outline-none focus:border-white/20 cursor-pointer appearance-none disabled:opacity-30";
+  const labelClass = "text-xs text-zinc-500 ml-1 mb-1.5 block";
 
-        <div className="p-8 md:p-12 space-y-12">
-          {/* Header Section */}
-          <div className="flex justify-between items-start border-b-8 border-black pb-8">
-            <div className="space-y-4">
-              <h2 className="text-5xl md:text-7xl font-[900] uppercase italic tracking-tighter leading-none text-black">
-                NEW_INCIDENT <br />
-                <span className="text-2xl md:text-3xl bg-black text-white px-4 py-1 inline-block mt-2 -rotate-1">LOG_SUBSYSTEM</span>
-              </h2>
-            </div>
-            <button onClick={onClose} className="p-3 border-4 border-black bg-white hover:bg-[#FF3131] hover:text-white transition-all shadow-[8px_8px_0_0_black] active:translate-x-1 active:translate-y-1 active:shadow-none">
-              <X className="w-10 h-10 stroke-[4px]" />
-            </button>
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 md:p-8 overflow-y-auto animate-in fade-in duration-200">
+      <div className="bg-[#111113] border border-white/[0.08] rounded-2xl w-full max-w-3xl animate-in zoom-in-95 duration-200 my-auto">
+        
+        {/* Header */}
+        <div className="flex justify-between items-center p-6 border-b border-white/[0.06]">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight">New Incident</h2>
+            <p className="text-xs text-zinc-600 mt-0.5">Create a new issue to track</p>
           </div>
-          
+          <button onClick={onClose} className="p-2 text-zinc-600 hover:text-white hover:bg-white/[0.06] rounded-lg transition-all">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-6">
           {error && (
-            <div className="p-6 bg-[#FF3131] text-white border-4 border-black font-black uppercase text-xs shadow-[8px_8px_0_0_black] flex items-center gap-6 italic">
-              <div className="bg-white text-[#FF3131] p-2 border-2 border-black">
-                <AlertCircle className="w-8 h-8 stroke-[3px]" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-lg font-black underline underline-offset-4 decoration-2">SYSTEM_ERROR_DETECTED</span>
-                <span className="opacity-90">{error}</span>
-              </div>
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 flex items-center gap-3">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {error}
             </div>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-12">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Title & Description */}
+            <div className="space-y-4">
+              <div>
+                <label className={labelClass}>Title *</label>
+                <input 
+                  required 
+                  value={title} 
+                  onChange={e=>setTitle(e.target.value)} 
+                  className={inputClass} 
+                  placeholder="e.g. Database connection timeout" 
+                />
+              </div>
               
-              {/* LEFT COLUMN: PRIMARY INPUTS */}
-              <div className="lg:col-span-7 space-y-10">
-                <div className="space-y-3 p-8 border-4 border-black bg-[#F8F8F8] shadow-[10px_10px_0_0_black]">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Terminal className="w-6 h-6" />
-                    <h3 className="font-black uppercase tracking-widest text-sm">IDENTIFICATION_DATA</h3>
-                  </div>
-                  
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-black/40 px-1">INCIDENT_NAME_PROTOCOL</label>
-                      <input 
-                        required 
-                        value={title} 
-                        onChange={e=>setTitle(e.target.value)} 
-                        className="w-full h-16 px-6 bg-white border-4 border-black font-black uppercase italic text-sm focus:bg-[#FFD700] transition-all shadow-[6px_6px_0_0_black] focus:shadow-none focus:translate-x-1 focus:translate-y-1 placeholder:text-black/10 outline-none" 
-                        placeholder="E.G. DB_QUERY_TIMEOUT_P0" 
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-black/40 px-1">DETAILED_FRAGMENT_REPORT</label>
-                      <textarea 
-                        required
-                        value={description} 
-                        onChange={e=>setDescription(e.target.value)} 
-                        rows={8}
-                        className="w-full p-6 bg-white border-4 border-black font-black uppercase italic text-sm focus:bg-[#FFD700] transition-all shadow-[6px_6px_0_0_black] focus:shadow-none focus:translate-x-1 focus:translate-y-1 resize-none placeholder:text-black/10 outline-none" 
-                        placeholder="PROVIDE_REPLICATION_STEPS..." 
-                      />
-                    </div>
-                  </div>
+              <div>
+                <label className={labelClass}>Description *</label>
+                <textarea 
+                  required
+                  value={description} 
+                  onChange={e=>setDescription(e.target.value)} 
+                  rows={5}
+                  className={cn(inputClass, "resize-none")} 
+                  placeholder="Describe the issue, steps to reproduce..." 
+                />
+              </div>
+            </div>
+
+            {/* Parameters row */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className={labelClass}>Severity</label>
+                <div className="relative">
+                  <select value={severity} onChange={e=>setSeverity(e.target.value)} className={selectClass}>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="CRITICAL">Critical</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-600" />
                 </div>
               </div>
+              <div>
+                <label className={labelClass}>Priority</label>
+                <div className="relative">
+                  <select value={priority} onChange={e=>setPriority(e.target.value)} className={selectClass}>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="URGENT">Urgent</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-600" />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Environment</label>
+                <div className="flex gap-1.5">
+                  {['PRODUCTION', 'STAGING', 'DEVELOPMENT'].map(env => (
+                    <button
+                      key={env}
+                      type="button"
+                      onClick={() => setEnvironment(env)}
+                      className={cn(
+                        "flex-1 py-3 rounded-lg text-[10px] font-medium transition-all border",
+                        environment === env 
+                          ? "bg-white text-black border-white" 
+                          : "bg-white/[0.02] text-zinc-500 border-white/[0.06] hover:bg-white/[0.04]"
+                      )}
+                    >
+                      {env.slice(0, 4)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
 
-              {/* RIGHT COLUMN: PARAMETERS */}
-              <div className="lg:col-span-5 space-y-10">
-                <div className="space-y-3 p-8 border-4 border-black bg-white shadow-[10px_10px_0_0_#00D1FF]">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Shield className="w-6 h-6 text-[#FF00FF]" />
-                    <h3 className="font-black uppercase tracking-widest text-sm text-[#FF00FF]">MISSION_PARAMETERS</h3>
+            {/* Assignment */}
+            <div className="space-y-3 pt-4 border-t border-white/[0.06]">
+              <p className="text-xs text-zinc-500 font-medium">Assignment (optional)</p>
+              
+              {!fixedProjectId && projects && projects.length > 0 && (
+                <div>
+                  <label className={labelClass}>Project *</label>
+                  <div className="relative">
+                    <select 
+                      value={selectedProjectId} 
+                      onChange={e=>{
+                        setSelectedProjectId(e.target.value);
+                        setSelectedTeamId("");
+                        setSelectedDeveloperId("");
+                      }}
+                      className={selectClass}
+                      required
+                    >
+                      <option value="">Select project...</option>
+                      {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-600" />
                   </div>
+                </div>
+              )}
 
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-black/40 px-1">SEVERITY</label>
-                        <div className="relative">
-                          <select 
-                            value={severity} 
-                            onChange={e=>setSeverity(e.target.value)}
-                            className="w-full h-14 px-4 bg-white border-4 border-black font-black uppercase text-sm focus:bg-[#FF3131] focus:text-white transition-all shadow-[4px_4px_0_0_black] focus:translate-x-1 focus:translate-y-1 focus:shadow-none cursor-pointer outline-none appearance-none"
-                          >
-                            <option value="LOW">LOW_PRIO</option>
-                            <option value="MEDIUM">MEDIUM</option>
-                            <option value="HIGH">HIGH_ALERT</option>
-                            <option value="CRITICAL">CRITICAL_ERROR</option>
-                          </select>
-                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none stroke-[3px]" />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-black/40 px-1">PRIORITY</label>
-                        <div className="relative">
-                          <select 
-                            value={priority} 
-                            onChange={e=>setPriority(e.target.value)}
-                            className="w-full h-14 px-4 bg-white border-4 border-black font-black uppercase text-sm focus:bg-[#FF00FF] focus:text-white transition-all shadow-[4px_4px_0_0_black] focus:translate-x-1 focus:translate-y-1 focus:shadow-none cursor-pointer outline-none appearance-none"
-                          >
-                            <option value="LOW">PLAN_B</option>
-                            <option value="MEDIUM">STANDARD</option>
-                            <option value="HIGH">URGENT</option>
-                            <option value="URGENT">IMMEDIATE</option>
-                          </select>
-                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none stroke-[3px]" />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-black/40 px-1">ZONE_ENVIRONMENT</label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {['PRODUCTION', 'STAGING', 'DEVELOPMENT'].map(env => (
-                          <button
-                            key={env}
-                            type="button"
-                            onClick={() => setEnvironment(env)}
-                            className={cn(
-                              "h-12 border-4 border-black font-black uppercase italic text-[9px] transition-all shadow-[4px_4px_0_0_black] active:shadow-none active:translate-x-1 active:translate-y-1",
-                              environment === env ? "bg-[#00D1FF] text-white translate-x-1 translate-y-1 shadow-none" : "bg-white text-black hover:bg-black hover:text-white"
-                            )}
-                          >
-                            {env.substring(0, 4)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>Team</label>
+                  <div className="relative">
+                    <select 
+                      value={selectedTeamId} 
+                      onChange={e=>{
+                        setSelectedTeamId(e.target.value);
+                        setSelectedDeveloperId("");
+                      }}
+                      className={selectClass}
+                      disabled={!fixedProjectId && projects && projects.length > 0 && !selectedProjectId}
+                    >
+                      <option value="">None</option>
+                      {filteredTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-600" />
                   </div>
                 </div>
 
-                {/* ALLOCATION BLOCK */}
-                <div className="space-y-3 p-8 border-4 border-black bg-white shadow-[10px_10px_0_0_#32CD32]">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Database className="w-6 h-6 text-[#32CD32]" />
-                    <h3 className="font-black uppercase tracking-widest text-sm text-[#32CD32]">NODE_ALLOCATION</h3>
-                  </div>
-
-                  <div className="space-y-6">
-                    {!fixedProjectId && projects && projects.length > 0 && (
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-black/40 px-1">PROJECT_TARGET</label>
-                        <div className="relative">
-                          <select 
-                            value={selectedProjectId} 
-                            onChange={e=>{
-                              setSelectedProjectId(e.target.value);
-                              setSelectedTeamId("");
-                              setSelectedDeveloperId("");
-                            }}
-                            className="w-full h-14 px-5 bg-white border-4 border-black font-black uppercase text-sm focus:bg-[#FFD700] transition-all shadow-[4px_4px_0_0_black] focus:translate-x-1 focus:translate-y-1 focus:shadow-none cursor-pointer outline-none appearance-none"
-                            required
-                          >
-                            <option value="">-- SELECT_TARGET_NODE --</option>
-                            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                          </select>
-                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none stroke-[3px]" />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-black/40 px-1">CLUSTER</label>
-                        <div className="relative">
-                          <select 
-                            value={selectedTeamId} 
-                            onChange={e=>{
-                              setSelectedTeamId(e.target.value);
-                              setSelectedDeveloperId("");
-                            }}
-                            className="w-full h-14 px-4 bg-white border-4 border-black font-black uppercase text-sm focus:bg-[#FF00FF] focus:text-white transition-all shadow-[4px_4px_0_0_black] focus:translate-x-1 focus:translate-y-1 focus:shadow-none cursor-pointer disabled:opacity-20 outline-none appearance-none"
-                            disabled={!fixedProjectId && projects && projects.length > 0 && !selectedProjectId}
-                          >
-                            <option value="">NO_CLUSTER</option>
-                            {filteredTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                          </select>
-                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none stroke-[3px]" />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-black/40 px-1">OPERATOR</label>
-                        <div className="relative">
-                          <select 
-                            value={selectedDeveloperId} 
-                            onChange={e=>setSelectedDeveloperId(e.target.value)}
-                            className="w-full h-14 px-4 bg-white border-4 border-black font-black uppercase text-sm focus:bg-[#32CD32] transition-all shadow-[4px_4px_0_0_black] focus:translate-x-1 focus:translate-y-1 focus:shadow-none cursor-pointer disabled:opacity-20 outline-none appearance-none"
-                            disabled={!selectedTeamId}
-                          >
-                            <option value="">PENDING</option>
-                            {filteredDevelopers.map(d => <option key={d.id} value={d.id}>{d.name || d.email}</option>)}
-                          </select>
-                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none stroke-[3px]" />
-                        </div>
-                      </div>
-                    </div>
+                <div>
+                  <label className={labelClass}>Assignee</label>
+                  <div className="relative">
+                    <select 
+                      value={selectedDeveloperId} 
+                      onChange={e=>setSelectedDeveloperId(e.target.value)}
+                      className={selectClass}
+                      disabled={!selectedTeamId}
+                    >
+                      <option value="">Unassigned</option>
+                      {filteredDevelopers.map(d => <option key={d.id} value={d.id}>{d.name || d.email}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-600" />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="pt-12 flex flex-col sm:flex-row justify-end items-center gap-12 border-t-8 border-black">
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.06]">
               <button 
                 type="button" 
                 onClick={onClose} 
-                className="font-black uppercase underline underline-offset-8 decoration-4 hover:bg-black hover:text-white px-8 py-4 transition-all text-xl italic tracking-tighter"
+                className="px-5 py-2.5 rounded-xl text-sm font-medium text-zinc-400 border border-white/[0.06] hover:bg-white/[0.04] transition-all"
               >
-                ABORT_MISSION
+                Cancel
               </button>
               <button 
                 type="submit" 
@@ -332,9 +286,9 @@ export function CreateIssueModal({
                   !description.trim() ||
                   (projectRequired && !selectedProjectId)
                 } 
-                className="w-full sm:w-[400px] h-24 bg-black text-white font-[900] uppercase italic tracking-widest border-4 border-black shadow-[15px_15px_0_0_#FFD700] hover:bg-[#FFD700] hover:text-black hover:shadow-none hover:translate-x-2 hover:translate-y-2 active:scale-[0.98] transition-all flex items-center justify-center gap-8 disabled:opacity-20 text-3xl"
+                className="px-6 py-2.5 bg-white text-black rounded-xl font-semibold text-sm hover:bg-white/90 transition-all disabled:opacity-30 flex items-center gap-2"
               >
-                {submitting ? <Loader2 className="w-10 h-10 animate-spin" /> : <>EXECUTE_LOG <Plus className="w-12 h-12 stroke-[5px]" /></>}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4" /> Create Issue</>}
               </button>
             </div>
           </form>

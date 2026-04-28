@@ -40,6 +40,7 @@ interface DetailedProject {
   plan?: string;
   sdkApiKey?: string | null;
   githubRepoUrl?: string | null;
+  githubInstallationId?: string | null;
   isSdkConnected?: boolean;
   issues?: Issue[];
 }
@@ -91,113 +92,118 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
   }
 
   return (
-    <div className="space-y-12 pb-24">
+    <div className="space-y-8 pb-24">
       {/* ── Project Header ── */}
-      <div className="p-10 md:p-12 border-8 border-black bg-white shadow-[16px_16px_0_0_black] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-full bg-black/5 -skew-x-12 translate-x-10 pointer-events-none"></div>
-        
-        <div className="relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center gap-4">
-                <span className="bg-[#FFD700] border-2 border-black px-4 py-1 text-[10px] font-black uppercase tracking-widest leading-none shadow-[4px_4px_0_0_black]">
-                  UNIT_ID: {project.id.slice(0, 8)}
+      <div className="p-8 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-8">
+          <div className="space-y-4 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-[10px] font-medium bg-white/[0.04] border border-white/[0.08] px-2.5 py-1 rounded-lg text-zinc-500">
+                ID: {project.id.slice(0, 8)}
+              </span>
+              {project.plan && (
+                <span className="text-[10px] font-medium bg-white/[0.06] border border-white/[0.08] px-2.5 py-1 rounded-lg text-zinc-400 uppercase">
+                  {project.plan}
                 </span>
-                {project.plan && (
-                  <span className="bg-[#FF00FF] text-white border-2 border-black px-4 py-1 text-[10px] font-black uppercase tracking-widest leading-none shadow-[4px_4px_0_0_black]">
-                    {project.plan}_TIER
-                  </span>
-                )}
-              </div>
-              <h1 className="text-5xl md:text-8xl font-[900] tracking-tighter uppercase italic leading-none text-black break-words">
-                {project.name}
-              </h1>
-              <p className="text-xl font-bold text-black/60 max-w-3xl leading-tight border-l-4 border-black pl-6 italic">
-                {project.description || "Building the future of incident management, one project at a time."}
-              </p>
+              )}
             </div>
-            
-            <div className="w-24 h-24 bg-black border-4 border-black flex items-center justify-center -rotate-6 shadow-[8px_8px_0_0_#00D1FF] shrink-0">
-               <Layout className="w-12 h-12 text-white" />
-            </div>
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+              {project.name}
+            </h1>
+            <p className="text-sm text-zinc-500 max-w-2xl leading-relaxed">
+              {project.description || "No description provided."}
+            </p>
           </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mt-16">
-              {[
-                { label: "OPERATIONAL_TEAMS", value: project.teams.length, icon: Users, color: "bg-[#00D1FF]" },
-                { label: "ACTIVE_INCIDENTS", value: totalIssues, icon: ShieldAlert, color: "bg-[#FF3131]", text: "text-white" },
-                { label: "UNIT_MANAGERS", value: project.managers.length, icon: ShieldCheck, color: "bg-[#32CD32]" },
-                { 
-                  label: project.githubRepoUrl ? "GITHUB_SYNC" : "SDK_STATUS", 
-                  value: project.githubRepoUrl ? "ACTIVE" : "PENDING", 
-                  icon: project.githubRepoUrl ? Github : Activity, 
-                  color: "bg-black",
-                  text: "text-white",
-                  link: project.githubRepoUrl || undefined
-                },
-              ].map((stat) => (
-                <div 
-                  key={stat.label}
-                  className="group relative"
-                >
-                  <div className="absolute inset-0 bg-black translate-x-1 translate-y-1 -z-10 group-hover:translate-x-0 group-hover:translate-y-0 transition-all"></div>
-                  <div className="p-6 bg-white border-4 border-black h-full flex flex-col justify-between hover:translate-x-1 hover:translate-y-1 transition-all">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className={cn("p-2 border-2 border-black -rotate-6 group-hover:rotate-0 transition-transform shadow-[3px_3px_0_0_black]", stat.color, stat.text || "text-black")}>
-                        <stat.icon className="w-5 h-5" />
-                      </div>
-                      <span className="text-[10px] font-black text-black/40 uppercase tracking-widest">{stat.label}</span>
-                    </div>
-                    <div className="text-4xl font-[900] italic leading-none tracking-tighter">
-                      {stat.value}
-                    </div>
-                  </div>
-                  {stat.link && (
-                    <a href={stat.link} target="_blank" rel="noopener noreferrer" className="absolute inset-0 z-20" />
-                  )}
-                </div>
-              ))}
+          <div className="w-14 h-14 bg-white/[0.04] border border-white/[0.06] rounded-2xl flex items-center justify-center shrink-0">
+            <Layout className="w-6 h-6 text-zinc-500" />
           </div>
         </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-8">
+          {[
+            { label: "Teams", value: project.teams.length, icon: Users },
+            { label: "Incidents", value: totalIssues, icon: ShieldAlert },
+            { label: "Managers", value: project.managers.length, icon: ShieldCheck },
+            { 
+              label: "GitHub", 
+              value: project.githubInstallationId ? "Connected" : "Not connected", 
+              icon: Github, 
+              link: project.githubRepoUrl || undefined
+            },
+          ].map((stat) => (
+            <div key={stat.label} className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-all relative">
+              <div className="flex items-center justify-between mb-3">
+                <stat.icon className="w-4 h-4 text-zinc-600" />
+                <span className="text-[10px] text-zinc-600 font-medium">{stat.label}</span>
+              </div>
+              <div className={cn("text-2xl font-extrabold", !project.githubInstallationId && stat.label === "GitHub" && "text-amber-400 text-lg")}>{stat.value}</div>
+              {stat.link && (
+                <a href={stat.link} target="_blank" rel="noopener noreferrer" className="absolute inset-0 z-20" />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* GitHub Connection Banner */}
+        {!project.githubInstallationId && (
+          <div className="mt-6 p-5 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center shrink-0">
+                <Github className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Connect GitHub Repository</p>
+                <p className="text-xs text-zinc-500 mt-0.5">Install the GitHub App to auto-track CI failures, PR conflicts, and more.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG;
+                window.open(`https://github.com/apps/${appSlug}/installations/new?state=${project.id}`, "_blank");
+              }}
+              className="px-5 py-2.5 bg-white text-black rounded-xl text-sm font-semibold hover:bg-white/90 transition-all flex items-center gap-2 shrink-0"
+            >
+              <Github className="w-4 h-4" />
+              Install GitHub App
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        <div className="lg:col-span-2 space-y-12">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
           {/* Managers List */}
-          <div className="p-10 border-4 border-black bg-white shadow-[12px_12px_0_0_#FFD700]">
-            <div className="flex items-center justify-between border-b-4 border-black pb-6 mb-8">
-              <h2 className="text-3xl font-[900] uppercase italic tracking-tighter flex items-center gap-4">
-                <UserCircle className="w-8 h-8" /> ASSIGNED_MANAGERS
+          <div className="p-6 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <UserCircle className="w-5 h-5 text-zinc-600" /> Managers
               </h2>
-              <span className="text-[10px] font-black bg-black text-white px-3 py-1">UNITS_{project.managers.length}</span>
+              <span className="text-xs text-zinc-600 bg-white/[0.04] px-2.5 py-1 rounded-md">{project.managers.length}</span>
             </div>
             
             {project.managers.length === 0 ? (
-              <div className="py-16 text-center border-4 border-black border-dashed bg-[#F8F8F8]">
-                <p className="text-lg font-black uppercase italic opacity-20 tracking-widest">NO_MANAGERS_ALLOCATED</p>
+              <div className="py-10 text-center rounded-xl border border-dashed border-white/[0.06]">
+                <p className="text-sm text-zinc-700">No managers assigned</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {project.managers.map((mgr: Manager) => (
-                  <div key={mgr.id} className="p-6 bg-white border-4 border-black group relative">
-                    <div className="absolute inset-0 bg-black translate-x-1 translate-y-1 -z-10 group-hover:translate-x-0 group-hover:translate-y-0 transition-all"></div>
-                    <div className="flex items-center justify-between relative z-10">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-black border-2 border-black flex items-center justify-center text-xl font-black text-[#FFD700] rotate-3 group-hover:rotate-0 transition-transform">
-                          {mgr.email[0].toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-lg font-black uppercase tracking-tighter leading-none mb-1 truncate">{mgr.email.split('@')[0]}</p>
-                          <p className="text-[10px] font-bold text-black/40 truncate">{mgr.email}</p>
-                        </div>
+                  <div key={mgr.id} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 bg-white/[0.06] rounded-lg flex items-center justify-center text-sm font-bold text-zinc-400">
+                        {mgr.email[0].toUpperCase()}
                       </div>
-                      <div className={cn(
-                        "px-3 py-1 border-2 border-black text-[10px] font-black uppercase shadow-[3px_3px_0_0_black]",
-                        mgr.status === "ACTIVE" ? "bg-[#32CD32]" : "bg-black text-white"
-                      )}>
-                        {mgr.status}
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate">{mgr.email.split('@')[0]}</p>
+                        <p className="text-[10px] text-zinc-600 truncate">{mgr.email}</p>
                       </div>
                     </div>
+                    <span className={cn(
+                      "text-[10px] font-medium px-2 py-0.5 rounded-md",
+                      mgr.status === "ACTIVE" ? "text-emerald-400 bg-emerald-500/10" : "text-zinc-500 bg-white/[0.04]"
+                    )}>
+                      {mgr.status}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -205,61 +211,59 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
           </div>
 
           {/* Teams List */}
-          <div className="p-10 border-4 border-black bg-white shadow-[12px_12px_0_0_#00D1FF]">
-            <div className="flex items-center justify-between border-b-4 border-black pb-6 mb-10">
-              <h2 className="text-3xl font-[900] uppercase italic tracking-tighter flex items-center gap-4">
-                <Users className="w-8 h-8" /> PROJECT_TEAMS
+          <div className="p-6 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Users className="w-5 h-5 text-zinc-600" /> Teams
               </h2>
-              <span className="text-[10px] font-black bg-black text-white px-3 py-1">UNITS_{project.teams.length}</span>
+              <span className="text-xs text-zinc-600 bg-white/[0.04] px-2.5 py-1 rounded-md">{project.teams.length}</span>
             </div>
             
             {project.teams.length === 0 ? (
-              <div className="py-20 text-center border-4 border-black border-dashed bg-[#F8F8F8]">
-                <p className="text-xl font-black uppercase italic opacity-20 tracking-widest">NO_OPERATIONAL_TEAMS</p>
+              <div className="py-10 text-center rounded-xl border border-dashed border-white/[0.06]">
+                <p className="text-sm text-zinc-700">No teams created</p>
               </div>
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-3">
                 {project.teams.map((team: Team) => (
-                  <div key={team.id} className="border-4 border-black bg-white group relative">
-                    <div className="absolute inset-0 bg-[#00D1FF] translate-x-2 translate-y-2 -z-10 group-hover:translate-x-1 group-hover:translate-y-1 transition-all"></div>
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-8 border-b-4 border-black gap-6">
-                      <div className="flex items-center gap-6">
-                        <div className="w-14 h-14 bg-black border-2 border-black flex items-center justify-center font-black text-2xl text-white rotate-3 group-hover:rotate-0 transition-transform">
+                  <div key={team.id} className="rounded-xl border border-white/[0.04] overflow-hidden">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-white/[0.06] rounded-lg flex items-center justify-center font-bold text-zinc-400">
                           {team.name[0]}
                         </div>
-                        <div className="space-y-1">
+                        <div>
                           <Link 
                             href={`/dashboard/admin/teams/${team.id}`}
-                            className="text-2xl font-[900] uppercase italic tracking-tighter underline decoration-4 hover:bg-[#FFD700] hover:text-black px-2 transition-colors"
+                            className="text-base font-bold hover:text-white transition-colors"
                           >
                             {team.name}
                           </Link>
-                          <div className="flex items-center gap-4 text-[10px] font-black uppercase text-black/40 mt-2 px-2">
-                            <span>MEMBERS_{team.members.length}</span>
-                            <span>{"//"}</span>
-                            <span>INCIDENTS_{team._count.issues}</span>
+                          <div className="flex items-center gap-3 text-[10px] text-zinc-600 mt-0.5">
+                            <span>{team.members.length} members</span>
+                            <span>·</span>
+                            <span>{team._count.issues} incidents</span>
                           </div>
                         </div>
                       </div>
                       <Link 
                         href={`/dashboard/admin/teams/${team.id}`}
-                        className="w-full md:w-auto px-6 py-3 bg-black text-white font-black uppercase text-[10px] tracking-widest hover:bg-[#00D1FF] hover:text-black transition-colors border-2 border-black flex items-center justify-center gap-2"
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium text-zinc-400 border border-white/[0.06] hover:bg-white/[0.04] transition-all"
                       >
-                        VIEW_RESOURCES <ArrowRight className="w-4 h-4" />
+                        View <ArrowRight className="w-3 h-3" />
                       </Link>
                     </div>
                     
-                    <div className="p-8 bg-[#F8F8F8] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {team.members.map((m: TeamMember) => (
-                        <div key={m.id} className="flex items-center justify-between p-4 bg-white border-2 border-black text-[10px] font-black uppercase">
-                          <span className="truncate mr-4" title={m.email}>{m.email.split('@')[0]}</span>
-                          <div className={cn("w-3 h-3 border border-black", m.status === 'ACTIVE' ? 'bg-[#32CD32]' : 'bg-black')} />
-                        </div>
-                      ))}
-                      {team.members.length === 0 && (
-                        <p className="text-[10px] font-black uppercase text-black/20 italic col-span-full py-2">UNIT_VOIDS_DETECTED: NO_RESOURCES_ALLOCATED</p>
-                      )}
-                    </div>
+                    {team.members.length > 0 && (
+                      <div className="px-5 py-3 border-t border-white/[0.04] bg-white/[0.01] flex flex-wrap gap-2">
+                        {team.members.map((m: TeamMember) => (
+                          <span key={m.id} className="flex items-center gap-1.5 text-[10px] text-zinc-500 bg-white/[0.03] px-2 py-1 rounded-md">
+                            <span className={cn("w-1.5 h-1.5 rounded-full", m.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-zinc-700')} />
+                            {m.email.split('@')[0]}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -268,49 +272,38 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
         </div>
 
         {/* ── Right column: Admin Controls ── */}
-        <div className="space-y-12">
+        <div className="space-y-6">
           {/* Assign Manager Form */}
-          <div className="p-10 border-4 border-black bg-white shadow-[12px_12px_0_0_#FF00FF]">
-            <div className="space-y-4 mb-10 border-b-2 border-black pb-6">
-              <h2 className="text-3xl font-[900] uppercase italic tracking-tighter leading-none flex items-center gap-3">
-                <ShieldAlert className="w-7 h-7" /> MANAGER_OPS
-              </h2>
-              <p className="text-xs font-bold text-black/60 leading-relaxed uppercase tracking-wider">
-                Authorized override to allocate unit management permissions.
-              </p>
-            </div>
+          <div className="p-6 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+            <h2 className="text-base font-bold flex items-center gap-2 mb-1">
+              <Mail className="w-4 h-4 text-zinc-600" /> Invite Manager
+            </h2>
+            <p className="text-xs text-zinc-600 mb-5">Generate an invite link for a new manager.</p>
 
             {error && (
-              <div className="p-4 bg-[#FF3131] text-white border-4 border-black font-black uppercase text-[10px] italic mb-6 animate-pulse">
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 mb-4">
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleGenerateInvite} className="space-y-8">
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-widest ml-1 flex items-center gap-2">
-                  <Mail className="w-4 h-4" /> TARGET_EMAIL
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="w-full h-16 px-6 bg-white border-4 border-black font-black uppercase text-sm focus:outline-none focus:bg-[#FF00FF] focus:text-white transition-colors placeholder:text-black/20"
-                  placeholder="OPERATOR@CORE.UNIT"
-                />
-              </div>
+            <form onSubmit={handleGenerateInvite} className="space-y-3">
+              <input
+                type="email"
+                required
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="w-full px-4 py-3 bg-white/[0.03] border border-white/[0.08] rounded-xl focus:outline-none focus:border-white/20 text-sm placeholder:text-zinc-700 transition-all"
+                placeholder="manager@company.com"
+              />
               <button
                 type="submit"
                 disabled={inviteLoading}
-                className="w-full h-16 bg-black text-white font-[900] uppercase italic tracking-widest flex items-center justify-center hover:bg-[#FFD700] hover:text-black transition-all border-4 border-black shadow-[6px_6px_0_0_black] active:shadow-none active:translate-x-1 active:translate-y-1 disabled:opacity-50 group"
+                className="w-full py-3 bg-white text-black rounded-xl font-semibold text-sm hover:bg-white/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {inviteLoading ? (
-                  <Loader2 className="w-8 h-8 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <span className="flex items-center gap-4 text-xl">
-                    INIT_INVITE <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform stroke-[4px]" />
-                  </span>
+                  <>Generate Invite <ArrowRight className="w-4 h-4" /></>
                 )}
               </button>
             </form>
@@ -321,140 +314,92 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2 }}
-                  className="mt-10 p-8 border-4 border-black bg-[#F0F0F0] space-y-6 relative overflow-hidden"
+                  className="mt-4 p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] space-y-3"
                 >
-                  <div className="absolute top-0 right-0 w-2 h-full bg-[#32CD32]"></div>
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-black text-black flex items-center gap-2 uppercase tracking-tighter italic">
-                      <Check className="w-4 h-4 stroke-[3px]" /> LINK_SECURE
+                    <p className="text-xs text-emerald-400 flex items-center gap-1.5">
+                      <Check className="w-3 h-3" /> Link generated
                     </p>
                     <button
                       onClick={() => { navigator.clipboard.writeText(inviteLink); setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2000); }}
-                      className="text-[10px] font-black uppercase underline decoration-2 hover:bg-black hover:text-white px-2 py-1 transition-colors"
+                      className="text-[10px] text-zinc-500 hover:text-white transition-colors"
                     >
-                      {linkCopied ? "COPIED" : "COPY_PROTO"}
+                      {linkCopied ? "Copied!" : "Copy"}
                     </button>
                   </div>
-                  <div className="relative group">
-                    <input
-                      readOnly
-                      value={inviteLink}
-                      className="w-full pr-12 pl-4 py-4 bg-white border-2 border-black text-[10px] font-mono font-bold focus:outline-none cursor-text truncate"
-                    />
-                  </div>
-                  <p className="text-[9px] text-black/30 text-center uppercase tracking-[0.3em] font-black">
-                     AUTO_EXPIRATION: T-7_DAYS
-                  </p>
+                  <input readOnly value={inviteLink} className="w-full px-3 py-2 bg-black/40 border border-white/[0.06] rounded-lg text-[10px] font-mono text-zinc-400 truncate" />
+                  <p className="text-[10px] text-zinc-700 text-center">Expires in 7 days</p>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* Project Insights */}
-          <div className="p-8 border-4 border-black bg-black text-white flex flex-col items-center text-center space-y-4 rotate-1 border-dashed">
-            <Activity className="w-10 h-10 text-[#00D1FF]" />
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-40 leading-relaxed italic">
-              &quot;Unit Managers hold total sector authority. They monitor node telemetry and allocate developer resources.&quot;
-            </p>
-          </div>
-
           {/* SDK Integration Section */}
           {project.plan === "ADVANCED" && project.sdkApiKey && (
-            <div className="border-8 border-black bg-white shadow-[16px_16px_0_0_#FF00FF] overflow-hidden">
-              <div className="p-10 bg-black text-white space-y-4 border-b-8 border-black">
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+              <div className="p-5 border-b border-white/[0.06]">
                 <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h3 className="text-3xl font-[900] uppercase italic tracking-tighter flex items-center gap-3">
-                      <ShieldCheck className="w-8 h-8 text-[#32CD32]" /> NEXUS_SDK
-                    </h3>
-                  </div>
-                  <div className={cn(
-                    "px-4 py-1 border-2 border-white text-[10px] font-black uppercase tracking-tighter shadow-[3px_3px_0_0_white]",
-                    project.isSdkConnected ? "bg-[#32CD32] text-black" : "bg-[#FF3131] text-white animate-pulse"
+                  <h3 className="text-base font-bold flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-zinc-600" /> SDK Setup
+                  </h3>
+                  <span className={cn(
+                    "text-[10px] font-medium px-2 py-0.5 rounded-md",
+                    project.isSdkConnected ? "text-emerald-400 bg-emerald-500/10" : "text-amber-400 bg-amber-500/10"
                   )}>
-                    {project.isSdkConnected ? "LIVE_LINK_ACTIVE" : "NO_SIGNAL"}
-                  </div>
+                    {project.isSdkConnected ? "Connected" : "Pending"}
+                  </span>
                 </div>
-                <p className="text-xs font-bold uppercase tracking-widest opacity-40">Operational error ingestion pipeline protocols.</p>
               </div>
 
-              <div className="p-10 space-y-10">
-                {/* Step 0: Install */}
-                <div className="space-y-4">
-                   <p className="text-xs font-black uppercase flex items-center gap-3">
-                     <span className="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-black rotate-12 group-hover:rotate-0 transition-transform">0</span>
-                     PKG_INSTALLATION
-                   </p>
-                    <div className="space-y-4">
-                      <div className="relative group">
-                        <div className="p-6 pr-16 bg-black border-4 border-black font-mono text-[11px] text-[#00D1FF] font-black italic shadow-[6px_6px_0_0_#F0F0F0]">
-                          npm install @devnexus/sdk
-                        </div>
-                        <button
-                          onClick={() => { navigator.clipboard.writeText('npm install @devnexus/sdk'); setNpmCopied(true); setTimeout(() => setNpmCopied(false), 2000); }}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white text-black border-2 border-black hover:bg-[#FFD700] transition-colors"
-                        >
-                          {npmCopied ? <Check className="w-5 h-5 stroke-[3px]" /> : <Copy className="w-5 h-5" />}
-                        </button>
-                      </div>
+              <div className="p-5 space-y-5">
+                {/* Install */}
+                <div className="space-y-2">
+                  <p className="text-[10px] text-zinc-600 font-medium">1. Install</p>
+                  <div className="relative">
+                    <div className="p-3 bg-black/40 border border-white/[0.04] rounded-lg font-mono text-xs text-zinc-400">
+                      npm install @devnexus/sdk
                     </div>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText('npm install @devnexus/sdk'); setNpmCopied(true); setTimeout(() => setNpmCopied(false), 2000); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-zinc-600 hover:text-white transition-colors"
+                    >
+                      {npmCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Step 1: Initialize */}
-                <div className="space-y-4">
-                   <p className="text-xs font-black uppercase flex items-center gap-3">
-                     <span className="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-black rotate-12 group-hover:rotate-0 transition-transform">1</span>
-                     SYST_INITIALIZATION
-                   </p>
-                    <div className="p-6 bg-black border-4 border-black font-mono text-[11px] text-[#32CD32] font-black italic shadow-[6px_6px_0_0_#F0F0F0] overflow-x-auto">
+                {/* Initialize */}
+                <div className="space-y-2">
+                  <p className="text-[10px] text-zinc-600 font-medium">2. Initialize</p>
+                  <div className="p-3 bg-black/40 border border-white/[0.04] rounded-lg font-mono text-[11px] text-zinc-400 overflow-x-auto whitespace-pre">
 {`import { DevNexus } from '@devnexus/sdk';
 
 DevNexus.init({
   apiKey: '${project.sdkApiKey}',
   baseUrl: '${origin || "<YOUR_APP_URL>"}/api/ingest'
 });`}
-                    </div>
-                   <p className="text-[10px] font-bold text-black/40 uppercase tracking-widest mt-2 flex items-start gap-3 border-l-2 border-black pl-4">
-                     <Plus className="w-4 h-4 mt-0.5 shrink-0" />
-                     INJECT INTO CORE ENTRY: LAYOUT.TSX / INDEX.JS
-                   </p>
+                  </div>
                 </div>
 
-                {/* API Key Section */}
-                <div className="pt-8 border-t-4 border-black space-y-4">
-                  <div className="flex justify-between items-center px-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-black/40">MASTER_UNIT_KEY</label>
-                    <span className="text-[10px] font-black uppercase text-[#FF3131] italic">!!! CLASSIFIED !!!</span>
-                  </div>
-                  <div className="relative group">
-                    <input 
-                      readOnly 
-                      value={project.sdkApiKey} 
-                      className="w-full h-14 px-5 pr-14 bg-white border-4 border-black text-xs font-mono font-black italic focus:outline-none" 
-                    />
+                {/* API Key */}
+                <div className="space-y-2 pt-4 border-t border-white/[0.06]">
+                  <label className="text-[10px] text-zinc-600 font-medium">API Key</label>
+                  <div className="relative">
+                    <input readOnly value={project.sdkApiKey} className="w-full px-3 py-2.5 pr-10 bg-black/40 border border-white/[0.04] rounded-lg text-xs font-mono text-zinc-400 truncate" />
                     <button
-                       onClick={() => { navigator.clipboard.writeText(project.sdkApiKey!); setKeyCopied(true); setTimeout(() => setKeyCopied(false), 2000); }}
-                       className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-black text-white hover:bg-[#FFD700] hover:text-black transition-colors"
-                     >
-                       {keyCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                     </button>
+                      onClick={() => { navigator.clipboard.writeText(project.sdkApiKey!); setKeyCopied(true); setTimeout(() => setKeyCopied(false), 2000); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-zinc-600 hover:text-white transition-colors"
+                    >
+                      {keyCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
                   </div>
                 </div>
 
-                <div className="p-6 bg-[#F0F0F0] border-4 border-black flex items-start gap-4">
-                  <Plus className="w-6 h-6 text-black mt-1 shrink-0" />
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black uppercase text-black leading-tight italic">
-                      &quot;AUTO_CAPTURE: ENABLED. ALL_EXCEPTIONS_WILL_CREATE_INCIDENTS.&quot;
-                    </p>
-                    {project.githubRepoUrl && (
-                      <p className="text-[9px] text-[#FF00FF] font-black uppercase tracking-widest flex items-center gap-2 mt-2">
-                        <Check className="w-3 h-3 stroke-[3px]" /> GITHUB_REPOSITORY_SYNC: ACTIVE
-                      </p>
-                    )}
+                {project.githubRepoUrl && (
+                  <div className="flex items-center gap-2 text-[10px] text-emerald-400">
+                    <Check className="w-3 h-3" /> GitHub repository synced
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}

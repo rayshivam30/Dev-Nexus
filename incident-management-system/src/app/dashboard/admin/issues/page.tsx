@@ -45,21 +45,18 @@ export default async function AdminIssuesPage() {
   }));
 
   return (
-    <div className="space-y-12 pb-20">
-      <div className="flex flex-col gap-4">
-        <h1 className="text-5xl md:text-7xl font-[900] tracking-tighter uppercase italic leading-none border-l-8 border-black pl-8">
-          UNASSIGNED <br />
-          <span className="bg-[#00D1FF] border-4 border-black px-4 shadow-[6px_6px_0_0_black]">INCIDENTS_ALL</span>
-        </h1>
-        <p className="text-black font-black uppercase text-xs tracking-widest mt-4 opacity-60 max-w-xl">
-          Critical operations center for unallocated organizational issues. Resolve or assign immediately to avoid SLA breach.
+    <div className="space-y-8 pb-20">
+      <div>
+        <h1 className="text-3xl font-extrabold tracking-tight">Unassigned Incidents</h1>
+        <p className="text-sm text-zinc-500 mt-1">
+          Issues awaiting assignment. Resolve or assign to avoid SLA breach.
         </p>
       </div>
 
       {issuesRaw.length === 0 ? (
-        <div className="p-20 border-4 border-black bg-white shadow-[12px_12px_0_0_#32CD32] text-center">
-          <p className="text-2xl font-black uppercase italic text-black">NO_UNASSIGNED_INCIDENTS_FOUND</p>
-          <p className="text-xs font-bold text-black/40 mt-4 uppercase tracking-widest">System node status: ALL_CLEAR</p>
+        <div className="p-16 border border-white/[0.06] rounded-2xl bg-white/[0.02] text-center">
+          <p className="text-sm text-zinc-500">No unassigned incidents found</p>
+          <p className="text-xs text-zinc-700 mt-2">All clear</p>
         </div>
       ) : (
         <AdminIssuesClient issues={mappedIssues} teams={allTeams} developers={allDevelopers} />

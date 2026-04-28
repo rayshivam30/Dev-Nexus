@@ -1,6 +1,11 @@
-import { expect, test, describe, mock } from "bun:test";
-import { createProject } from "../src/services/project-service";
-import { prisma } from "../src/lib/db";
+import { createPrismaMock } from "./mock-db";
+import { mock } from "bun:test";
+const prismaMock = createPrismaMock();
+mock.module("@/lib/db", () => ({ prisma: prismaMock }));
+mock.module("../src/lib/db", () => ({ prisma: prismaMock }));
+
+import { expect, test, describe } from "bun:test";
+import { createProject, getProjectsByOrg, deleteProject } from "../src/services/project-service";
 import crypto from "crypto";
 
 interface BunMock {
@@ -9,14 +14,6 @@ interface BunMock {
   };
 }
 
-// Mock Prisma
-mock.module("../src/lib/db", () => ({
-  prisma: {
-    project: {
-      create: mock((args) => Promise.resolve({ id: "test-id", ...args.data })),
-    },
-  },
-}));
 
 describe("Project Service (Security)", () => {
   test("createProject hashes SDK API Key for ADVANCED plan", async () => {
@@ -31,8 +28,8 @@ describe("Project Service (Security)", () => {
     expect(project.sdkApiKey).not.toBeNull();
     expect(project.sdkApiKey).toStartWith("devnexus_sk_");
 
-    // The data passed to prisma.create should be the HASH, not the plain text
-    const calls = (prisma.project.create as unknown as BunMock).mock.calls;
+    // The data passed to prismaMock.create should be the HASH, not the plain text
+    const calls = (prismaMock.project.create as unknown as BunMock).mock.calls;
     const lastCallData = calls[calls.length - 1][0] as { data: { sdkApiKey: string } };
     
     expect(lastCallData.data.sdkApiKey).not.toBe(project.sdkApiKey);
@@ -53,5 +50,18 @@ describe("Project Service (Security)", () => {
     );
 
     expect(project.sdkApiKey).toBeNull();
+  });
+  test("getProjectsByOrg returns projects for an org", async () => {
+    const projects = await getProjectsByOrg("org-123");
+    expect(projects).toHaveLength(2);
+    expect(projects[0].name).toBe("P1");
+  });
+
+  test("deleteProject calls delete correctly", async () => {
+    const result = await deleteProject("p1");
+    expect(result.id).toBe("deleted-id");
+    expect(prismaMock.project.delete as any).toHaveBeenCalledWith({
+      where: { id: "p1" }
+    });
   });
 });

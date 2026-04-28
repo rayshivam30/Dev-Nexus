@@ -1,7 +1,7 @@
 "use client";
 
 import { Sidebar, NavItem } from "@/components/dashboard/shared/Sidebar";
-import { LayoutDashboard, FolderKanban, AlertCircle, Activity, ShieldCheck, Terminal, Bell } from "lucide-react";
+import { LayoutDashboard, FolderKanban, AlertCircle, Bell } from "lucide-react";
 
 const adminNavItems: NavItem[] = [
   { href: "/dashboard/admin", icon: LayoutDashboard, label: "Overview" },
@@ -12,12 +12,7 @@ const adminNavItems: NavItem[] = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen bg-[#F0F0F0] text-black overflow-hidden selection:bg-[#FFD700] selection:text-black">
-      {/* Grid Background Pattern */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0" 
-           style={{ backgroundImage: "linear-gradient(#000 1.5px, transparent 1.5px), linear-gradient(90deg, #000 1.5px, transparent 1.5px)", backgroundSize: "30px 30px" }}>
-      </div>
-
+    <div className="flex h-screen bg-[#0a0a0c] text-white overflow-hidden selection:bg-emerald-500/20 selection:text-white">
       <Sidebar navItems={adminNavItems} roleTitle="Admin Panel" />
       
       <div className="flex-1 flex flex-col min-w-0 relative z-10 overflow-hidden">
@@ -25,40 +20,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {children}
         </main>
         
-        {/* Bottom Ticker Bar */}
-        <div className="h-10 bg-black border-t-4 border-black flex items-center overflow-hidden shrink-0">
-          <div className="flex items-center gap-12 animate-marquee whitespace-nowrap text-white text-[10px] font-black uppercase tracking-widest px-6">
-            <span className="flex items-center gap-2"><Activity className="w-3 h-3 text-[#FFD700]" /> SYSTEM_STATUS: OPERATIONAL</span>
-            <span className="flex items-center gap-2 text-[#00D1FF]"><ShieldCheck className="w-3 h-3" /> UPLINK_STABLE: 100%_SECURED</span>
-            <span className="flex items-center gap-2 text-[#FF00FF]"><Terminal className="w-3 h-3" /> NODE_ACCESS: ADMIN_LEVEL_GRANTED</span>
-            <span className="flex items-center gap-2"><Activity className="w-3 h-3 text-[#FFD700]" /> SYSTEM_STATUS: OPERATIONAL</span>
-            <span className="flex items-center gap-2 text-[#00D1FF]"><ShieldCheck className="w-3 h-3" /> UPLINK_STABLE: 100%_SECURED</span>
-            <span className="flex items-center gap-2 text-[#FF00FF]"><Terminal className="w-3 h-3" /> NODE_ACCESS: ADMIN_LEVEL_GRANTED</span>
+        {/* Status Bar */}
+        <div className="h-9 bg-[#0a0a0c] border-t border-white/[0.06] flex items-center px-6 shrink-0">
+          <div className="flex items-center gap-6 text-[10px] text-zinc-600 font-medium">
+            <span className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              All systems operational
+            </span>
+            <span className="text-zinc-700">·</span>
+            <span>Admin access</span>
           </div>
         </div>
       </div>
 
       <style jsx global>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          animation: marquee 20s linear infinite;
-        }
         .custom-scrollbar::-webkit-scrollbar {
-          width: 12px;
+          width: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f0f0f0;
-          border-left: 4px solid black;
+          background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: black;
-          border: 2px solid white;
+          background: rgba(255,255,255,0.08);
+          border-radius: 3px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #333;
+          background: rgba(255,255,255,0.15);
         }
       `}</style>
     </div>

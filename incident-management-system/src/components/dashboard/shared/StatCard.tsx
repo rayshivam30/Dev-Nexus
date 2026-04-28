@@ -16,21 +16,21 @@ interface StatCardProps {
 export function StatCard({ title, value, icon: Icon, color, bgClass, index }: StatCardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.2 }}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.3 }}
       className={cn(
-        "p-6 border-4 border-black shadow-[8px_8px_0_0_black] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all group",
+        "p-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all group",
         bgClass
       )}
     >
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/60">{title}</p>
-          <p className="text-5xl font-[900] italic tracking-tighter text-black leading-none">{value}</p>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">{title}</p>
+          <p className="text-3xl font-extrabold tracking-tight text-white">{value}</p>
         </div>
-        <div className="w-14 h-14 bg-white border-4 border-black flex items-center justify-center -rotate-3 group-hover:rotate-0 transition-transform">
-          <Icon className={cn("w-8 h-8", color)} />
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.04]", bgClass)}>
+          <Icon className={cn("w-5 h-5", color)} />
         </div>
       </div>
     </motion.div>

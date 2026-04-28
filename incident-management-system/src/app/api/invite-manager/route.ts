@@ -1,11 +1,9 @@
 import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/db";
-import { Resend } from "resend";
+import { sendMail } from "@/lib/mailer";
 import { getBaseUrl } from "@/lib/utils";
 
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
-
-// Resend instantiation moved inside handler to prevent build-time crashes
 
 export const POST = withAuth(async (req, { decoded }) => {
   const { email, projectId } = await req.json();
@@ -42,23 +40,22 @@ export const POST = withAuth(async (req, { decoded }) => {
   console.log("🔥 Invite link:", inviteLink);
 
   //  EMAIL SEND
-  if (process.env.RESEND_API_KEY) {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
-      from: "onboarding@resend.dev",
+  try {
+    await sendMail({
       to: email,
-      subject: "You're invited 🚀",
+      subject: "You're invited to DevNexus 🚀",
       html: `
         <h2>You are invited as a Manager</h2>
         <p>Click below to join:</p>
         <a href="${inviteLink}">${inviteLink}</a>
       `,
     });
-  } else {
-    console.warn("No RESEND_API_KEY provided. Skipping email send.");
+  } catch (emailError) {
+    console.error("Failed to send invite email:", emailError);
   }
 
   return apiResponse("Invite created", {
     inviteLink,
   });
 }, ["ADMIN"]);
+

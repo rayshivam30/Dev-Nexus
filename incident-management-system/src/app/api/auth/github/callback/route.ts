@@ -5,13 +5,18 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const installationId = searchParams.get("installation_id");
   const projectId = searchParams.get("state"); // We passed projectId in the 'state' parameter
+  const setupAction = searchParams.get("setup_action"); // "install" when app is installed
+
+  const protocol = req.headers.get("x-forwarded-proto") || "http";
+  const host = req.headers.get("host");
+  const baseUrl = `${protocol}://${host}`;
 
   if (!installationId || !projectId) {
-    return NextResponse.json({ error: "Missing installation data" }, { status: 400 });
+    return NextResponse.redirect(`${baseUrl}/dashboard/admin?error=github_missing_data`);
   }
 
   try {
-    // 1. Link the GitHub Installation ID to the project in our database
+    // Link the GitHub Installation ID to the project in our database
     await prisma.project.update({
       where: { id: projectId },
       data: {
@@ -19,17 +24,11 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // 2. Redirect the user back to their project dashboard with a success message
-    const protocol = req.headers.get("x-forwarded-proto") || "http";
-    const host = req.headers.get("host");
-    
-    // You can redirect to a specific project page or the main dashboard
-    return NextResponse.redirect(`${protocol}://${host}/dashboard/admin?github_linked=true`);
+    // Redirect the user back to their specific project page with a success flag
+    return NextResponse.redirect(`${baseUrl}/dashboard/admin/projects/${projectId}?github_linked=true`);
 
   } catch (error) {
     console.error("GitHub Callback Error:", error);
-    const protocol = req.headers.get("x-forwarded-proto") || "http";
-    const host = req.headers.get("host");
-    return NextResponse.redirect(`${protocol}://${host}/dashboard/admin?error=github_link_failed`);
+    return NextResponse.redirect(`${baseUrl}/dashboard/admin?error=github_link_failed`);
   }
 }

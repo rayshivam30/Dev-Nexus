@@ -67,93 +67,83 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="space-y-12 max-w-5xl mx-auto py-8">
+    <div className="space-y-8 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b-8 border-black pb-8">
-        <div className="space-y-2">
-          <h1 className="text-7xl font-[1000] tracking-tighter uppercase italic leading-none text-black flex items-center gap-6">
-            <div className="w-12 h-12 bg-black animate-pulse"></div>
-            INBOX_CENTRAL
-          </h1>
-          <p className="text-xl font-black uppercase italic opacity-40 tracking-widest">Incident History & System Alerts_</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight">Notifications</h1>
+          <p className="text-sm text-zinc-500 mt-1">Incident history &amp; system alerts</p>
         </div>
         
         <button 
           onClick={markAllRead}
-          className="px-8 py-4 bg-[#FFD700] text-black border-4 border-black font-black uppercase italic text-sm shadow-[8px_8px_0_0_black] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all flex items-center gap-3"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-zinc-400 border border-white/[0.06] hover:bg-white/[0.04] hover:text-white transition-all"
         >
-          <CheckCheck className="w-5 h-5 stroke-[3px]" />
-          ACKNOWLEDGE_ALL
+          <CheckCheck className="w-4 h-4" />
+          Mark all read
         </button>
       </div>
 
       {loading ? (
-        <div className="p-20 text-center border-8 border-black border-dashed animate-pulse">
-           <p className="text-4xl font-black uppercase italic opacity-20 tracking-tighter text-black">UPLOADING_DATA...</p>
+        <div className="p-16 text-center border border-white/[0.06] border-dashed rounded-2xl">
+           <p className="text-sm text-zinc-600 animate-pulse">Loading notifications...</p>
         </div>
       ) : notifications.length === 0 ? (
-        <div className="p-20 text-center border-8 border-black border-dashed space-y-6">
-           <Inbox className="w-20 h-20 mx-auto opacity-20" />
-           <p className="text-4xl font-black uppercase italic opacity-20 tracking-tighter text-black">NO_DATA_RECORDS</p>
+        <div className="p-16 text-center border border-white/[0.06] border-dashed rounded-2xl space-y-3">
+           <Inbox className="w-12 h-12 mx-auto text-zinc-700" />
+           <p className="text-sm text-zinc-500">No notifications</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6">
+        <div className="space-y-2">
           {notifications.map((n) => (
             <div 
               key={n.id}
-              className="relative group"
+              className={cn(
+                "p-4 rounded-xl border transition-all flex items-start gap-4",
+                n.isRead 
+                  ? "border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.03]" 
+                  : "border-emerald-500/20 bg-emerald-500/[0.03] hover:bg-emerald-500/[0.06]"
+              )}
             >
               <div className={cn(
-                  "absolute inset-0 border-4 border-black translate-x-2 translate-y-2 -z-10 group-hover:translate-x-1 group-hover:translate-y-1 transition-all",
-                  n.isRead ? "bg-white" : "bg-[#FF00FF]"
-              )}></div>
-              
-              <div className={cn(
-                  "p-8 border-4 border-black bg-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:-translate-x-1 hover:-translate-y-1 transition-all",
-                  !n.isRead && "border-r-[16px]"
+                  "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
+                  n.isRead ? "bg-white/[0.03] border border-white/[0.06]" : "bg-emerald-500/10 border border-emerald-500/20"
               )}>
-                <div className="flex items-start gap-6 flex-1">
-                  <div className={cn(
-                      "w-12 h-12 shrink-0 border-4 border-black flex items-center justify-center shadow-[4px_4px_0_0_black]",
-                      n.isRead ? "bg-white" : "bg-[#00D1FF]"
-                  )}>
-                    <Bell className={cn("w-6 h-6", !n.isRead && "animate-bounce")} />
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <h3 className="text-2xl font-black uppercase italic tracking-tighter leading-none">{n.title}</h3>
-                    <p className="text-sm font-bold text-black/60 uppercase tracking-widest">{n.message}</p>
-                    <div className="flex items-center gap-4 pt-2">
-                       <div className="flex items-center gap-1 text-[10px] font-black text-black/40 uppercase">
-                          <Clock className="w-3 h-3" />
-                          {formatDistanceToNow(new Date(n.createdAt))} AGO
-                       </div>
-                       {!n.isRead && (
-                          <span className="bg-black text-white text-[8px] font-black px-2 py-0.5 tracking-widest">UNREAD_LOG</span>
-                       )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                   {n.link && (
-                     <button 
-                       onClick={() => { markRead(n.id); router.push(n.link!); }}
-                       className="flex-1 md:flex-none px-6 py-3 bg-black text-white border-2 border-black font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 shadow-[4px_4px_0_0_#FFD700] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
-                     >
-                       INVESTIGATE_INCIDENT <ArrowRight className="w-3 h-3" />
-                     </button>
-                   )}
+                <Bell className={cn("w-4 h-4", n.isRead ? "text-zinc-600" : "text-emerald-400")} />
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-white">{n.title}</h3>
+                <p className="text-xs text-zinc-500 mt-0.5">{n.message}</p>
+                <div className="flex items-center gap-3 mt-2">
+                   <div className="flex items-center gap-1 text-[10px] text-zinc-600">
+                      <Clock className="w-3 h-3" />
+                      {formatDistanceToNow(new Date(n.createdAt))} ago
+                   </div>
                    {!n.isRead && (
-                     <button 
-                        onClick={() => markRead(n.id)}
-                        className="p-3 border-2 border-black hover:bg-black hover:text-white transition-colors"
-                        title="Mark as Read"
-                     >
-                        <CheckCheck className="w-4 h-4" />
-                     </button>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                    )}
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                 {n.link && (
+                   <button 
+                     onClick={() => { markRead(n.id); router.push(n.link!); }}
+                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] border border-white/[0.06] rounded-lg text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-all"
+                   >
+                     View <ArrowRight className="w-3 h-3" />
+                   </button>
+                 )}
+                 {!n.isRead && (
+                   <button 
+                      onClick={() => markRead(n.id)}
+                      className="p-1.5 rounded-lg text-zinc-600 hover:text-white hover:bg-white/[0.06] transition-all"
+                      title="Mark as Read"
+                   >
+                      <CheckCheck className="w-4 h-4" />
+                   </button>
+                 )}
               </div>
             </div>
           ))}

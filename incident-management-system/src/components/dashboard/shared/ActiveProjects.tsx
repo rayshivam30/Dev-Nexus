@@ -14,52 +14,55 @@ export interface ProjectStats {
 
 export function ActiveProjects({ projects }: { projects: ProjectStats[] }) {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between border-b-4 border-black pb-4">
-        <h2 className="text-3xl font-[900] tracking-tighter uppercase italic leading-none text-black flex items-center gap-4">
-          <div className="w-6 h-6 bg-[#00D1FF]"></div>
-          ACTIVE_PROJECTS
-        </h2>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-lg font-bold tracking-tight">Active Projects</h2>
       </div>
 
-      <div className="p-8 border-4 border-black bg-white shadow-[8px_8px_0_0_black] space-y-10">
+      <div className="space-y-3">
         {projects.map((project, idx) => (
-          <div key={project.id} className={cn(idx !== projects.length - 1 && "border-b-2 border-black/10 pb-8")}>
-            <div className="flex justify-between items-end mb-4">
-              <div className="flex flex-col">
-                <span className="text-xl font-black uppercase italic text-black leading-none">{project.name}</span>
-                <span className="text-[10px] font-black uppercase text-black/40 mt-2 tracking-widest leading-none">
-                  TEAMS_{project.teamsCount} {"//"} INCIDENTS_{project.issuesCount}
-                </span>
+          <div key={project.id} className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+            <div className="flex justify-between items-center mb-3">
+              <div>
+                <span className="text-sm font-semibold text-white">{project.name}</span>
+                <div className="text-[10px] text-zinc-600 mt-0.5">
+                  {project.teamsCount} teams · {project.issuesCount} incidents
+                </div>
               </div>
-              <span className={cn("text-lg font-black italic tracking-tighter", project.colorClass)}>{project.slaPercentage}%_SLA</span>
+              <span className={cn(
+                "text-sm font-bold",
+                project.slaPercentage > 90 ? "text-emerald-400" : project.slaPercentage > 75 ? "text-amber-400" : "text-red-400"
+              )}>
+                {project.slaPercentage}%
+              </span>
             </div>
             
-            <div className="w-full h-6 bg-[#F0F0F0] border-2 border-black overflow-hidden relative">
+            <div className="w-full h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
               <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: `${project.slaPercentage}%` }}
                 transition={{ duration: 1, delay: 0.2 + (idx * 0.1) }}
                 className={cn(
-                    "absolute inset-y-0 left-0 border-r-2 border-black",
-                    project.slaPercentage > 90 ? "bg-[#32CD32]" : project.slaPercentage > 75 ? "bg-[#FFD700]" : "bg-[#FF3131]"
+                    "h-full rounded-full",
+                    project.slaPercentage > 90 ? "bg-emerald-500" : project.slaPercentage > 75 ? "bg-amber-500" : "bg-red-500"
                 )} 
               />
             </div>
           </div>
         ))}
+        
         {projects.length === 0 && (
-          <div className="text-[10px] font-black uppercase tracking-widest text-black/20 text-center py-8 italic border-2 border-black border-dashed">
-            NO_DATA_STREAMING
+          <div className="text-sm text-zinc-600 text-center py-8 border border-white/[0.06] border-dashed rounded-xl">
+            No projects found
           </div>
         )}
         
         {projects.length > 0 && (
           <button 
             onClick={() => window.location.href = "/dashboard/admin/projects"}
-            className="w-full h-14 bg-white text-black border-4 border-black font-black uppercase text-xs tracking-widest shadow-[6px_6px_0_0_black] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all active:bg-[#FFD700]"
+            className="w-full py-2.5 rounded-xl text-sm font-medium text-zinc-500 border border-white/[0.06] hover:bg-white/[0.03] hover:text-white transition-all"
           >
-            SHOW_ALL_INFRASTRUCTURE
+            View all projects
           </button>
         )}
       </div>
