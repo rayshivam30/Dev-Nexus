@@ -1,0 +1,4 @@
+# Tell GitHub to ignore these folders in language statistics
+incident-management-system/playwright-report/** linguist-generated=true
+incident-management-system/test-results/** linguist-generated=true
+incident-management-system/coverage/** linguist-generated=true
