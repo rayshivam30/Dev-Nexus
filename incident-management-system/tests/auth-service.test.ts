@@ -22,8 +22,8 @@ describe("Auth Service", () => {
       
       expect(result.user).toBeDefined();
       expect(result.verificationToken).toBeDefined();
-      expect(prismaMock.organization.create as any).toHaveBeenCalled();
-      expect(prismaMock.user.create as any).toHaveBeenCalledWith(expect.objectContaining({
+      expect(prismaMock.organization.create).toHaveBeenCalled();
+      expect(prismaMock.user.create).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({
           role: "ADMIN",
           status: "UNVERIFIED"
@@ -44,8 +44,8 @@ describe("Auth Service", () => {
       const user = await verifyEmail("valid-token");
       
       expect(user).toBeDefined();
-      expect(prismaMock.user.update as any).toHaveBeenCalled();
-      expect(prismaMock.verificationToken.delete as any).toHaveBeenCalled();
+      expect(prismaMock.user.update).toHaveBeenCalled();
+      expect(prismaMock.verificationToken.delete).toHaveBeenCalled();
     });
 
     test("throws error for invalid token", async () => {

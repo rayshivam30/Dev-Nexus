@@ -4,6 +4,7 @@ import { updateIssue, getIssueDetails } from "@/services/issue-service";
 import { IssueStatus } from "@prisma/client";
 import { updateIssueSchema } from "@/lib/validations";
 import { eventEmitter, EVENTS } from "@/lib/events";
+import { createNotification } from "@/services/notification-service";
 
 export const GET = withAuth(async (_req, { params }) => {
   const { id } = await (params as { id: string });
@@ -67,6 +68,14 @@ export const PATCH = withAuth(async (_req, { decoded, body, params }) => {
     const orgId = existingIssue.project.orgId;
     
     if (assignedToId && assignedToId !== existingIssue.assignedToId) {
+       await createNotification({
+         userId: assignedToId,
+         type: "ASSIGNMENT",
+         title: `Assigned: ${issue.title}`,
+         message: "An incident has been assigned to you.",
+         link: `/dashboard/developer/issues/${issue.id}`,
+       });
+
        eventEmitter.emit(EVENTS.INCIDENT_ASSIGNED, {
          issueId: issue.id,
          orgId,

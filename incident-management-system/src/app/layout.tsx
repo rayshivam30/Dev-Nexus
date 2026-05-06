@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 // Removed next/font/google imports due to network fetch errors during build
 import "./globals.css";
+import { ToastProvider } from "@/components/ui/ToastProvider";
 
 export const metadata: Metadata = {
   title: {
@@ -34,7 +35,9 @@ export default function RootLayout({
       lang="en"
       className={`font-sans h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

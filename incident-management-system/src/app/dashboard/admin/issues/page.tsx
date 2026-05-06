@@ -16,16 +16,21 @@ export default async function AdminIssuesPage() {
   const decoded = verifyToken(token);
   if (!decoded || decoded.role !== "ADMIN") redirect("/auth/login");
 
-  // Fetch only unassigned issues (assignedToId: null) across all projects
+  const user = await prisma.user.findUnique({ select: { orgId: true }, where: { id: decoded.userId } });
+  
+  // Fetch only unassigned issues (assignedToId: null) across admin's organization
   const issuesRaw = await prisma.issue.findMany({
-    where: { assignedToId: null },
+    where: { 
+      assignedToId: null,
+      project: { orgId: user?.orgId ?? undefined }
+    },
     orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
     include: { team: true, assignedTo: true },
   });
 
   const [allTeams, allDevelopers] = await Promise.all([
-    prisma.team.findMany({ select: { id: true, name: true, projectId: true } }),
-    prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER' } })
+    prisma.team.findMany({ select: { id: true, name: true, projectId: true }, where: { project: { orgId: user?.orgId ?? undefined } } }),
+    prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER', team: { project: { orgId: user?.orgId ?? undefined } } } })
   ]);
 
   const mappedIssues: Issue[] = issuesRaw.map(issue => ({

@@ -1,20 +1,16 @@
 import { createPrismaMock } from "./mock-db";
 import { mock } from "bun:test";
 const prismaMock = createPrismaMock();
+
+// Register all mock modules BEFORE standard imports
 mock.module("@/lib/db", () => ({ prisma: prismaMock }));
 mock.module("../src/lib/db", () => ({ prisma: prismaMock }));
-
-import { expect, test, describe, beforeEach } from "bun:test";
-import { POST } from "../src/app/api/ingest/route";
-import { Redis } from "@upstash/redis";
-
 mock.module("../src/lib/logger", () => ({
   logger: {
     error: mock(() => {}),
     info: mock(() => {}),
   },
 }));
-
 mock.module("@upstash/redis", () => ({
   Redis: mock(() => ({
     incr: mock(() => Promise.resolve(1)),
@@ -22,25 +18,27 @@ mock.module("@upstash/redis", () => ({
     pttl: mock(() => Promise.resolve(1000)),
   })),
 }));
-
 mock.module("next/server", () => ({
   NextResponse: {
-    json: (data: any, init?: any) => {
+    json: (data: unknown, init?: ResponseInit) => {
       const res = new Response(JSON.stringify(data), init);
-      (res as any).json = () => Promise.resolve(data);
+      (res as unknown as { json: () => Promise<unknown> }).json = () => Promise.resolve(data);
       return res;
     },
   },
-  after: mock((cb: any) => {}), // Mock 'after' to do nothing or track calls
+  after: mock(() => {}), // Mock 'after' to do nothing or track calls
 }));
-
 mock.module("@/services/notification-service", () => ({
   notifyOrgStaff: mock(() => Promise.resolve()),
 }));
 
+import { expect, test, describe, beforeEach } from "bun:test";
+import { POST } from "../src/app/api/ingest/route";
+import { createHash } from "crypto";
+
 describe("API Ingest Route", () => {
   beforeEach(() => {
-    const validHashedKey = require("crypto").createHash("sha256").update("valid-key").digest("hex");
+    const validHashedKey = createHash("sha256").update("valid-key").digest("hex");
     prismaMock.project.findUnique.mockClear();
     prismaMock.project.findUnique.mockResolvedValue({ id: "project-1", sdkApiKey: validHashedKey, orgId: "org-1", plan: "ADVANCED" });
     prismaMock.issue.create.mockClear();
@@ -49,7 +47,6 @@ describe("API Ingest Route", () => {
   test("returns 401 if Authorization header is missing", async () => {
     const req = new Request("http://localhost/api/ingest", {
       method: "POST",
-      body: JSON.stringify({ message: "Test" }),
     });
 
     const res = await POST(req);
@@ -59,12 +56,11 @@ describe("API Ingest Route", () => {
   });
 
   test("returns 401 if API key is invalid", async () => {
-    (prismaMock.project.findUnique as any).mockResolvedValue(null);
+    (prismaMock.project.findUnique as unknown as { mockResolvedValue: (val: unknown) => void }).mockResolvedValue(null);
 
     const req = new Request("http://localhost/api/ingest", {
       method: "POST",
       headers: { "Authorization": "Bearer invalid-key" },
-      body: JSON.stringify({ message: "Test" }),
     });
 
     const res = await POST(req);

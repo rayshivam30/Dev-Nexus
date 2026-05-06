@@ -22,19 +22,51 @@ export function Sidebar({ navItems, roleTitle }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Derive role-specific profile path from the current route
   const roleBase = pathname.match(/\/dashboard\/(admin|manager|developer)/)?.[0] || "/dashboard";
   const profileHref = `${roleBase}/profile`;
   const isProfileActive = pathname.includes("/profile");
 
-  // Real-time updates simulation: refresh server components every 15s
   useEffect(() => {
-    const interval = setInterval(() => {
-      router.refresh();
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [router]);
+    let isMounted = true;
+
+    async function fetchUnreadCount() {
+      try {
+        const token = localStorage.getItem("incident_token");
+        const res = await fetch("/api/notifications", {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (isMounted) {
+          setUnreadCount(typeof data.unreadCount === "number" ? data.unreadCount : 0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch unread notifications", error);
+      }
+    }
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 15000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchUnreadCount();
+      }
+    };
+    window.addEventListener("focus", fetchUnreadCount);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener("focus", fetchUnreadCount);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   async function handleLogout() {
     try {
@@ -93,6 +125,7 @@ export function Sidebar({ navItems, roleTitle }: SidebarProps) {
             <nav className="flex-1 p-6 space-y-1 overflow-y-auto">
               {navItems.map((item) => {
                 const isActive = (pathname === item.href || pathname.startsWith(item.href + '/')) && !pathname.includes('/profile');
+                const showNotificationBadge = item.href.includes("/notifications") && unreadCount > 0;
                 return (
                   <Link
                     key={item.href}
@@ -104,12 +137,19 @@ export function Sidebar({ navItems, roleTitle }: SidebarProps) {
                         ? "bg-white/10 text-white" 
                         : "text-zinc-500 hover:text-white hover:bg-white/[0.03]"
                     )}
-                  >
-                    <div className="flex items-center space-x-4">
-                      <item.icon className={cn("w-5 h-5", isActive ? "text-emerald-400" : "text-zinc-500")} />
-                      <span>{item.label}</span>
+                    >
+                      <div className="flex items-center space-x-4">
+                        <item.icon className={cn("w-5 h-5", isActive ? "text-emerald-400" : "text-zinc-500")} />
+                        <span>{item.label}</span>
+                      </div>
+                    <div className="flex items-center gap-2">
+                      {showNotificationBadge && (
+                        <span className="min-w-5 rounded-full bg-emerald-500 px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-black">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                      {isActive && <div className="w-1 h-4 bg-emerald-500 rounded-full" />}
                     </div>
-                    {isActive && <div className="w-1 h-4 bg-emerald-500 rounded-full" />}
                   </Link>
                 );
               })}
@@ -164,6 +204,7 @@ export function Sidebar({ navItems, roleTitle }: SidebarProps) {
         <nav className="flex-1 px-4 py-8 space-y-1 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => {
             const isActive = (pathname === item.href || pathname.startsWith(item.href + '/')) && !pathname.includes('/profile');
+            const showNotificationBadge = item.href.includes("/notifications") && unreadCount > 0;
             
             return (
               <Link
@@ -180,9 +221,16 @@ export function Sidebar({ navItems, roleTitle }: SidebarProps) {
                   <item.icon className={cn("w-4 h-4 transition-colors", isActive ? "text-emerald-400" : "text-zinc-600 group-hover:text-white")} />
                   <span>{item.label}</span>
                 </div>
-                {isActive && (
-                  <motion.div layoutId="active-pill" className="w-1 h-4 bg-emerald-500 rounded-full" />
-                )}
+                <div className="flex items-center gap-2">
+                  {showNotificationBadge && (
+                    <span className="min-w-5 rounded-full bg-emerald-500 px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-black">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                  {isActive && (
+                    <motion.div layoutId="active-pill" className="w-1 h-4 bg-emerald-500 rounded-full" />
+                  )}
+                </div>
               </Link>
             );
           })}

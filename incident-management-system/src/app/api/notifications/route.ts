@@ -1,10 +1,14 @@
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
-import { getNotifications, markAllAsRead } from "@/services/notification-service";
+import { getNotifications, getUnreadNotificationCount, markAllAsRead } from "@/services/notification-service";
 
 export const GET = withAuth(async (_req, { decoded }) => {
   try {
-    const notifications = await getNotifications(decoded.userId as string);
-    return apiResponse("Success", { notifications });
+    const userId = decoded.userId as string;
+    const [notifications, unreadCount] = await Promise.all([
+      getNotifications(userId),
+      getUnreadNotificationCount(userId),
+    ]);
+    return apiResponse("Success", { notifications, unreadCount });
   } catch {
     return apiError("Failed to fetch notifications", 500);
   }

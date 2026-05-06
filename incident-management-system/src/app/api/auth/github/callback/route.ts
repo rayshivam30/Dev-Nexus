@@ -5,7 +5,6 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const installationId = searchParams.get("installation_id");
   const projectId = searchParams.get("state"); // We passed projectId in the 'state' parameter
-  const setupAction = searchParams.get("setup_action"); // "install" when app is installed
 
   const protocol = req.headers.get("x-forwarded-proto") || "http";
   const host = req.headers.get("host");

@@ -24,9 +24,9 @@ export default async function DeveloperIssueDetailPage({ params }: { params: Pro
 
   if (!issue) {
     return (
-      <div className="p-12 text-center border-4 border-black bg-white shadow-[12px_12px_0_0_black]">
-        <h1 className="text-4xl font-black uppercase italic tracking-tighter">ISSUE_NOT_FOUND</h1>
-        <p className="mt-4 opacity-60 font-black tracking-widest uppercase text-xs">THE_REQUESTED_PACKET_DOES_NOT_EXIST_ON_THIS_NODE</p>
+      <div className="p-12 text-center border border-white/[0.06] bg-white/[0.01] rounded-2xl max-w-xl mx-auto mt-24">
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-400">Issue Not Found</h1>
+        <p className="mt-2 text-sm text-zinc-500">The requested incident packet does not exist on this node.</p>
       </div>
     );
   }

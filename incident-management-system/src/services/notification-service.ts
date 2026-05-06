@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 
 export type NotificationType = 'INCIDENT_CREATED' | 'ASSIGNMENT' | 'COMMENT' | 'SLA' | 'GITHUB_CONFLICT';
+type StaffRole = 'ADMIN' | 'MANAGER';
 
 export async function createNotification(data: {
   userId: string;
@@ -28,13 +29,14 @@ export async function notifyOrgStaff(orgId: string, data: {
   title: string;
   message: string;
   link?: string;
+  linkByRole?: Partial<Record<StaffRole, string>>;
 }) {
   const staff = await prisma.user.findMany({
     where: {
       orgId,
       role: { in: ['ADMIN', 'MANAGER'] }
     },
-    select: { id: true }
+    select: { id: true, role: true }
   });
 
   const notifications = staff.map(user => ({
@@ -42,7 +44,7 @@ export async function notifyOrgStaff(orgId: string, data: {
     type: data.type,
     title: data.title,
     message: data.message,
-    link: data.link,
+    link: data.linkByRole?.[user.role as StaffRole] || data.link,
   }));
 
   return await prisma.notification.createMany({
@@ -58,9 +60,15 @@ export async function getNotifications(userId: string) {
   });
 }
 
-export async function markAsRead(notificationId: string) {
-  return await prisma.notification.update({
-    where: { id: notificationId },
+export async function getUnreadNotificationCount(userId: string) {
+  return await prisma.notification.count({
+    where: { userId, isRead: false }
+  });
+}
+
+export async function markAsRead(notificationId: string, userId: string) {
+  return await prisma.notification.updateMany({
+    where: { id: notificationId, userId },
     data: { isRead: true }
   });
 }

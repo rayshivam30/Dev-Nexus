@@ -1,11 +1,12 @@
 "use client";
 
-import { AlertTriangle, CheckCircle, Clock, Activity, Plus, Zap, Terminal } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, Activity, Plus, Zap } from "lucide-react";
 import { StatCard } from "@/components/dashboard/shared/StatCard";
 import { RecentIssues, Issue } from "@/components/dashboard/shared/RecentIssues";
 import { CreateIssueModal, DeveloperData } from "@/components/dashboard/shared/CreateIssueModal";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/ToastProvider";
 
 interface DeveloperDashboardClientProps {
   developerEmail: string;
@@ -31,6 +32,7 @@ export function DeveloperDashboardClient({
   allDevelopers,
 }: DeveloperDashboardClientProps) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false);
 
 
@@ -52,101 +54,81 @@ export function DeveloperDashboardClient({
         const data = await res.json();
         throw new Error(data.error || "Failed to update status");
       }
+      showToast({
+        tone: "success",
+        title: newStatus === "RESOLVED" ? "Issue resolved" : "Work started",
+        description: newStatus === "RESOLVED" ? "The issue was resolved successfully." : "The issue has moved into progress.",
+      });
       router.refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update status");
+      showToast({
+        tone: "error",
+        title: "Update failed",
+        description: err instanceof Error ? err.message : "Failed to update status",
+      });
     }
   }
 
   const stats = [
-    { title: "ASSIGNED_TASKS", value: openCount + inProgressCount, icon: AlertTriangle, color: "text-black", bgClass: "bg-[#FFD700]" },
-    { title: "IN_PROGRESS", value: inProgressCount, icon: Activity, color: "text-white", bgClass: "bg-[#00D1FF]" },
-    { title: "STABILIZED_NODES", value: resolvedCount, icon: CheckCircle, color: "text-black", bgClass: "bg-[#32CD32]" },
-    { title: "RESPONSE_PENDING", value: openCount, icon: Clock, color: "text-white", bgClass: "bg-[#FF3131]" },
+    { title: "Assigned Tasks", value: openCount + inProgressCount, icon: AlertTriangle, color: "text-amber-400", bgClass: "" },
+    { title: "In Progress", value: inProgressCount, icon: Activity, color: "text-blue-400", bgClass: "" },
+    { title: "Resolved Nodes", value: resolvedCount, icon: CheckCircle, color: "text-emerald-400", bgClass: "" },
+    { title: "Response Pending", value: openCount, icon: Clock, color: "text-rose-400", bgClass: "" },
   ];
 
   return (
-    <div className="space-y-16 pb-24 max-w-[1500px] mx-auto">
-      {/* ── MASSIVE HEADER BOARD ── */}
-      <div className="relative group">
-        {/* Outer Shadow Layer */}
-        <div className="absolute inset-0 bg-black translate-x-4 translate-y-4 -z-10 group-hover:translate-x-2 group-hover:translate-y-2 transition-all"></div>
-        
-        <div className="bg-white border-4 border-black p-8 md:p-12 relative overflow-hidden">
-          {/* Aesthetic UI Lines */}
-          <div className="absolute top-0 right-0 w-24 h-24 bg-[#FFD700] border-l-4 border-b-4 border-black rotate-45 -mr-12 -mt-12"></div>
-          <div className="absolute bottom-4 left-4 flex gap-1">
-             <div className="w-1 h-1 bg-black/20"></div>
-             <div className="w-1 h-1 bg-black/20"></div>
-             <div className="w-1 h-1 bg-black/20"></div>
+    <div className="space-y-8 pb-24 max-w-[1600px] mx-auto">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-xs font-medium text-zinc-500 bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-1">
+              {teamName || "Global"} Workspace
+            </span>
+            <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+              <Zap className="w-3 h-3" /> Active Session
+            </span>
           </div>
-          
-          <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-end gap-10">
-            <div className="space-y-10 max-w-3xl">
-              <div className="flex flex-wrap gap-3">
-                <span className="bg-black text-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
-                  <Zap className="w-3.5 h-3.5 text-[#FFD700]" /> NODE: {teamName || "SYS"}_WORKSPACE
-                </span>
-                <span className="bg-[#00D1FF] border-2 border-black px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.3em]">
-                  USER: {developerEmail.split('@')[0].toUpperCase()}
-                </span>
-                <span className="border-2 border-black/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-black/40">
-                  SEC_LEVEL: 04
-                </span>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-black/40 font-black text-xs uppercase tracking-[0.4em] mb-4 flex items-center gap-2">
-                  <span className="w-8 h-[2px] bg-black/10"></span> SYSTEM_OVERVIEW_MOD_01
-                </p>
-                <h1 className="text-6xl md:text-7xl lg:text-8xl font-[1000] tracking-tighter uppercase italic leading-[0.8] text-black">
-                  ENGINEER <br />
-                  <span className="relative">
-                    WORKSPACE_
-                    <div className="absolute -bottom-2 left-0 w-full h-4 bg-[#FFD700] -z-10 -rotate-1"></div>
-                  </span>
-                </h1>
-              </div>
-              
-              <div className="flex items-start gap-4 p-5 bg-[#F8F8F8] border-l-8 border-black text-black max-w-2xl">
-                <Terminal className="w-6 h-6 shrink-0 mt-1 opacity-40" />
-                <p className="text-[11px] font-black uppercase tracking-widest opacity-60 leading-relaxed">
-                  Active session established. Monitoring stream diagnostics for {teamName || "global"} sector. 
-                  SLA response buffers are currently stable.
-                </p>
-              </div>
-            </div>
-
-            <button 
-              onClick={() => setIsCreateIssueOpen(true)}
-              className="w-full xl:w-auto h-20 px-10 bg-[#FFD700] text-black border-4 border-black font-[900] text-xl uppercase italic tracking-tighter hover:bg-black hover:text-white shadow-[8px_8px_0_0_black] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all flex items-center justify-center gap-6 active:scale-95 group"
-            >
-              <Plus className="w-8 h-8 stroke-[4px] group-hover:rotate-90 transition-transform" /> 
-              <span>INIT_LOG_ENTRY</span>
-            </button>
-          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight">
+            Engineer Workspace
+          </h1>
+          <p className="text-sm text-zinc-500 mt-1">
+            Logged in as {developerEmail}. Monitoring active issue assignments and SLA thresholds.
+          </p>
         </div>
+
+        <button 
+          onClick={() => setIsCreateIssueOpen(true)}
+          className="flex items-center gap-2 h-11 px-6 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold text-sm transition-all"
+        >
+          <Plus className="w-4 h-4" /> 
+          Log Incident
+        </button>
       </div>
 
-      {/* ── STATS BOARD ── */}
-      <div className="bg-black border-4 border-black p-1 shadow-[20px_20px_0_0_#00D1FF]">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1 bg-black">
-          {stats.map((stat, idx) => (
-            <div key={stat.title} className="bg-white p-2">
-               <StatCard index={idx} {...stat} />
-            </div>
-          ))}
-        </div>
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, idx) => (
+          <StatCard key={stat.title} index={idx} {...stat} />
+        ))}
       </div>
 
-      <div className="space-y-8">
-        <div className="bg-white border-4 border-black p-8 shadow-[12px_12px_0_0_black]">
-          <RecentIssues 
-            issues={recentIssues} 
-            onStatusChange={handleStatusChange} 
-            onRowClick={(issue) => router.push(`/dashboard/developer/issues/${issue.id}`)} 
-          />
-        </div>
+      {/* Content */}
+      <div className="grid grid-cols-1 gap-6">
+        {recentIssues.length === 0 ? (
+          <div className="p-12 border border-white/[0.06] rounded-2xl bg-white/[0.01] text-center">
+            <AlertTriangle className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
+            <p className="text-xl font-bold text-zinc-400">No active assigned incidents</p>
+          </div>
+        ) : (
+          <div className="p-6 border border-white/[0.06] bg-[#0a0a0c]/50 rounded-2xl">
+            <RecentIssues 
+              issues={recentIssues} 
+              onStatusChange={handleStatusChange} 
+              onRowClick={(issue) => router.push(`/dashboard/developer/issues/${issue.id}`)} 
+            />
+          </div>
+        )}
       </div>
 
       <CreateIssueModal 
@@ -156,6 +138,7 @@ export function DeveloperDashboardClient({
         fixedProjectId={projectId || undefined}
         fixedTeamId={teamId || undefined}
         developers={allDevelopers}
+        hideAssignment={true}
       />
     </div>
   );

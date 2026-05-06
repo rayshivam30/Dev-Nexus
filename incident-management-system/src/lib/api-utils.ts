@@ -20,8 +20,13 @@ export function withAuth(handler: ApiHandler, allowedRoles?: string[]) {
       let token = "";
       const authHeader = req.headers.get("Authorization");
       if (authHeader?.startsWith("Bearer ")) {
-        token = authHeader.split(" ")[1];
-      } else {
+        const extracted = authHeader.split(" ")[1];
+        if (extracted && extracted.trim() !== "" && extracted !== "null") {
+          token = extracted;
+        }
+      } 
+      
+      if (!token) {
         const cookieToken = req.cookies?.get("incident_token")?.value;
         if (cookieToken) {
           token = cookieToken;

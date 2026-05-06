@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useState } from "react";
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 const severityColor: Record<string, string> = {
   Critical: "text-red-400 bg-red-400/10 border-red-400/20",

@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/ToastProvider";
 
 export interface DetailedIssue extends Issue {
   activities?: Array<{
@@ -32,6 +33,7 @@ interface DeveloperIssueDetailClientProps {
 
 export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperIssueDetailClientProps) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [issue, setIssue] = useState<DetailedIssue>(initialIssue);
   const [commentText, setCommentText] = useState("");
   const [commenting, setCommenting] = useState(false);
@@ -71,14 +73,26 @@ export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperI
       });
       if (res.ok) {
         setCommentText("");
+        showToast({
+          tone: "success",
+          title: "Comment added",
+          description: "Your update was posted to the issue.",
+        });
         const resDetail = await fetch(`/api/issues/${issue.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const dataDetail = await resDetail.json();
         if (resDetail.ok) setIssue(dataDetail.issue);
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to add comment");
       }
     } catch (err) {
-      console.error("Failed to add comment:", err);
+      showToast({
+        tone: "error",
+        title: "Comment failed",
+        description: err instanceof Error ? err.message : "Failed to add comment",
+      });
     } finally {
       setCommenting(false);
     }
@@ -92,7 +106,10 @@ export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperI
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: newStatus, rootCause })
       });
-      if (!res.ok) throw new Error("Failed to update status");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update status");
+      }
       
       // Refresh local data
       const resDetail = await fetch(`/api/issues/${issueId}`, {
@@ -100,10 +117,20 @@ export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperI
       });
       const dataDetail = await resDetail.json();
       if (resDetail.ok) setIssue(dataDetail.issue);
+
+      showToast({
+        tone: "success",
+        title: newStatus === "RESOLVED" ? "Issue resolved" : "Work started",
+        description: newStatus === "RESOLVED" ? "The issue has been resolved." : "The issue is now in progress.",
+      });
       
       router.refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Update failed");
+      showToast({
+        tone: "error",
+        title: "Update failed",
+        description: err instanceof Error ? err.message : "Update failed",
+      });
     }
   }
 
@@ -129,85 +156,79 @@ export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperI
   }
 
   return (
-    <div className="space-y-12 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[1600px] mx-auto">
       {/* ── TOP NAV / BREADCRUMB ── */}
       <button 
         onClick={() => router.back()}
-        className="flex items-center gap-2 group text-black font-black uppercase text-xs tracking-widest hover:translate-x-[-4px] transition-all"
+        className="flex items-center gap-2 text-sm font-semibold text-zinc-400 hover:text-white transition-colors"
       >
-        <ArrowLeft className="w-5 h-5 border-2 border-black bg-[#FFD700] p-0.5 group-hover:bg-black group-hover:text-white transition-colors" />
-        RETURN_TO_WORKSPACE
+        <ArrowLeft className="w-4 h-4" />
+        Return to Workspace
       </button>
 
-      <div className="bg-white border-8 border-black shadow-[20px_20px_0_0_black] flex flex-col xl:flex-row relative">
-        {/* Decorative elements */}
-        <div className="absolute -top-4 -left-4 w-12 h-12 bg-[#FFD700] border-4 border-black -rotate-6 z-20"></div>
-        <div className="absolute top-0 right-0 w-32 h-32 bg-[#00D1FF] border-l-4 border-b-4 border-black -mr-16 -mt-16 rotate-45 pointer-events-none opacity-20"></div>
-
-        <div className="flex-1 p-8 md:p-16 space-y-16 border-b-8 xl:border-b-0 xl:border-r-8 border-black overflow-hidden">
-          {/* Header Info */}
-          <div className="space-y-8">
-            <div className="flex flex-wrap gap-4 text-[10px] uppercase font-black tracking-[0.2em]">
-               <span className="bg-black text-white px-4 py-1.5">UNIT_ID: {issue.id.slice(-12)}</span>
-               <span className={cn(
-                  "px-4 py-1.5 border-2 border-black",
-                  issue.severity === 'CRITICAL' ? 'bg-[#FF3131] text-white' : 'bg-[#FFD700] text-black'
-               )}>{issue.severity}_LEVEL</span>
-               <span className="bg-[#00D1FF] border-2 border-black px-4 py-1.5">{issue.status?.replace("_", " ")}</span>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="xl:col-span-2 space-y-6">
+          {/* Main Panel */}
+          <div className="p-8 border border-white/[0.06] bg-white/[0.01] rounded-2xl space-y-8">
+            <div className="flex flex-wrap gap-2 text-xs font-semibold">
+              <span className="bg-white/[0.03] border border-white/[0.06] text-zinc-400 px-3 py-1 rounded-lg">ID: {issue.id.slice(-12)}</span>
+              <span className={cn(
+                 "px-3 py-1 rounded-lg border",
+                 issue.severity === 'CRITICAL' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+              )}>{issue.severity} Severity</span>
+              <span className="bg-blue-500/10 border border-blue-500/20 text-blue-400 px-3 py-1 rounded-lg">{issue.status?.replace("_", " ")}</span>
             </div>
-            
-            <h1 className="text-5xl md:text-8xl font-[1000] tracking-tighter uppercase italic leading-[0.85] text-black">
-              {issue.title}
-            </h1>
-          </div>
 
-          {/* Description */}
-          <div className="space-y-6">
-            <h4 className="text-xs font-black uppercase tracking-[0.4em] flex items-center gap-4 text-black/40">
-              <ShieldAlert className="w-5 h-5 text-[#FF3131]" /> DESCRIPTION_LOG.EXE
-            </h4>
-            <div className="text-xl font-bold text-black border-4 border-black p-10 bg-[#F8F8F8] shadow-[12px_12px_0_0_black] whitespace-pre-wrap leading-tight italic">
-              {issue.description}
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight text-white leading-tight">
+                {issue.title}
+              </h1>
             </div>
-          </div>
 
-          {/* Root Cause & AI Remediations */}
-          {(issue.rootCause || issue.suggestedFixes) && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-               {issue.rootCause && (
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-black/40">ROOT_CAUSE_PROTOCOL</h4>
-                  <div className="bg-[#32CD32] border-4 border-black p-6 font-black italic shadow-[8px_8px_0_0_black]">
-                    &quot;{issue.rootCause}&quot;
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-zinc-400" /> Description
+              </h4>
+              <div className="p-6 border border-white/[0.06] bg-black/40 rounded-xl text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
+                {issue.description}
+              </div>
+            </div>
+
+            {(issue.rootCause || issue.suggestedFixes) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                 {issue.rootCause && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">Root Cause</h4>
+                    <div className="p-4 border border-emerald-500/10 bg-emerald-500/[0.02] rounded-xl text-emerald-400 text-sm font-medium">
+                      {issue.rootCause}
+                    </div>
                   </div>
-                </div>
-               )}
-               {issue.suggestedFixes && (
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-black/40">AI_GEN_ADVISORY</h4>
-                  <div className="bg-[#FF00FF] text-white border-4 border-black p-6 font-bold shadow-[8px_8px_0_0_black] flex gap-4">
-                     <Lightbulb className="w-8 h-8 shrink-0 text-[#FFD700]" />
-                     <span>{issue.suggestedFixes}</span>
+                 )}
+                 {issue.suggestedFixes && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">Suggested Fix</h4>
+                    <div className="p-4 border border-purple-500/10 bg-purple-500/[0.02] rounded-xl text-purple-400 text-sm font-medium flex gap-3">
+                       <Lightbulb className="w-5 h-5 shrink-0 text-purple-400 mt-0.5" />
+                       <span>{issue.suggestedFixes}</span>
+                    </div>
                   </div>
-                </div>
-               )}
-            </div>
-          )}
+                 )}
+              </div>
+            )}
+          </div>
 
           {/* Activity Timeline */}
-          <div className="space-y-10 pt-8 border-t-8 border-black">
-             <h4 className="text-2xl font-black uppercase italic tracking-tighter flex items-center gap-4">
-                <Clock className="w-8 h-8" /> CHRONO_STREAM
+          <div className="p-8 border border-white/[0.06] bg-white/[0.01] rounded-2xl space-y-6">
+             <h4 className="text-lg font-bold flex items-center gap-2">
+                <Clock className="w-5 h-5 text-zinc-400" /> Activity stream
              </h4>
-             <div className="space-y-10 ml-5 border-l-8 border-black pl-10 relative">
+             <div className="space-y-6 pl-4 border-l border-white/[0.06] relative ml-2">
                 {issue.activities?.map((act) => (
                   <div key={act.id} className="relative">
-                     <div className="absolute -left-[54px] top-1 w-8 h-8 bg-white border-4 border-black flex items-center justify-center font-black text-[10px]">
-                        {act.action[0]}
-                     </div>
-                     <div className="space-y-1">
-                        <p className="text-2xl font-black uppercase italic tracking-tighter leading-none">{act.action}</p>
-                        <p className="text-[10px] font-black uppercase opacity-40">{new Date(act.createdAt).toLocaleString()} {"//"} {act.user?.email || "SYSTEM"}</p>
+                     <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-zinc-500 border-2 border-[#0a0a0c]" />
+                     <div className="space-y-1 pl-2">
+                        <p className="text-sm font-semibold text-zinc-300 leading-none">{act.action}</p>
+                        <p className="text-[10px] text-zinc-500">{new Date(act.createdAt).toLocaleString()} · {act.user?.email || "SYSTEM"}</p>
                      </div>
                   </div>
                 ))}
@@ -215,41 +236,41 @@ export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperI
           </div>
 
           {/* Comments Section */}
-          <div className="space-y-10 pt-8 border-t-8 border-black">
-             <h4 className="text-2xl font-black uppercase italic tracking-tighter flex items-center gap-4">
-                <MessageSquare className="w-8 h-8" /> COMMS_FLOW
+          <div className="p-8 border border-white/[0.06] bg-white/[0.01] rounded-2xl space-y-6">
+             <h4 className="text-lg font-bold flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-zinc-400" /> Discussions
              </h4>
-             <div className="space-y-12">
+             <div className="space-y-6">
                 {issue.comments?.map((comment) => (
-                   <div key={comment.id} className="flex gap-8 group">
-                      <div className="w-16 h-16 bg-black text-[#FFD700] border-4 border-black flex items-center justify-center text-2xl font-black shrink-0 shadow-[6px_6px_0_0_black] -rotate-3 group-hover:rotate-0 transition-transform">
+                   <div key={comment.id} className="flex gap-4 group">
+                      <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center text-sm font-bold shrink-0">
                          {comment.user?.email?.[0]?.toUpperCase()}
                       </div>
-                      <div className="flex-1 space-y-4">
-                         <div className="flex items-center justify-between border-b-2 border-black pb-2 opacity-40">
-                            <span className="text-[10px] font-black uppercase tracking-widest">{comment.user?.email}</span>
-                            <span className="text-[10px] font-black uppercase">{new Date(comment.createdAt).toDateString()}</span>
+                      <div className="flex-1 space-y-2">
+                         <div className="flex items-center justify-between border-b border-white/[0.06] pb-1">
+                            <span className="text-xs font-semibold text-zinc-400">{comment.user?.email}</span>
+                            <span className="text-[10px] text-zinc-500">{new Date(comment.createdAt).toDateString()}</span>
                          </div>
-                         <div className="text-lg font-bold italic p-6 bg-white border-4 border-black shadow-[6px_6px_0_0_black]">
+                         <div className="text-sm text-zinc-300 p-4 bg-white/[0.02] border border-white/[0.06] rounded-xl leading-relaxed">
                             {comment.text}
                          </div>
                       </div>
                    </div>
                 ))}
 
-                <form onSubmit={handleAddComment} className="mt-12 group bg-[#F0F0F0] p-10 border-4 border-black shadow-[12px_12px_0_0_black]">
+                <form onSubmit={handleAddComment} className="space-y-4 pt-4 border-t border-white/[0.06]">
                    <textarea 
                     value={commentText}
                     onChange={e => setCommentText(e.target.value)}
-                    placeholder="TRANSMIT_SIGNAL..."
-                    className="w-full h-32 bg-white border-4 border-black p-6 font-black uppercase focus:bg-[#FFD700] transition-colors resize-none placeholder:opacity-20 outline-none"
+                    placeholder="Write a comment..."
+                    className="w-full h-28 bg-black border border-white/[0.06] rounded-xl p-4 text-sm text-zinc-300 focus:outline-none focus:border-white/20 transition-colors resize-none placeholder:text-zinc-600 outline-none"
                    />
-                   <div className="flex justify-end mt-6">
+                   <div className="flex justify-end">
                       <button 
                          disabled={commenting || !commentText.trim()}
-                         className="h-16 px-12 bg-black text-white font-black italic uppercase border-4 border-black shadow-[8px_8px_0_0_#32CD32] hover:shadow-none hover:translate-x-1 hover:translate-y-1 active:scale-95 transition-all flex items-center gap-4 disabled:opacity-20"
+                         className="h-10 px-6 bg-white text-black font-semibold text-xs rounded-xl hover:bg-zinc-200 transition-all flex items-center gap-2 disabled:opacity-50"
                       >
-                         {commenting ? <Loader2 className="w-6 h-6 animate-spin" /> : <>TRANSMIT <Send className="w-6 h-6 stroke-[3px]" /></>}
+                         {commenting ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Comment <Send className="w-3.5 h-3.5" /></>}
                       </button>
                    </div>
                 </form>
@@ -258,21 +279,21 @@ export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperI
         </div>
 
         {/* Sidebar Info & Controls */}
-        <div className="w-full xl:w-[450px] bg-[#F0F0F0] p-8 md:p-12 space-y-12 shrink-0">
-           <div className="space-y-10 sticky top-12">
-              <h4 className="text-xl font-black uppercase flex items-center gap-4 bg-black text-white p-4 -rotate-1 shrink-0">
-                 <BarChart2 className="w-6 h-6 text-[#FFD700]" /> SYS_METRICS
+        <div className="space-y-6">
+           <div className="p-8 border border-white/[0.06] bg-white/[0.01] rounded-2xl space-y-6">
+              <h4 className="text-lg font-bold flex items-center gap-2">
+                 <BarChart2 className="w-5 h-5 text-zinc-400" /> Metrics
               </h4>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                   {[
-                    { label: "NODE_STATUS", value: issue.status?.replace("_", " "), bg: "bg-[#00D1FF]" },
-                    { label: "CLUSTER_NAME", value: issue.teamName || "UNASSIGNED", bg: "bg-white" },
-                    { label: "ASSIGNED_TECH", value: issue.assignedToEmail || "PENDING", bg: "bg-black", text: "text-white" }
+                    { label: "Node Status", value: issue.status?.replace("_", " "), bg: "bg-blue-500/10 text-blue-400 border border-blue-500/20" },
+                    { label: "Cluster Name", value: issue.teamName || "UNASSIGNED", bg: "bg-white/[0.03] border border-white/[0.06] text-zinc-300" },
+                    { label: "Assigned Tech", value: issue.assignedToEmail || "PENDING", bg: "bg-white/[0.03] border border-white/[0.06] text-zinc-300" }
                   ].map((row) => (
-                    <div key={row.label} className="space-y-2 group">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-black/40 ml-1">{row.label}</label>
-                      <div className={cn("p-4 border-4 border-black font-[1000] uppercase italic shadow-[4px_4px_0_0_black] group-hover:shadow-none group-hover:translate-x-1 group-hover:translate-y-1 transition-all", row.bg, row.text)}>
+                    <div key={row.label} className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{row.label}</label>
+                      <div className={cn("px-4 py-2.5 rounded-xl font-semibold text-sm", row.bg)}>
                         {row.value}
                       </div>
                     </div>
@@ -280,29 +301,29 @@ export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperI
               </div>
 
               {/* SLA Section */}
-              <div className="pt-10 border-t-4 border-black space-y-8">
-                 <h4 className="text-xl font-black uppercase italic tracking-tighter flex items-center gap-4">
-                    <Timer className="w-6 h-6 text-[#FF00FF]" /> SLA_MONITOR
+              <div className="pt-6 border-t border-white/[0.06] space-y-4">
+                 <h4 className="text-sm font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-2">
+                    <Timer className="w-4 h-4 text-zinc-500" /> SLA Monitor
                  </h4>
-                 <div className="grid gap-6">
+                 <div className="grid grid-cols-1 gap-3">
                     {issue.responseSlaDeadline && (
                       <div className={cn(
-                        "p-6 border-4 border-black shadow-[6px_6px_0_0_black]",
-                        issue.status !== "OPEN" ? "bg-[#32CD32]" : "bg-white"
+                        "p-4 rounded-xl border",
+                        issue.status !== "OPEN" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-white/[0.02] border-white/[0.06] text-zinc-300"
                       )}>
-                        <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-2">RESP_DEADLINE</p>
-                        <p className="text-3xl font-[1000] italic tracking-tighter leading-none">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Response Deadline</p>
+                        <p className="text-xl font-extrabold tracking-tight">
                           {issue.status !== "OPEN" ? "STABLE" : formatTimeRemaining(issue.responseSlaDeadline)}
                         </p>
                       </div>
                     )}
                     {issue.resolutionSlaDeadline && (
                       <div className={cn(
-                        "p-6 border-4 border-black shadow-[6px_6px_0_0_black]",
-                        issue.status === "RESOLVED" ? "bg-[#32CD32]" : "bg-white"
+                        "p-4 rounded-xl border",
+                        issue.status === "RESOLVED" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-white/[0.02] border-white/[0.06] text-zinc-300"
                       )}>
-                        <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-2">RESOLVE_DEADLINE</p>
-                        <p className="text-3xl font-[1000] italic tracking-tighter leading-none">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Resolve Deadline</p>
+                        <p className="text-xl font-extrabold tracking-tight">
                           {issue.status === "RESOLVED" ? "STABLE" : formatTimeRemaining(issue.resolutionSlaDeadline)}
                         </p>
                       </div>
@@ -311,41 +332,42 @@ export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperI
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-10 space-y-6">
+              <div className="pt-4 space-y-4">
                  {issue.status === "ASSIGNED" && (
                   <button 
                     onClick={() => handleStatusChange(issue.id, "IN_PROGRESS")}
-                    className="w-full h-20 bg-[#00D1FF] border-4 border-black shadow-[8px_8px_0_0_black] hover:bg-black hover:text-white transition-all font-black text-xl uppercase italic tracking-tighter flex items-center justify-center gap-4"
+                    className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
                   >
-                    START_WORK <ChevronRight className="w-8 h-8 stroke-[4px]" />
+                    Start Work <ChevronRight className="w-4 h-4" />
                   </button>
                  )}
 
                  {issue.status === "IN_PROGRESS" && (
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                        {!isResolving ? (
                         <button 
                           onClick={() => setIsResolving(true)}
-                          className="w-full h-20 bg-[#32CD32] border-4 border-black shadow-[8px_8px_0_0_black] hover:bg-black hover:text-white transition-all font-black text-xl uppercase italic tracking-tighter flex items-center justify-center gap-4"
+                          className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2"
                         >
-                          RESOLVE_NODE <CheckCircle className="w-8 h-8 stroke-[4px]" />
+                          Resolve Node <CheckCircle className="w-4 h-4" />
                         </button>
                        ) : (
-                        <form onSubmit={handleResolveSubmit} className="space-y-6 animate-in zoom-in-95 duration-200">
-                           <div className="space-y-2">
-                              <label className="text-[10px] font-black uppercase text-[#32CD32]">ROOT_CAUSE_LOG_ENTRY</label>
+                        <form onSubmit={handleResolveSubmit} className="space-y-4 animate-in fade-in duration-200">
+                           <div className="space-y-1.5">
+                              <label className="text-xs font-semibold text-emerald-400">Root Cause Log Entry</label>
                               <textarea 
                                 required
                                 value={rootCauseInput}
                                 onChange={e => setRootCauseInput(e.target.value)}
-                                className="w-full h-40 bg-white border-4 border-black p-6 font-black uppercase focus:bg-[#32CD32] transition-colors outline-none shadow-[6px_6px_0_0_black]"
+                                placeholder="Describe root cause and resolution..."
+                                className="w-full h-28 bg-black border border-white/[0.06] rounded-xl p-4 text-sm text-zinc-300 focus:outline-none focus:border-white/20 transition-colors resize-none placeholder:text-zinc-600 outline-none"
                               />
                            </div>
-                           <div className="flex flex-col gap-4">
-                              <button type="submit" disabled={resolvingSubmit} className="w-full h-20 bg-black text-white border-4 border-black shadow-[8px_8px_0_0_#32CD32] font-black text-lg flex items-center justify-center gap-4">
-                                {resolvingSubmit ? <Loader2 className="w-6 h-6 animate-spin" /> : <>TRANSMIT_RESTORE <ChevronRight className="w-8 h-8 stroke-[4px]" /></>}
+                           <div className="flex flex-col gap-2">
+                              <button type="submit" disabled={resolvingSubmit} className="w-full h-11 bg-white text-black hover:bg-zinc-200 font-semibold text-sm rounded-xl flex items-center justify-center gap-2">
+                                {resolvingSubmit ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Transmit Restore <ChevronRight className="w-4 h-4" /></>}
                               </button>
-                              <button type="button" onClick={() => setIsResolving(false)} className="font-black text-[10px] uppercase underline decoration-2">ABORT_CMD</button>
+                              <button type="button" onClick={() => setIsResolving(false)} className="text-xs font-semibold text-zinc-500 hover:text-white underline transition-colors pt-1">Abort</button>
                            </div>
                         </form>
                        )}

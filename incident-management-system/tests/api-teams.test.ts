@@ -9,7 +9,7 @@ import { POST } from "../src/app/api/teams/route";
 import { verifyToken } from "../src/lib/jwt";
 
 mock.module("../src/lib/jwt", () => ({
-  verifyToken: mock((token: string) => ({
+  verifyToken: mock(() => ({
     userId: "user-1",
     role: "ADMIN",
     orgId: "org-1"
@@ -18,9 +18,9 @@ mock.module("../src/lib/jwt", () => ({
 
 mock.module("next/server", () => ({
   NextResponse: {
-    json: (data: any, init?: any) => {
+    json: (data: unknown, init?: ResponseInit) => {
       const res = new Response(JSON.stringify(data), init);
-      (res as any).json = () => Promise.resolve(data);
+      (res as unknown as { json: () => Promise<unknown> }).json = () => Promise.resolve(data);
       return res;
     },
   },
@@ -31,8 +31,8 @@ describe("API Teams Route", () => {
     prismaMock.project.findUnique.mockClear();
     prismaMock.project.findUnique.mockResolvedValue({ id: "project-1", orgId: "org-1" });
     prismaMock.team.create.mockClear();
-    (verifyToken as any).mockClear();
-    (verifyToken as any).mockReturnValue({
+    (verifyToken as unknown as { mockClear: () => void; mockReturnValue: (val: unknown) => void }).mockClear();
+    (verifyToken as unknown as { mockClear: () => void; mockReturnValue: (val: unknown) => void }).mockReturnValue({
       userId: "user-1",
       role: "ADMIN",
       orgId: "org-1"
@@ -45,12 +45,12 @@ describe("API Teams Route", () => {
       body: JSON.stringify({ name: "Team A", projectId: "p1" }),
     });
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as Parameters<typeof POST>[0]);
     expect(res.status).toBe(401);
   });
 
   test("returns 403 if user is not ADMIN or MANAGER", async () => {
-    (verifyToken as any).mockReturnValue({ role: "DEVELOPER" });
+    (verifyToken as unknown as { mockReturnValue: (val: unknown) => void }).mockReturnValue({ role: "DEVELOPER" });
 
     const req = new Request("http://localhost/api/teams", {
       method: "POST",
@@ -58,7 +58,7 @@ describe("API Teams Route", () => {
       body: JSON.stringify({ name: "Team A", projectId: "p1" }),
     });
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as Parameters<typeof POST>[0]);
     expect(res.status).toBe(403);
   });
 
@@ -69,7 +69,7 @@ describe("API Teams Route", () => {
       body: JSON.stringify({ name: "Team A" }), // missing projectId
     });
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as Parameters<typeof POST>[0]);
     expect(res.status).toBe(400);
   });
 
@@ -82,7 +82,7 @@ describe("API Teams Route", () => {
       body: JSON.stringify({ name: "Team A", projectId: "p-wrong" }),
     });
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as Parameters<typeof POST>[0]);
     expect(res.status).toBe(404);
   });
 
@@ -93,7 +93,7 @@ describe("API Teams Route", () => {
       body: JSON.stringify({ name: "Success Team", projectId: "project-1" }),
     });
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as Parameters<typeof POST>[0]);
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data.team.name).toBe("Success Team");

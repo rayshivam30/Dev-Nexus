@@ -1,24 +1,12 @@
 import { NextResponse } from 'next/server';
-import { signToken, verifyToken } from '@/lib/jwt';
+import { signToken } from '@/lib/jwt';
 import { inviteSchema } from '@/lib/validations';
 import { getBaseUrl } from '@/lib/utils';
+import { withAuth } from '@/lib/api-utils';
+import { sendMail } from '@/lib/mailer';
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (request, { decoded, body }) => {
   try {
-    // Basic auth check
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token);
-    
-    if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'MANAGER')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const body = await request.json();
     const result = inviteSchema.safeParse(body);
 
     if (!result.success) {
@@ -41,11 +29,24 @@ export async function POST(request: Request) {
     const baseUrl = getBaseUrl();
     const inviteLink = `${baseUrl}/auth/accept-invite?token=${inviteToken}`;
 
-    // Here we would use Nodemailer to send the email.
-    // For MVP, we return the link directly in the response.
+    // Send email with the invite link
+    try {
+      await sendMail({
+        to: email,
+        subject: `You're invited to join DevNexus as a ${role.toLowerCase()}! 🚀`,
+        html: `
+          <h2>You are invited to join DevNexus</h2>
+          <p>You have been invited as a <strong>${role}</strong>.</p>
+          <p>Click the link below to accept your invitation and set up your account:</p>
+          <a href="${inviteLink}">${inviteLink}</a>
+        `,
+      });
+    } catch (emailError) {
+      console.error('Failed to send invite email:', emailError);
+    }
 
     return NextResponse.json({
-      message: 'Invite link generated successfully',
+      message: 'Invite link generated and sent successfully',
       inviteLink
     }, { status: 200 });
 
@@ -53,4 +54,6 @@ export async function POST(request: Request) {
     console.error('Invite error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+}, ['ADMIN', 'MANAGER']);
+
+

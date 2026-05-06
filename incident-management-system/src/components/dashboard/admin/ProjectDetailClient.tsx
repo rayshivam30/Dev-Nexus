@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { 
   Loader2, Copy, Check, UserCircle, Users, 
   ShieldCheck, Mail, ArrowRight,
-  Plus, Layout, Github, Activity, ShieldAlert
+  Layout, Github, ShieldAlert
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";

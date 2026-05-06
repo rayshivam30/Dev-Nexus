@@ -60,147 +60,137 @@ export function ManagerTeamNode({ team, projectId, isExpanded, onToggleExpand }:
   }
 
   return (
-    <div className="group relative">
-      <div className="absolute inset-0 bg-black translate-x-3 translate-y-3 -z-10 group-hover:translate-x-1 group-hover:translate-y-1 transition-all"></div>
-      <div className="bg-white border-4 border-black overflow-hidden hover:translate-x-0.5 hover:translate-y-0.5 transition-all">
-        {/* Team Header */}
-        <button
-          onClick={onToggleExpand}
-          className="w-full p-6 flex items-center justify-between hover:bg-[#F0F0F0] transition-colors border-b-4 border-black"
-        >
-          <div className="flex items-center gap-4">
-            <div className={cn(
-              "w-12 h-12 border-2 border-black flex items-center justify-center -rotate-3 group-hover:rotate-0 transition-transform",
-              isExpanded ? "bg-[#00D1FF]" : "bg-[#F0F0F0]"
-            )}>
-              <Users className="w-6 h-6 text-black" />
-            </div>
-            <div className="text-left">
-              <p className="font-[900] text-xl uppercase tracking-tighter italic leading-none">{team.name}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-black/40 mt-1">
-                {team.members.length}_OPERATORS · {team.issueCount}_OPEN_LOGS
-              </p>
-            </div>
+    <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden transition-all hover:border-white/[0.1]">
+      {/* Team Header */}
+      <button
+        onClick={onToggleExpand}
+        className="w-full p-6 flex items-center justify-between hover:bg-white/[0.02] transition-colors border-b border-white/[0.06]"
+      >
+        <div className="flex items-center gap-4">
+          <div className={cn(
+            "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+            isExpanded ? "bg-emerald-500/10 text-emerald-400" : "bg-white/[0.04] text-zinc-400"
+          )}>
+            <Users className="w-6 h-6" />
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-[10px] font-black px-3 py-1 border-2 border-black bg-[#FFD700] text-black uppercase tracking-widest hidden md:inline">
-              SECTOR_ID: {team.id.slice(0, 6)}
-            </span>
-            {isExpanded ? <ChevronUp className="w-6 h-6 stroke-[3px]" /> : <ChevronDown className="w-6 h-6 stroke-[3px]" />}
+          <div className="text-left">
+            <p className="font-bold text-lg text-white">{team.name}</p>
+            <p className="text-xs font-medium text-zinc-500 mt-1">
+              {team.members.length} Operators · {team.issueCount} Open Logs
+            </p>
           </div>
-        </button>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-white/[0.06] text-zinc-300 hidden md:inline">
+            ID: {team.id.slice(0, 6)}
+          </span>
+          {isExpanded ? <ChevronUp className="w-5 h-5 text-zinc-400" /> : <ChevronDown className="w-5 h-5 text-zinc-400" />}
+        </div>
+      </button>
 
-        {/* Expanded Content */}
-        {isExpanded && (
-          <div className="divide-y-4 divide-black">
-            {/* Members list */}
-            <div className="p-6 space-y-4">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-[10px] font-black uppercase tracking-widest text-black/40">OPERATOR_ROSTER</span>
-                <span className="text-[10px] font-black bg-black text-white px-2 py-0.5">{team.members.length}</span>
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div className="divide-y divide-white/[0.06]">
+          {/* Members list */}
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Operator Roster</span>
+            </div>
+            {team.members.length === 0 ? (
+              <div className="py-8 text-center bg-white/[0.01] rounded-xl border border-white/[0.04]">
+                <p className="text-sm font-medium text-zinc-500">No operators assigned</p>
               </div>
-              {team.members.length === 0 ? (
-                <div className="py-10 text-center border-4 border-dashed border-black bg-[#F8F8F8]">
-                  <p className="text-sm font-black uppercase italic opacity-20">NO_OPERATORS_ASSIGNED</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {team.members.map((m) => (
-                    <div key={m.id} className="p-4 bg-white border-4 border-black group/member relative">
-                      <div className="absolute inset-0 bg-black translate-x-1 translate-y-1 -z-10 group-hover/member:translate-x-0 group-hover/member:translate-y-0 transition-all"></div>
-                      <div className="flex items-center justify-between relative z-10">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-black border-2 border-black flex items-center justify-center text-base font-black text-[#00D1FF] rotate-3 group-hover/member:rotate-0 transition-transform">
-                            {m.email[0].toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-black uppercase tracking-tighter leading-none truncate">{m.email.split('@')[0]}</p>
-                            <p className="text-[10px] font-bold text-black/40 truncate italic">{m.email}</p>
-                          </div>
-                        </div>
-                        <div className={cn(
-                          "w-4 h-4 border-2 border-black",
-                          m.status === "ACTIVE" ? "bg-[#32CD32]" : "bg-black"
-                        )} title={m.status} />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {team.members.map((m) => (
+                  <div key={m.id} className="p-4 bg-white/[0.03] border border-white/[0.06] rounded-xl flex items-center justify-between hover:bg-white/[0.05] transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-black flex items-center justify-center text-sm font-bold text-emerald-400 shrink-0">
+                        {m.email[0].toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-zinc-200 truncate">{m.email.split('@')[0]}</p>
+                        <p className="text-xs text-zinc-500 truncate">{m.email}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Invite Developer to this team */}
-            <div className="p-6 bg-[#F0F0F0] space-y-4">
-              {!inviting ? (
-                <button
-                  onClick={() => setInviting(true)}
-                  className="flex items-center gap-2 text-[10px] px-4 py-3 border-2 border-black bg-white font-black uppercase tracking-widest hover:bg-[#00D1FF] shadow-[4px_4px_0_0_black] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
-                >
-                  <UserPlus className="w-4 h-4 stroke-[2.5px]" /> INVITE_OPERATOR_TO_{team.name.toUpperCase().replace(/ /g, '_')}
-                </button>
-              ) : (
-                <div className="space-y-4 animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-black uppercase tracking-widest">
-                      INVITE_TO: <span className="text-black">{team.name.toUpperCase()}</span>
-                    </p>
-                    <button
-                      onClick={() => { setInviting(false); setInviteError(""); setInviteLink(""); }}
-                      className="p-1 border-2 border-black hover:bg-black hover:text-white transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                    <div className={cn(
+                      "w-2 h-2 rounded-full shrink-0",
+                      m.status === "ACTIVE" ? "bg-emerald-500" : "bg-zinc-600"
+                    )} title={m.status} />
                   </div>
-                  {inviteError && (
-                    <p className="text-[10px] font-black uppercase text-[#FF3131] bg-[#FF3131]/10 border-2 border-[#FF3131] px-3 py-2">
-                      {inviteError}
-                    </p>
-                  )}
-                  <form onSubmit={handleInviteDeveloper} className="flex gap-3">
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Invite Developer to this team */}
+          <div className="p-6 bg-black/20 space-y-4">
+            {!inviting ? (
+              <button
+                onClick={() => setInviting(true)}
+                className="flex items-center gap-2 text-xs px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] text-white rounded-lg transition-colors font-medium"
+              >
+                <UserPlus className="w-4 h-4" /> Invite Operator to {team.name}
+              </button>
+            ) : (
+              <div className="space-y-4 animate-in fade-in duration-200 bg-white/[0.03] p-5 rounded-xl border border-white/[0.06]">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-zinc-300">
+                    Invite to <span className="text-white">{team.name}</span>
+                  </p>
+                  <button
+                    onClick={() => { setInviting(false); setInviteError(""); setInviteLink(""); }}
+                    className="p-1.5 rounded-lg hover:bg-white/[0.1] text-zinc-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                {inviteError && (
+                  <p className="text-xs font-medium text-red-400 bg-red-400/10 border border-red-400/20 px-3 py-2 rounded-lg">
+                    {inviteError}
+                  </p>
+                )}
+                <form onSubmit={handleInviteDeveloper} className="flex gap-3">
+                  <input
+                    type="email"
+                    required
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="operator@domain.com"
+                    className="flex-1 px-4 py-2.5 text-sm bg-black border border-white/[0.1] rounded-lg focus:outline-none focus:border-white/20 transition-colors placeholder:text-zinc-600"
+                  />
+                  <button
+                    type="submit"
+                    disabled={inviteLoading}
+                    className="px-5 py-2.5 bg-white text-black font-semibold text-xs rounded-lg hover:bg-zinc-200 disabled:opacity-50 transition-colors flex items-center justify-center min-w-[100px]"
+                  >
+                    {inviteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Transmit"}
+                  </button>
+                </form>
+
+                {inviteLink && (
+                  <div className="mt-4 bg-black border border-white/[0.1] rounded-lg p-3 flex items-center gap-3">
+                    <div className="text-xs font-semibold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-md shrink-0">
+                      Link Generated
+                    </div>
                     <input
-                      type="email"
-                      required
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      placeholder="OPERATOR@DOMAIN.COM"
-                      className="flex-1 px-4 py-3 text-sm bg-white border-4 border-black font-bold uppercase focus:outline-none focus:bg-[#00D1FF] transition-colors placeholder:text-black/20"
+                      readOnly
+                      value={inviteLink}
+                      className="flex-1 text-sm font-mono bg-transparent text-zinc-300 focus:outline-none truncate"
                     />
                     <button
-                      type="submit"
-                      disabled={inviteLoading}
-                      className="px-6 py-3 bg-black text-white border-4 border-black text-[10px] font-black uppercase tracking-widest hover:bg-[#FFD700] hover:text-black disabled:opacity-50 shadow-[4px_4px_0_0_#FFD700] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
+                      onClick={copyLink}
+                      className="shrink-0 p-2 rounded-md bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 transition-colors"
                     >
-                      {inviteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "TRANSMIT"}
+                      {copiedTeam ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                     </button>
-                  </form>
-
-                  {inviteLink && (
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-black translate-x-1 translate-y-1"></div>
-                      <div className="relative bg-white border-4 border-black p-4 flex items-center gap-3">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-[#32CD32] shrink-0 bg-[#32CD32]/10 border-2 border-[#32CD32] px-2 py-1">
-                          LINK_GEN
-                        </div>
-                        <input
-                          readOnly
-                          value={inviteLink}
-                          className="flex-1 text-xs font-mono bg-transparent focus:outline-none font-bold truncate"
-                        />
-                        <button
-                          onClick={copyLink}
-                          className="shrink-0 p-2 border-2 border-black hover:bg-black hover:text-white transition-colors"
-                        >
-                          {copiedTeam ? <Check className="w-4 h-4 text-[#32CD32]" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -24,7 +24,11 @@ export async function createIssue(data: {
     select: { plan: true }
   });
 
-  const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(projectId, severity, project?.plan || undefined);
+  const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(
+    projectId,
+    severity,
+    project?.plan || undefined
+  );
 
   return await prisma.$transaction(async (tx) => {
     const issueData: Prisma.IssueCreateInput = {
@@ -42,12 +46,10 @@ export async function createIssue(data: {
 
     if (teamId) issueData.team = { connect: { id: teamId } };
 
-    if (assignedToId) {
-      if (role === "MANAGER" || role === "ADMIN") {
-        issueData.assignedTo = { connect: { id: assignedToId } };
-        issueData.status = "ASSIGNED";
-        issueData.acceptedAt = new Date();
-      }
+    if (assignedToId && (role === "MANAGER" || role === "ADMIN")) {
+      issueData.assignedTo = { connect: { id: assignedToId } };
+      issueData.status = "ASSIGNED";
+      issueData.acceptedAt = new Date();
     }
 
     const issue = await tx.issue.create({ data: issueData });
@@ -60,7 +62,6 @@ export async function createIssue(data: {
         action: `Issue created by ${role.toLowerCase()}${issue.status === "ASSIGNED" ? " and auto-assigned" : ""}`
       }
     });
-
     return issue;
   });
 }

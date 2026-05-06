@@ -61,42 +61,41 @@ export function ManagerTeamClient({ projectId, projectName, teams }: ManagerTeam
 
 
   return (
-    <div className="space-y-16 pb-24 max-w-[1600px] mx-auto">
+    <div className="space-y-8 pb-24 max-w-[1600px] mx-auto">
       {/* ── PAGE HEADER ── */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div className="flex flex-col gap-4">
-          <h1 className="text-5xl md:text-7xl font-[900] tracking-tighter uppercase italic leading-none border-l-8 border-black pl-8">
-            TEAM <br />
-            <span className="bg-[#00D1FF] border-4 border-black px-4 shadow-[6px_6px_0_0_black] inline-block mt-2">RESOURCE_MGMT</span>
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight">
+            Team Management
           </h1>
-          <p className="text-black font-black uppercase text-xs tracking-widest mt-4 opacity-60 max-w-xl border-b-2 border-black/10 pb-4">
-            Project: <span className="text-black opacity-100">{projectName}</span> — manage sector nodes and operator access.
+          <p className="text-sm text-zinc-500 mt-1">
+            Project <span className="text-zinc-300 font-medium">{projectName}</span> — manage sector teams and operator access.
           </p>
         </div>
         <button
           onClick={() => { setShowCreateTeam(true); setTeamError(""); }}
-          className="bg-[#FFD700] text-black h-16 px-8 border-4 border-black font-[900] text-xl uppercase tracking-tighter hover:bg-black hover:text-white shadow-[8px_8px_0_0_black] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all flex items-center gap-4 active:scale-95 shrink-0"
+          className="flex items-center gap-2 h-11 px-6 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-500 transition-all shrink-0"
         >
-          <Plus className="w-6 h-6 stroke-[4px]" /> NEW_SECTOR
+          <Plus className="w-4 h-4" /> New Team
         </button>
       </div>
 
       {/* Create Team Form */}
       {showCreateTeam && (
-        <div className="bg-white border-8 border-black shadow-[20px_20px_0_0_#00D1FF] p-10 space-y-6 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between border-b-4 border-black pb-6">
-            <h2 className="text-3xl font-[900] uppercase italic tracking-tighter flex items-center gap-3">
-              <Layers className="w-7 h-7" /> DEPLOY_TEAM_NODE
+        <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-8 space-y-6 animate-in fade-in duration-200 backdrop-blur-xl">
+          <div className="flex items-center justify-between border-b border-white/[0.06] pb-6">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Layers className="w-5 h-5 text-emerald-400" /> Deploy Team
             </h2>
             <button
               onClick={() => setShowCreateTeam(false)}
-              className="p-2 border-2 border-black hover:bg-black hover:text-white transition-colors"
+              className="p-2 rounded-lg hover:bg-white/[0.06] text-zinc-400 hover:text-white transition-colors"
             >
-              <X className="w-6 h-6 stroke-[3px]" />
+              <X className="w-5 h-5" />
             </button>
           </div>
           {teamError && (
-            <p className="text-[10px] font-black uppercase text-[#FF3131] bg-[#FF3131]/10 border-2 border-[#FF3131] px-4 py-3 flex items-center gap-2">
+            <p className="text-xs font-medium text-red-400 bg-red-400/10 border border-red-400/20 px-4 py-3 rounded-lg flex items-center gap-2">
               <AlertCircle className="w-4 h-4" /> {teamError}
             </p>
           )}
@@ -106,15 +105,15 @@ export function ManagerTeamClient({ projectId, projectName, teams }: ManagerTeam
               required
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
-              placeholder="BACKEND_SECTOR"
-              className="flex-1 px-6 py-4 bg-white border-4 border-black font-bold uppercase text-sm focus:outline-none focus:bg-[#00D1FF] transition-colors placeholder:text-black/20"
+              placeholder="Backend Team"
+              className="flex-1 px-4 py-3 bg-black border border-white/[0.1] rounded-xl text-sm focus:outline-none focus:border-white/20 transition-colors placeholder:text-zinc-600"
             />
             <button
               type="submit"
               disabled={teamLoading}
-              className="px-8 py-4 bg-black text-white border-4 border-black font-black text-xs uppercase tracking-widest hover:bg-[#FFD700] hover:text-black disabled:opacity-50 shadow-[6px_6px_0_0_#FFD700] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all flex items-center gap-2"
+              className="px-6 py-3 bg-white text-black rounded-xl font-semibold text-sm hover:bg-zinc-200 disabled:opacity-50 transition-colors flex items-center gap-2"
             >
-              {teamLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "DEPLOY_NODE"}
+              {teamLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Team"}
             </button>
           </form>
         </div>
@@ -122,18 +121,18 @@ export function ManagerTeamClient({ projectId, projectName, teams }: ManagerTeam
 
       {/* Teams — each is an expandable card */}
       {teams.length === 0 ? (
-        <div className="p-20 border-4 border-black border-dashed bg-white text-center shadow-[12px_12px_0_0_#F0F0F0] space-y-4">
-          <Users className="w-12 h-12 text-black/10 mx-auto" />
-          <p className="text-2xl font-black uppercase italic opacity-20">VOID_STATE: NO_SECTOR_NODES_INITIALIZED</p>
+        <div className="p-12 border border-white/[0.06] rounded-2xl bg-white/[0.01] text-center space-y-4">
+          <Users className="w-12 h-12 text-zinc-600 mx-auto" />
+          <p className="text-xl font-bold text-zinc-400">No teams initialized</p>
           <button
             onClick={() => setShowCreateTeam(true)}
-            className="mt-4 text-xs font-black uppercase underline underline-offset-4 decoration-2 hover:bg-black hover:text-white px-4 py-2 transition-colors"
+            className="mt-4 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
           >
-            INITIALIZE_FIRST_SECTOR
+            Create your first team
           </button>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-4">
           {teams.map((team) => (
             <ManagerTeamNode
               key={team.id}
@@ -147,10 +146,10 @@ export function ManagerTeamClient({ projectId, projectName, teams }: ManagerTeam
       )}
 
       {/* System Note */}
-      <div className="p-10 border-4 border-black bg-black text-white flex flex-col items-center text-center space-y-6 rotate-1 border-dashed">
-        <Activity className="w-12 h-12 text-[#FFD700] animate-pulse" />
-        <p className="text-xs font-black uppercase tracking-widest opacity-40 leading-relaxed italic">
-          &quot;Sector nodes sync in real-time. Unauthorized access to operator records is strictly prohibited under core protocol mandates.&quot;
+      <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.04] text-center space-y-4">
+        <Activity className="w-8 h-8 text-emerald-400/50 mx-auto" />
+        <p className="text-xs font-medium text-zinc-500 max-w-lg mx-auto leading-relaxed">
+          Teams sync in real-time. Role-based access controls apply to operator records.
         </p>
       </div>
     </div>

@@ -39,7 +39,8 @@ export default async function DeveloperDashboardPage() {
         assignedToId: user.id,
         status: { not: "RESOLVED" },
       },
-      orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
+      orderBy: { createdAt: "desc" },
+      take: 3,
       include: { team: true },
     }),
     prisma.user.findMany({

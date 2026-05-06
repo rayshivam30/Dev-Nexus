@@ -7,12 +7,6 @@ mock.module("../src/lib/db", () => ({ prisma: prismaMock }));
 import { expect, test, describe, beforeEach } from "bun:test";
 import { createIssue, updateIssue, calculateSLADeadlines, logActivity, addComment, getIssueDetails, getIssuesByProject } from "../src/services/issue-service";
 
-interface BunMock {
-  mockClear(): void;
-  mock: {
-    calls: unknown[][];
-  };
-}
 
 describe("Issue Service", () => {
   beforeEach(() => {
@@ -64,10 +58,10 @@ describe("Issue Service", () => {
       expect(issue.title).toBe("Test Issue");
       expect(issue.status).toBe("OPEN");
 
-      const createCalls = (prismaMock.issue.create as any).mock.calls;
+      const createCalls = (prismaMock.issue.create as unknown as { mock: { calls: unknown[][] } }).mock.calls;
       expect(createCalls.length).toBe(1);
       
-      const activityCalls = (prismaMock.issueActivity.create as any).mock.calls;
+      const activityCalls = (prismaMock.issueActivity.create as unknown as { mock: { calls: unknown[][] } }).mock.calls;
       expect(activityCalls.length).toBe(1);
       
       const firstActivityCall = activityCalls[0][0] as { data: { action: string } };
@@ -84,14 +78,14 @@ describe("Issue Service", () => {
 
       expect(result.status).toBe("RESOLVED");
       
-      const updateCalls = (prismaMock.issue.update as any).mock.calls;
+      const updateCalls = (prismaMock.issue.update as unknown as { mock: { calls: unknown[][] } }).mock.calls;
       expect(updateCalls.length).toBe(1);
       
       const firstUpdateCall = updateCalls[0][0] as { data: { status: string, resolvedAt: unknown } };
       expect(firstUpdateCall.data.status).toBe("RESOLVED");
       expect(firstUpdateCall.data.resolvedAt).toBeDefined();
 
-      const activityCalls = (prismaMock.issueActivity.create as any).mock.calls;
+      const activityCalls = (prismaMock.issueActivity.create as unknown as { mock: { calls: unknown[][] } }).mock.calls;
       expect(activityCalls.length).toBe(1);
       
       const firstActivityCall = activityCalls[0][0] as { data: { action: string } };
@@ -113,8 +107,8 @@ describe("Issue Service", () => {
       expect(comment.text).toBe("This is a comment");
       expect(comment.issueId).toBe("issue-1");
       
-      const activityCalls = (prismaMock.issueActivity.create as any).mock.calls;
-      expect(activityCalls.some((call: any) => (call[0] as any).data.action === "Comment added")).toBe(true);
+      const activityCalls = (prismaMock.issueActivity.create as unknown as { mock: { calls: { data: { action: string } }[][] } }).mock.calls;
+      expect(activityCalls.some((call) => call[0].data.action === "Comment added")).toBe(true);
     });
   });
 
@@ -122,8 +116,8 @@ describe("Issue Service", () => {
     test("calls findUnique with correct includes", async () => {
       const details = await getIssueDetails("issue-1");
       expect(details).toBeDefined();
-      const calls = (prismaMock.issue.findUnique as any).mock.calls;
-      expect(calls[calls.length - 1][0] as any).toHaveProperty("include");
+      const calls = (prismaMock.issue.findUnique as unknown as { mock: { calls: Record<string, unknown>[][] } }).mock.calls;
+      expect(calls[calls.length - 1][0]).toHaveProperty("include");
     });
   });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldAlert, CheckCircle, Clock, AlertTriangle, Plus, Zap, Command } from "lucide-react";
+import { ShieldAlert, CheckCircle, Clock, AlertTriangle, Plus, Zap } from "lucide-react";
 import { StatCard } from "@/components/dashboard/shared/StatCard";
 import { RecentIssues, Issue } from "@/components/dashboard/shared/RecentIssues";
 import { ActiveProjects, ProjectStats } from "@/components/dashboard/shared/ActiveProjects";
@@ -117,6 +117,7 @@ export function DashboardClient({
         projects={allProjects}
         teams={allTeams}
         developers={allDevelopers}
+        hideTeamAndAssignee={true}
       />
     </div>
   );

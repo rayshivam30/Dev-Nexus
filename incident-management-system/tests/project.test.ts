@@ -60,7 +60,7 @@ describe("Project Service (Security)", () => {
   test("deleteProject calls delete correctly", async () => {
     const result = await deleteProject("p1");
     expect(result.id).toBe("deleted-id");
-    expect(prismaMock.project.delete as any).toHaveBeenCalledWith({
+    expect(prismaMock.project.delete).toHaveBeenCalledWith({
       where: { id: "p1" }
     });
   });

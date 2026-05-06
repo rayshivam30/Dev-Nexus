@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { Loader2, X, AlertCircle, Plus, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/ToastProvider";
 
 export interface ProjectData { id: string; name: string; }
 export interface TeamData { id: string; name: string; projectId: string; }
@@ -19,6 +20,9 @@ export interface CreateIssueModalProps {
   
   fixedProjectId?: string;
   fixedTeamId?: string;
+
+  hideAssignment?: boolean;
+  hideTeamAndAssignee?: boolean;
 }
 
 export function CreateIssueModal({
@@ -29,8 +33,11 @@ export function CreateIssueModal({
   teams,
   developers,
   fixedProjectId,
-  fixedTeamId
+  fixedTeamId,
+  hideAssignment = false,
+  hideTeamAndAssignee = false,
 }: CreateIssueModalProps) {
+  const { showToast } = useToast();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [severity, setSeverity] = useState("LOW");
@@ -86,17 +93,28 @@ export function CreateIssueModal({
           priority,
           environment,
           projectId: selectedProjectId,
-          teamId: selectedTeamId || undefined,
-          assignedToId: selectedDeveloperId || undefined
+          teamId: hideAssignment || hideTeamAndAssignee ? undefined : (selectedTeamId || undefined),
+          assignedToId: hideAssignment || hideTeamAndAssignee ? undefined : (selectedDeveloperId || undefined)
         })
       });
       
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create issue");
+
+      showToast({
+        tone: "success",
+        title: "Issue created",
+        description: selectedDeveloperId ? "The issue was created and assigned." : "The issue is now in the queue.",
+      });
       
       onSuccess();
       onClose();
     } catch (err) {
+      showToast({
+        tone: "error",
+        title: "Issue creation failed",
+        description: err instanceof Error ? err.message : "Something went wrong",
+      });
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setSubmitting(false);
@@ -157,16 +175,39 @@ export function CreateIssueModal({
               </div>
             </div>
 
+            {/* Project Selection (Main mandatory field if projects list is supplied and not fixed) */}
+            {!fixedProjectId && projects && projects.length > 0 && (
+              <div>
+                <label className={labelClass}>Project *</label>
+                <div className="relative">
+                  <select 
+                    value={selectedProjectId} 
+                    onChange={e=>{
+                      setSelectedProjectId(e.target.value);
+                      setSelectedTeamId("");
+                      setSelectedDeveloperId("");
+                    }}
+                    className={selectClass}
+                    required
+                  >
+                    <option value="" className="bg-[#111113] text-white">Select project...</option>
+                    {projects.map(p => <option key={p.id} value={p.id} className="bg-[#111113] text-white">{p.name}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-600" />
+                </div>
+              </div>
+            )}
+
             {/* Parameters row */}
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className={labelClass}>Severity</label>
                 <div className="relative">
                   <select value={severity} onChange={e=>setSeverity(e.target.value)} className={selectClass}>
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                    <option value="CRITICAL">Critical</option>
+                    <option value="LOW" className="bg-[#111113] text-white">Low</option>
+                    <option value="MEDIUM" className="bg-[#111113] text-white">Medium</option>
+                    <option value="HIGH" className="bg-[#111113] text-white">High</option>
+                    <option value="CRITICAL" className="bg-[#111113] text-white">Critical</option>
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-600" />
                 </div>
@@ -175,10 +216,10 @@ export function CreateIssueModal({
                 <label className={labelClass}>Priority</label>
                 <div className="relative">
                   <select value={priority} onChange={e=>setPriority(e.target.value)} className={selectClass}>
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                    <option value="URGENT">Urgent</option>
+                    <option value="LOW" className="bg-[#111113] text-white">Low</option>
+                    <option value="MEDIUM" className="bg-[#111113] text-white">Medium</option>
+                    <option value="HIGH" className="bg-[#111113] text-white">High</option>
+                    <option value="URGENT" className="bg-[#111113] text-white">Urgent</option>
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-600" />
                 </div>
@@ -205,69 +246,49 @@ export function CreateIssueModal({
               </div>
             </div>
 
-            {/* Assignment */}
-            <div className="space-y-3 pt-4 border-t border-white/[0.06]">
-              <p className="text-xs text-zinc-500 font-medium">Assignment (optional)</p>
-              
-              {!fixedProjectId && projects && projects.length > 0 && (
-                <div>
-                  <label className={labelClass}>Project *</label>
-                  <div className="relative">
-                    <select 
-                      value={selectedProjectId} 
-                      onChange={e=>{
-                        setSelectedProjectId(e.target.value);
-                        setSelectedTeamId("");
-                        setSelectedDeveloperId("");
-                      }}
-                      className={selectClass}
-                      required
-                    >
-                      <option value="">Select project...</option>
-                      {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-600" />
+            {/* Assignment (Team & Assignee selection) */}
+            {!hideAssignment && !hideTeamAndAssignee && (
+              <div className="space-y-3 pt-4 border-t border-white/[0.06]">
+                <p className="text-xs text-zinc-500 font-medium">Assignment (optional)</p>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelClass}>Team</label>
+                    <div className="relative">
+                      <select 
+                        value={selectedTeamId} 
+                        onChange={e=>{
+                          setSelectedTeamId(e.target.value);
+                          setSelectedDeveloperId("");
+                        }}
+                        className={selectClass}
+                        disabled={!fixedProjectId && projects && projects.length > 0 && !selectedProjectId}
+                      >
+                        <option value="" className="bg-[#111113] text-white">None</option>
+                        {filteredTeams.map(t => <option key={t.id} value={t.id} className="bg-[#111113] text-white">{t.name}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-600" />
+                    </div>
                   </div>
-                </div>
-              )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>Team</label>
-                  <div className="relative">
-                    <select 
-                      value={selectedTeamId} 
-                      onChange={e=>{
-                        setSelectedTeamId(e.target.value);
-                        setSelectedDeveloperId("");
-                      }}
-                      className={selectClass}
-                      disabled={!fixedProjectId && projects && projects.length > 0 && !selectedProjectId}
-                    >
-                      <option value="">None</option>
-                      {filteredTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-600" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className={labelClass}>Assignee</label>
-                  <div className="relative">
-                    <select 
-                      value={selectedDeveloperId} 
-                      onChange={e=>setSelectedDeveloperId(e.target.value)}
-                      className={selectClass}
-                      disabled={!selectedTeamId}
-                    >
-                      <option value="">Unassigned</option>
-                      {filteredDevelopers.map(d => <option key={d.id} value={d.id}>{d.name || d.email}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-600" />
+                  <div>
+                    <label className={labelClass}>Assignee</label>
+                    <div className="relative">
+                      <select 
+                        value={selectedDeveloperId} 
+                        onChange={e=>setSelectedDeveloperId(e.target.value)}
+                        className={selectClass}
+                        disabled={!selectedTeamId}
+                      >
+                        <option value="" className="bg-[#111113] text-white">Unassigned</option>
+                        {filteredDevelopers.map(d => <option key={d.id} value={d.id} className="bg-[#111113] text-white">{d.name || d.email}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-zinc-600" />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.06]">

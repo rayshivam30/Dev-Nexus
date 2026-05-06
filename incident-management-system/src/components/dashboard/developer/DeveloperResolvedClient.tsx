@@ -8,23 +8,26 @@ export function DeveloperResolvedClient({ resolvedIssues }: { resolvedIssues: Is
   const router = useRouter();
 
   return (
-    <div className="space-y-12 pb-24">
-      {/* ── HEADER BOARD ── */}
-      <div className="bg-black border-4 border-black p-1 shadow-[12px_12px_0_0_black]">
-        <div className="bg-white border-4 border-black p-8 md:p-12 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#32CD32] border-l-4 border-b-4 border-black rotate-45 -mr-16 -mt-16"></div>
-          <div className="relative z-10 space-y-4">
-            <span className="bg-black text-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2 w-fit">
-              <Zap className="w-4 h-4 text-[#32CD32]" /> STABILIZED_NODES
-            </span>
-            <h1 className="text-4xl md:text-7xl font-[1000] tracking-tighter uppercase italic leading-none text-black">
-              HISTORY_LOG
-            </h1>
-          </div>
+    <div className="space-y-8 pb-24 max-w-[1600px] mx-auto">
+      {/* Header */}
+      <div>
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-xs font-medium text-zinc-500 bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-1">
+            Archived Logs
+          </span>
+          <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+            <Zap className="w-3 h-3" /> Stabilized Nodes
+          </span>
         </div>
+        <h1 className="text-3xl font-extrabold tracking-tight">
+          Resolved Incidents
+        </h1>
+        <p className="text-sm text-zinc-500 mt-1">
+          Historical record of all incidents successfully resolved by you.
+        </p>
       </div>
 
-      <div className="bg-white border-4 border-black p-8 shadow-[12px_12px_0_0_black]">
+      <div className="p-6 border border-white/[0.06] bg-[#0a0a0c]/50 rounded-2xl">
         <RecentIssues 
           issues={resolvedIssues} 
           onRowClick={(issue) => router.push(`/dashboard/developer/issues/${issue.id}`)} 

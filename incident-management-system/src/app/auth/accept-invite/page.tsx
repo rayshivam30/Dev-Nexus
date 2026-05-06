@@ -2,7 +2,8 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Loader2, ShieldCheck, AlertCircle } from "lucide-react";
+import { ArrowRight, Loader2, ShieldCheck, AlertCircle, Lock, Mail, Eye, EyeOff, UserPlus } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Safely decode email from the JWT payload (middle segment, base64url encoded)
 function decodeTokenEmail(token: string): string {
@@ -25,6 +26,8 @@ function decodeTokenRole(token: string): string {
   }
 }
 
+
+
 function AcceptInviteContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -37,6 +40,9 @@ function AcceptInviteContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   useEffect(() => {
     if (token) {
@@ -47,15 +53,19 @@ function AcceptInviteContent() {
 
   if (!token) {
     return (
-      <div className="space-y-8 py-10 text-center">
-        <div className="flex justify-center">
-          <AlertCircle className="w-12 h-12 text-red-500" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="space-y-6 text-center"
+      >
+        <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.1] flex items-center justify-center mx-auto">
+          <AlertCircle className="w-8 h-8 text-white/60" />
         </div>
-        <h1 className="text-3xl font-extrabold tracking-tight">Invalid Invite Link</h1>
-        <p className="text-sm text-zinc-500">
+        <h1 className="text-3xl font-black tracking-tighter">Invalid Invite Link</h1>
+        <p className="text-sm text-white/40 max-w-xs mx-auto">
           This invite link is missing or malformed. Please ask your admin to resend the invite.
         </p>
-      </div>
+      </motion.div>
     );
   }
 
@@ -109,91 +119,180 @@ function AcceptInviteContent() {
 
   if (success) {
     return (
-      <div className="space-y-8 py-10 text-center animate-in fade-in duration-500">
-        <div className="flex justify-center">
-          <ShieldCheck className="w-12 h-12 text-white" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="space-y-8 text-center"
+      >
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
+          className="w-20 h-20 rounded-2xl bg-white/[0.04] border border-white/[0.1] flex items-center justify-center mx-auto"
+        >
+          <ShieldCheck className="w-10 h-10 text-white" />
+        </motion.div>
+        <div className="space-y-3">
+          <h2 className="text-3xl font-black tracking-tighter">Account Created!</h2>
+          <p className="text-sm text-white/40">
+            Welcome aboard. Redirecting you to your dashboard…
+          </p>
         </div>
-        <h2 className="text-3xl font-extrabold tracking-tight">Account Created!</h2>
-        <p className="text-zinc-500 text-sm">
-          Welcome aboard. Redirecting you to your dashboard…
-        </p>
-        <Loader2 className="w-5 h-5 animate-spin mx-auto text-zinc-500" />
-      </div>
+        <Loader2 className="w-5 h-5 animate-spin mx-auto text-white/30" />
+      </motion.div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="space-y-3">
-        <h1 className="text-3xl font-extrabold tracking-tight">Accept Invite</h1>
-        <p className="text-sm text-zinc-500">
+    <div className="space-y-8">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="space-y-3"
+      >
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] font-semibold text-white/50 mb-2">
+          <UserPlus className="w-3 h-3 text-white/50" />
+          Team invite
+        </div>
+        <h1 className="text-4xl font-black tracking-tighter leading-[1.1]">Accept Invite</h1>
+        <p className="text-base text-white/40 font-medium leading-relaxed">
           You&apos;ve been invited as a{" "}
-
-          <span className="font-semibold text-white capitalize">
+          <span className="text-white/80 font-bold capitalize">
             {role.toLowerCase()}
           </span>
           . Set your password to get started.
         </p>
-      </div>
+      </motion.div>
 
-      {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 flex items-center gap-3">
-          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-          {error}
-        </div>
-      )}
+      {/* Error */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: "auto" }}
+            exit={{ opacity: 0, y: -8, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 bg-white/[0.04] border border-white/[0.1] rounded-2xl text-sm text-white/70 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-white/[0.06] flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-4 h-4 text-white/60" />
+              </div>
+              <span className="font-medium">{error}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      {/* Form */}
       <form onSubmit={onSubmit} className="space-y-5">
-        {/* Pre-filled email — read only */}
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-500 ml-1">Email</label>
-          <input
-            type="email"
-            value={email}
-            readOnly
-            className="w-full px-4 py-3.5 bg-white/[0.02] border border-white/[0.04] rounded-xl text-zinc-500 cursor-not-allowed focus:outline-none text-sm"
-          />
-        </div>
+        {/* Email (read-only) */}
+        <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15, duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="space-y-2">
+          <label className="text-[11px] font-semibold text-white/30 uppercase tracking-wider ml-1">Email</label>
+          <div className="relative">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center bg-white/[0.04]">
+              <Mail className="w-3.5 h-3.5 text-white/25" />
+            </div>
+            <input
+              type="email"
+              value={email}
+              readOnly
+              className="w-full pl-16 pr-4 py-4 bg-white/[0.02] border border-white/[0.06] rounded-2xl text-white/40 cursor-not-allowed focus:outline-none text-sm font-medium"
+            />
+          </div>
+        </motion.div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-500 ml-1">Password</label>
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/[0.08] rounded-xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] transition-all text-sm placeholder:text-zinc-700"
-            placeholder="••••••••"
-          />
-        </div>
+        {/* Password */}
+        <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.23, duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="space-y-2">
+          <label className="text-[11px] font-semibold text-white/30 uppercase tracking-wider ml-1">Password</label>
+          <div className="relative group">
+            <div
+              className={`absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                focusedField === "password"
+                  ? "bg-white/10 shadow-[0_0_12px_rgba(255,255,255,0.08)]"
+                  : "bg-white/[0.04]"
+              }`}
+            >
+              <Lock className={`w-3.5 h-3.5 transition-colors duration-300 ${focusedField === "password" ? "text-white/80" : "text-white/30"}`} />
+            </div>
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onFocus={() => setFocusedField("password")}
+              onBlur={() => setFocusedField(null)}
+              className="w-full pl-16 pr-14 py-4 bg-white/[0.03] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] focus:shadow-[0_0_0_4px_rgba(255,255,255,0.03)] transition-all duration-300 text-sm placeholder:text-white/20 font-medium"
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-all"
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </motion.div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-500 ml-1">Confirm Password</label>
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full px-4 py-3.5 bg-white/[0.03] border border-white/[0.08] rounded-xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] transition-all text-sm placeholder:text-zinc-700"
-            placeholder="••••••••"
-          />
-        </div>
+        {/* Confirm Password */}
+        <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.31, duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="space-y-2">
+          <label className="text-[11px] font-semibold text-white/30 uppercase tracking-wider ml-1">Confirm Password</label>
+          <div className="relative group">
+            <div
+              className={`absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                focusedField === "confirm"
+                  ? "bg-white/10 shadow-[0_0_12px_rgba(255,255,255,0.08)]"
+                  : "bg-white/[0.04]"
+              }`}
+            >
+              <Lock className={`w-3.5 h-3.5 transition-colors duration-300 ${focusedField === "confirm" ? "text-white/80" : "text-white/30"}`} />
+            </div>
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              required
+              minLength={6}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              onFocus={() => setFocusedField("confirm")}
+              onBlur={() => setFocusedField(null)}
+              className="w-full pl-16 pr-14 py-4 bg-white/[0.03] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] focus:shadow-[0_0_0_4px_rgba(255,255,255,0.03)] transition-all duration-300 text-sm placeholder:text-white/20 font-medium"
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-all"
+            >
+              {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </motion.div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full flex items-center justify-center h-12 bg-white text-black rounded-xl font-semibold text-sm hover:bg-white/90 transition-all disabled:opacity-50 mt-2"
+        {/* Submit */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45, duration: 0.4 }}
         >
-          {loading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <>
-              Create Account <ArrowRight className="w-4 h-4 ml-2" />
-            </>
-          )}
-        </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="group w-full flex items-center justify-center h-14 bg-white text-black rounded-2xl font-bold text-sm hover:shadow-[0_0_30px_rgba(255,255,255,0.15)] transition-all duration-300 disabled:opacity-50 mt-4 relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <span className="flex items-center gap-2 relative z-10">
+                Create Account <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </span>
+            )}
+          </button>
+        </motion.div>
       </form>
     </div>
   );
@@ -203,7 +302,7 @@ export default function AcceptInvitePage() {
   return (
     <Suspense fallback={
       <div className="space-y-8 py-10 text-center">
-        <Loader2 className="w-6 h-6 animate-spin mx-auto text-zinc-500" />
+        <Loader2 className="w-6 h-6 animate-spin mx-auto text-white/30" />
       </div>
     }>
       <AcceptInviteContent />

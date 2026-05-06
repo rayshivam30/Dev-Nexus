@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { ArrowRight, Command, Terminal, Github, Activity, Shield, Zap, ChevronRight } from "lucide-react";
+import { ArrowRight, Command, Terminal, Github, Activity, Shield, Zap } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useRef, useEffect, useState } from "react";
@@ -85,9 +85,6 @@ export default function LandingPage() {
       <main>
         {/* ── HERO ── */}
         <section className="relative pt-48 pb-32 px-6 overflow-hidden">
-          {/* Framer-style Vibrant Mesh Gradients */}
-          <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-tr from-fuchsia-600 via-blue-600 to-cyan-400 rounded-full blur-[120px] opacity-20 pointer-events-none" />
-          <div className="absolute top-[20%] left-[20%] w-[400px] h-[400px] bg-purple-600 rounded-full blur-[140px] opacity-20 pointer-events-none" />
           
           <div className="max-w-4xl mx-auto text-center relative z-10 flex flex-col items-center">
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-xs font-semibold text-white/80 mb-8 shadow-xl">
@@ -98,7 +95,7 @@ export default function LandingPage() {
               className="text-6xl md:text-8xl font-black tracking-tighter leading-[1.0] mb-8"
             >
               Ship fast. <br className="hidden md:block" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-cyan-400">Stay resilient.</span>
+              <span className="text-white/40">Stay resilient.</span>
             </motion.h1>
 
             <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
@@ -136,7 +133,7 @@ export default function LandingPage() {
                 <div className="flex items-center gap-6 pt-2">
                   {["TypeScript native", "Zero config", "Auto-capture"].map((t) => (
                     <div key={t} className="flex items-center gap-2 text-sm font-semibold text-white/50">
-                      <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 shadow-[0_0_10px_rgba(217,70,239,0.8)]" /> {t}
+                      <div className="w-1.5 h-1.5 rounded-full bg-white/40" /> {t}
                     </div>
                   ))}
                 </div>
@@ -145,7 +142,7 @@ export default function LandingPage() {
               <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={1}>
                 <TiltCard className="perspective-[2000px]">
                   <div className="bg-[#0a0a0a]/80 backdrop-blur-3xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative">
-                    <div className="absolute -top-32 -right-32 w-64 h-64 bg-cyan-500/20 rounded-full blur-[80px]" />
+
                     <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
                       <div className="flex items-center gap-2">
                         <div className="flex gap-1.5">
@@ -257,7 +254,6 @@ export default function LandingPage() {
 
         {/* ── PRICING ── */}
         <section id="pricing" className="py-32 px-6 max-w-7xl mx-auto relative">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-fuchsia-600 rounded-full blur-[160px] opacity-10 pointer-events-none" />
           
           <div className="relative z-10">
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0} className="text-center mb-20">
@@ -279,7 +275,7 @@ export default function LandingPage() {
                         : "bg-white/[0.02] border-white/10 hover:bg-white/[0.04]"
                     )}>
                       {tier.popular && (
-                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-5 py-1.5 bg-fuchsia-500 text-white rounded-full text-xs font-bold shadow-lg">
+                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-5 py-1.5 bg-white text-black rounded-full text-xs font-bold shadow-lg">
                           Recommended
                         </div>
                       )}
@@ -294,7 +290,7 @@ export default function LandingPage() {
                       <ul className="space-y-4 mb-10 flex-1">
                         {tier.feats.map((f) => (
                           <li key={f} className={cn("flex items-center gap-4 text-base font-medium", tier.popular ? "text-black/70" : "text-white/70")}>
-                            <span className={cn("w-1.5 h-1.5 rounded-full", tier.popular ? "bg-black/40" : "bg-fuchsia-500")} /> {f}
+                            <span className={cn("w-1.5 h-1.5 rounded-full", tier.popular ? "bg-black/40" : "bg-white/40")} /> {f}
                           </li>
                         ))}
                       </ul>
@@ -316,7 +312,6 @@ export default function LandingPage() {
 
         {/* ── CTA ── */}
         <section className="py-40 px-6 text-center relative overflow-hidden mt-20">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-gradient-to-tr from-cyan-600 via-blue-600 to-fuchsia-600 rounded-full blur-[140px] opacity-30 pointer-events-none" />
           
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={0} className="max-w-4xl mx-auto relative z-10 bg-white/[0.02] border border-white/10 rounded-[40px] p-16 backdrop-blur-2xl shadow-2xl">
             <h2 className="text-6xl md:text-7xl font-black tracking-tighter mb-8 leading-[1.0]">

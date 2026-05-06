@@ -153,7 +153,11 @@ async function processReport(payload: IngestReportPayload, project: Project) {
       type: 'INCIDENT_CREATED',
       title: `New Incident: ${initialTitle}`,
       message: `A new incident has been reported from ${customSource || 'SDK'}.`,
-      link: `/dashboard/admin/issues/${issue.id}`
+      link: `/dashboard/admin/issues/${issue.id}`,
+      linkByRole: {
+        ADMIN: `/dashboard/admin/issues/${issue.id}`,
+        MANAGER: "/dashboard/manager/issues",
+      },
     });
 
     eventEmitter.emit(EVENTS.INCIDENT_CREATED, { 

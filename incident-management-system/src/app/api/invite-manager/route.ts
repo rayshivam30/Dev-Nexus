@@ -5,11 +5,31 @@ import { getBaseUrl } from "@/lib/utils";
 
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 
-export const POST = withAuth(async (req, { decoded }) => {
-  const { email, projectId } = await req.json();
+export const POST = withAuth(async (req, { decoded, body }) => {
+  const { email, projectId } = (body as { email?: string; projectId?: string }) || {};
 
   if (!email || !projectId) {
     return apiError("Missing data");
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (existingUser) {
+    return apiError(`User already exists with role ${existingUser.role}`);
+  }
+
+  const existingInvite = await prisma.invite.findFirst({
+    where: { 
+      email,
+      projectId,
+      expiresAt: { gt: new Date() }
+    },
+  });
+
+  if (existingInvite) {
+    return apiError("An active invite has already been sent to this email for this project");
   }
 
   const token = jwt.sign(

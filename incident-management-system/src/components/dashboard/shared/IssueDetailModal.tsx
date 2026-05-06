@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Loader2, Send, Clock, MessageSquare, ShieldAlert, Globe, BarChart2, Timer, Github, Sparkles, Lightbulb, Activity, ChevronRight, ExternalLink, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Issue } from "./RecentIssues";
+import { useToast } from "@/components/ui/ToastProvider";
 
 export interface TeamData { id: string; name: string; projectId: string; }
 export interface DeveloperData { id: string; name?: string | null; email: string; teamId: string | null; }
@@ -44,6 +45,7 @@ export function IssueDetailModal({
   onStatusChange,
   isAssigning 
 }: IssueDetailModalProps) {
+  const { showToast } = useToast();
   const [issue, setIssue] = useState<DetailedIssue | null>(null);
   const [loading, setLoading] = useState(false);
   const [commentText, setCommentText] = useState("");
@@ -95,6 +97,11 @@ export function IssueDetailModal({
       });
       if (res.ok) {
         setCommentText("");
+        showToast({
+          tone: "success",
+          title: "Comment added",
+          description: "Your update is now attached to the issue.",
+        });
         if (initialIssue) {
           const resDetail = await fetch(`/api/issues/${issue.id}`, {
             headers: { Authorization: `Bearer ${token}` }
@@ -102,9 +109,16 @@ export function IssueDetailModal({
           const dataDetail = await resDetail.json();
           if (resDetail.ok) setIssue(dataDetail.issue);
         }
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to add comment");
       }
     } catch (err) {
-      console.error("Failed to add comment:", err);
+      showToast({
+        tone: "error",
+        title: "Comment failed",
+        description: err instanceof Error ? err.message : "Failed to add comment",
+      });
     } finally {
       setCommenting(false);
     }

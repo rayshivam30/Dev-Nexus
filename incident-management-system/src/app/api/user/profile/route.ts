@@ -85,6 +85,16 @@ export const GET = withAuth(async (req, { decoded }) => {
         skills: true,
         orgId: true,
         projectId: true,
+        organization: {
+          select: { id: true, name: true, plan: true }
+        },
+        project: {
+          select: { id: true, name: true, description: true, plan: true }
+        },
+        teamId: true,
+        team: {
+          select: { id: true, name: true, projectId: true }
+        }
       }
     });
 
@@ -211,13 +221,61 @@ export const GET = withAuth(async (req, { decoded }) => {
     const completedFields = profileFields.filter(field => !!field).length;
     const profileCompletion = Math.round((completedFields / profileFields.length) * 100);
 
+    let roleContext: Record<string, unknown> = {};
+
+    if (user.role === "ADMIN") {
+      const orgId = user.orgId || user.organization?.id;
+      const [projectCount, teamCount, memberCount] = await Promise.all([
+        prisma.project.count({ where: { orgId: orgId || undefined } }),
+        prisma.team.count({ where: { project: { orgId: orgId || undefined } } }),
+        prisma.user.count({ where: { orgId: orgId || undefined } }),
+      ]);
+
+      roleContext = {
+        organizationName: user.organization?.name || "Organization",
+        plan: user.organization?.plan || null,
+        projectCount,
+        teamCount,
+        memberCount,
+      };
+    } else if (user.role === "MANAGER") {
+      const [teamCount, developerCount, openIncidentCount] = await Promise.all([
+        prisma.team.count({ where: { projectId: user.projectId || undefined } }),
+        prisma.user.count({ where: { team: { projectId: user.projectId || undefined }, role: "DEVELOPER" } }),
+        prisma.issue.count({ where: { projectId: user.projectId || undefined, status: { in: ["OPEN", "ASSIGNED", "IN_PROGRESS"] } } }),
+      ]);
+
+      roleContext = {
+        projectName: user.project?.name || "Assigned Project",
+        projectDescription: user.project?.description || "",
+        plan: user.project?.plan || null,
+        teamCount,
+        developerCount,
+        openIncidentCount,
+      };
+    } else {
+      const [teamMemberCount, inProgressCount, assignedOpenCount] = await Promise.all([
+        prisma.user.count({ where: { teamId: user.teamId || undefined, role: "DEVELOPER" } }),
+        prisma.issue.count({ where: { assignedToId: userId, status: "IN_PROGRESS" } }),
+        prisma.issue.count({ where: { assignedToId: userId, status: { in: ["OPEN", "ASSIGNED"] } } }),
+      ]);
+
+      roleContext = {
+        teamName: user.team?.name || "Assigned Team",
+        teamMemberCount,
+        inProgressCount,
+        assignedOpenCount,
+      };
+    }
+
     return apiResponse("Profile fetched successfully", { 
       user,
       stats: {
         resolvedCount,
         rating,
         profileCompletion
-      }
+      },
+      roleContext,
     });
 
   } catch (error) {
