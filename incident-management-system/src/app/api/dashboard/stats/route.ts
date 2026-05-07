@@ -25,7 +25,7 @@ export const GET = withAuth(async (req, { decoded }) => {
     where: { assignedToId: null, project: { orgId } },
     take: 5,
     orderBy: { createdAt: 'desc' },
-    include: { team: true, assignedTo: true }
+    include: { team: true, assignedTo: true, project: { select: { id: true, name: true } } }
   });
 
   const recentIssues = recentIssuesRaw.map((issue) => ({
@@ -41,7 +41,9 @@ export const GET = withAuth(async (req, { decoded }) => {
     logs: issue.logs as Record<string, unknown> | null,
     createdAt: issue.createdAt,
     projectId: issue.projectId,
-    teamId: issue.teamId
+    teamId: issue.teamId,
+    source: issue.source,
+    project: issue.project ? { id: issue.project.id, name: issue.project.name } : null
   }));
 
   return apiResponse("Stats fetched successfully", {

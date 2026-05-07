@@ -7,6 +7,7 @@ import { IssueSource, Prisma, IssueSeverity } from "@prisma/client";
 import { analyzeIncident } from "@/lib/ai-service";
 import { calculateSLADeadlines } from "@/services/issue-service";
 import { eventEmitter, EVENTS } from "@/lib/events";
+import { notifyOrgStaff } from "@/services/notification-service";
 
 export async function POST(req: Request) {
   try {
@@ -78,6 +79,18 @@ export async function POST(req: Request) {
                 github_raw: data as unknown as Prisma.InputJsonValue,
               } as Prisma.InputJsonValue,
             }
+          });
+
+          // ── Persistent Notification ──────────────────────────────────────────
+          await notifyOrgStaff(project.orgId, {
+            type: 'INCIDENT_CREATED',
+            title: `New GitHub Incident: ${title}`,
+            message: `A new incident has been reported from GitHub.`,
+            link: `/dashboard/admin/issues/${issue.id}`,
+            linkByRole: {
+              ADMIN: `/dashboard/admin/issues/${issue.id}`,
+              MANAGER: "/dashboard/manager/issues",
+            },
           });
 
           // Trigger real-time notification

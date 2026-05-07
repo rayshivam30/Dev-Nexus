@@ -29,6 +29,7 @@ export interface Issue {
   responseBreached?: boolean | null;
   resolutionBreached?: boolean | null;
   team?: { id?: string | null; name: string } | null;
+  project?: { id: string; name: string } | null;
   assignedTo?: { id?: string | null; email: string; name?: string | null } | null;
   createdAt?: Date | string | null;
 }
@@ -115,6 +116,16 @@ export function RecentIssues({ issues, onAssignClick, onStatusChange, onRowClick
                     {issue.status === "OPEN" && !!issue.logs?.suggestedAssigneeId && (
                       <span className="text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-md">
                         Pending Approval
+                      </span>
+                    )}
+                    {issue.source && issue.source !== "MANUAL" && (
+                      <span className="text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                        {issue.source}
+                      </span>
+                    )}
+                    {issue.source && issue.source !== "MANUAL" && issue.project?.name && (
+                      <span className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+                        Project: {issue.project.name}
                       </span>
                     )}
                     <span className="text-[10px] text-zinc-600">{issue.timeAgo}</span>

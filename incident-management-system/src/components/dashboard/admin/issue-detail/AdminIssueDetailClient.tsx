@@ -32,6 +32,7 @@ interface DetailedIssue {
   projectId?: string | null;
   teamId?: string | null;
   team?: { id: string; name: string } | null;
+  project?: { id: string; name: string } | null;
   assignedToId?: string | null;
   assignedTo?: { id: string; email: string; name?: string | null } | null;
   activities?: Array<{
@@ -243,12 +244,9 @@ export default function AdminIssueDetailClient({
 
   const teamsForProject = allTeams.filter(t => t.projectId === issue.projectId);
   const devsForTeam = allDevelopers.filter(d => d.teamId === assignTeamId);
-  const canManageAssignment = viewerRole === "ADMIN" || viewerRole === "MANAGER";
+  const canManageAssignment = viewerRole === "MANAGER";
   const canAdvanceStatus = viewerRole === "ADMIN";
-  const showAssignmentPanel =
-    viewerRole === "MANAGER"
-      ? issue.status === "OPEN"
-      : canManageAssignment && issue.status !== "RESOLVED";
+  const showAssignmentPanel = canManageAssignment && issue.status === "OPEN";
 
   return (
     <div className="space-y-6 pb-24 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -274,6 +272,16 @@ export default function AdminIssueDetailClient({
                  "px-3 py-1 rounded-lg border",
                  issue.status === 'RESOLVED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
               )}>{issue.status?.replace("_", " ")}</span>
+              {issue.source && issue.source !== "MANUAL" && (
+                <span className="px-3 py-1 rounded-lg border bg-blue-500/10 text-blue-400 border-blue-500/20 uppercase">
+                  {issue.source} Source
+                </span>
+              )}
+              {issue.source && issue.source !== "MANUAL" && issue.project?.name && (
+                <span className="px-3 py-1 rounded-lg border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                  Project: {issue.project.name}
+                </span>
+              )}
             </div>
 
             <div>

@@ -25,7 +25,7 @@ export default async function AdminIssuesPage() {
       project: { orgId: user?.orgId ?? undefined }
     },
     orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
-    include: { team: true, assignedTo: true },
+    include: { team: true, assignedTo: true, project: { select: { id: true, name: true } } },
   });
 
   const [allTeams, allDevelopers] = await Promise.all([
@@ -46,7 +46,9 @@ export default async function AdminIssuesPage() {
     assignedToEmail: issue.assignedTo?.email || "—",
     timeAgo: formatTimeAgo(new Date(issue.createdAt)),
     logs: issue.logs as Record<string, unknown> | null,
-    rootCause: issue.rootCause
+    rootCause: issue.rootCause,
+    source: issue.source,
+    project: issue.project ? { id: issue.project.id, name: issue.project.name } : null
   }));
 
   return (

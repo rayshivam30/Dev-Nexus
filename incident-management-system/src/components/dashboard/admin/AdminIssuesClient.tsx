@@ -94,6 +94,16 @@ export function AdminIssuesClient({ issues }: AdminIssuesClientProps) {
                       {issue.environment}
                     </span>
                   )}
+                  {issue.source && issue.source !== "MANUAL" && (
+                    <span className="text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                      {issue.source}
+                    </span>
+                  )}
+                  {issue.source && issue.source !== "MANUAL" && issue.project?.name && (
+                    <span className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+                      Project: {issue.project.name}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

@@ -144,6 +144,7 @@ export async function getIssueDetails(id: string) {
   return await prisma.issue.findUnique({
     where: { id },
     include: {
+      project: { select: { id: true, name: true } },
       assignedTo: { select: { id: true, email: true, name: true } },
       team: { select: { id: true, name: true } },
       activities: {
