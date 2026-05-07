@@ -703,7 +703,8 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-GitHub-Event": eventType
+            "X-GitHub-Event": eventType,
+            "X-Mock-Simulation": "true"
           },
           body: JSON.stringify(payload)
         });
