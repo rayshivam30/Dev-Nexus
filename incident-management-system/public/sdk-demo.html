@@ -412,6 +412,44 @@
         💡 <strong>How to view live:</strong> Open your <strong>DevNexus Dashboard</strong> in another window. Click any button above, and watch the incident instantly pop up. In ~2 seconds, the background **AI Engine** will analyze the exception, generate a professional title, identify root causes, suggest code fixes, and establish **SLA Deadlines** based on severity!
       </p>
     </div>
+
+    <!-- GitHub Webhook Simulation Card (Basic Category) -->
+    <div class="card" style="margin-top: 2rem;">
+      <div class="section-title">
+        <span>🐙</span> GitHub Webhook Simulation (Basic Category)
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.5;">
+        Simulate automated incident creation using mock GitHub webhooks. The system automatically ingests build/CI workflow failures, dirty pull request merge conflicts, or new pull requests, and converts them into structured incidents under your project.
+      </p>
+
+      <div class="input-group" style="margin-bottom: 1.5rem;">
+        <label for="githubRepoUrl" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Project GitHub Repo URL (Must match the linked repo in your Project details)</label>
+        <input type="text" id="githubRepoUrl" class="input-field" placeholder="https://github.com/rayshivam30/Dev-Nexus" />
+      </div>
+
+      <div class="grid-triggers">
+        <!-- GitHub Event 1 -->
+        <button id="btnGit1" class="btn-trigger active type-3">
+          <span class="badge">CI/CD FAILURE</span>
+          <h3>CI/CD Build Failure</h3>
+          <p>Triggers a mock GITHUB webhook event for a failing deployment or automated test suite workflow run.</p>
+        </button>
+
+        <!-- GitHub Event 2 -->
+        <button id="btnGit2" class="btn-trigger active type-1">
+          <span class="badge">CONFLICT</span>
+          <h3>Pull Request Conflict</h3>
+          <p>Triggers a mock GITHUB webhook event for a Pull Request entering a 'dirty' mergeable conflict state.</p>
+        </button>
+
+        <!-- GitHub Event 3 -->
+        <button id="btnGit3" class="btn-trigger active type-4">
+          <span class="badge">PR OPENED</span>
+          <h3>New Pull Request</h3>
+          <p>Triggers a mock GITHUB webhook event for a newly opened Pull Request on your repository.</p>
+        </button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -635,6 +673,87 @@
       await DevNexus.captureMessage("System performance warning: CPU utilization exceeded 92% for 5 consecutive minutes", {
         severity: IssueSeverity.MEDIUM,
         tags: { environment: "PRODUCTION", component: "orchestrator" }
+      });
+    });
+
+    // ── GitHub Webhook Simulation Logic ─────────────────────────────────────────
+    const savedGitUrl = localStorage.getItem("devnexus_demo_git_url");
+    if (savedGitUrl) {
+      document.getElementById("githubRepoUrl").value = savedGitUrl;
+    } else {
+      document.getElementById("githubRepoUrl").value = "https://github.com/rayshivam30/Dev-Nexus";
+    }
+
+    async function triggerGithubWebhook(eventType, payload) {
+      const repoUrl = document.getElementById("githubRepoUrl").value.trim();
+      if (!repoUrl) {
+        logToConsole("⚠️ GitHub Simulation Failed: Repository URL is required.", "error");
+        return;
+      }
+
+      localStorage.setItem("devnexus_demo_git_url", repoUrl);
+
+      // Attach repository to payload
+      payload.repository = { html_url: repoUrl };
+
+      logToConsole(`Sending mock GitHub webhook event: "${eventType}"...`, "info");
+
+      try {
+        const res = await fetch(`${window.location.origin}/api/webhooks/github`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-GitHub-Event": eventType
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const text = await res.text();
+        let data = {};
+        try { data = JSON.parse(text); } catch(e) {}
+
+        if (!res.ok) throw new Error(data.error || text || "Failed to deliver webhook");
+
+        logToConsole(`✅ Success! Mock GitHub Webhook processed. Result: ${data.message || data.type || "Event handled"}`, "success");
+      } catch (err) {
+        logToConsole(`❌ Webhook Delivery Failed: ${err.message}`, "error");
+      }
+    }
+
+    // Button Git 1: CI/CD Build Failure
+    document.getElementById("btnGit1").addEventListener("click", () => {
+      triggerGithubWebhook("workflow_run", {
+        action: "completed",
+        workflow_run: {
+          name: "Production Build & Deploy",
+          conclusion: "failure",
+          html_url: "https://github.com/rayshivam30/Dev-Nexus/actions/runs/8892120"
+        }
+      });
+    });
+
+    // Button Git 2: PR Merge Conflict
+    document.getElementById("btnGit2").addEventListener("click", () => {
+      triggerGithubWebhook("pull_request", {
+        action: "synchronize",
+        pull_request: {
+          number: 42,
+          title: "Feature: Advanced Ingest Rate Limiting",
+          mergeable_state: "dirty",
+          html_url: "https://github.com/rayshivam30/Dev-Nexus/pull/42"
+        }
+      });
+    });
+
+    // Button Git 3: New PR Opened
+    document.getElementById("btnGit3").addEventListener("click", () => {
+      triggerGithubWebhook("pull_request", {
+        action: "opened",
+        pull_request: {
+          number: 43,
+          title: "Refactor: Optimized AI Analytics pipeline",
+          html_url: "https://github.com/rayshivam30/Dev-Nexus/pull/43"
+        }
       });
     });
   </script>
