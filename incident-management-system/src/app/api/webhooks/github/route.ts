@@ -26,23 +26,37 @@ export async function POST(req: Request) {
     const payload = JSON.parse(rawBody);
     const event = req.headers.get("x-github-event");
     const installationId = payload.installation?.id?.toString();
-
-    // Identify project by Installation ID (GitHub App Flow) OR Repo URL (Manual Flow)
+    const repoUrl = payload.repository?.html_url;
     let project = null;
 
-    if (installationId) {
+    if (installationId && repoUrl) {
+      // 1. Try to find project matching BOTH installation ID and specific repository URL
       project = await prisma.project.findFirst({
-        where: { githubInstallationId: installationId }
+        where: { 
+          githubInstallationId: installationId,
+          githubRepoUrl: repoUrl
+        }
       });
     }
 
-    if (!project) {
-      const repoUrl = payload.repository?.html_url;
-      if (repoUrl) {
-        project = await prisma.project.findFirst({
-          where: { githubRepoUrl: repoUrl }
-        });
-      }
+    if (!project && installationId) {
+      // 2. Fallback: Find a project that has the installation ID but no specific repository URL linked yet
+      project = await prisma.project.findFirst({
+        where: { 
+          githubInstallationId: installationId,
+          OR: [
+            { githubRepoUrl: null },
+            { githubRepoUrl: "" }
+          ]
+        }
+      });
+    }
+
+    if (!project && repoUrl) {
+      // 3. Fallback: Find project matching the repository URL (Manual Flow)
+      project = await prisma.project.findFirst({
+        where: { githubRepoUrl: repoUrl }
+      });
     }
 
     if (!project) {

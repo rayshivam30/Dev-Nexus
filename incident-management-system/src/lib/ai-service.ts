@@ -4,8 +4,8 @@ import { aiAnalysisSchema } from "@/lib/validations";
 
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ 
-  model: "gemini-2.0-flash",
+const model = genAI.getGenerativeModel({
+  model: "gemini-flash-latest",
   generationConfig: {
     responseMimeType: "application/json",
   }
@@ -30,12 +30,12 @@ export async function analyzeIncident(
 ): Promise<AIAnalysisResult> {
   const history = rawData.history as { last24hCount: number; isFirstOccurrence: boolean } | undefined;
   const breadcrumbs = rawData.breadcrumbs as unknown[] | undefined;
-  
+
   const incident = { ...rawData };
   delete incident.history;
   delete incident.breadcrumbs;
-  
-  const historyContext = history 
+
+  const historyContext = history
     ? `
     HISTORICAL CONTEXT:
     - This error has occurred ${history.last24hCount} times in the last 24 hours.
@@ -89,12 +89,12 @@ export async function analyzeIncident(
       const response = await result.response;
       const text = response.text();
       const parsed = JSON.parse(text);
-      
+
       const validated = aiAnalysisSchema.safeParse(parsed);
       if (!validated.success) {
         throw new Error("AI schema validation failed: " + JSON.stringify(validated.error.flatten().fieldErrors));
       }
-      
+
       return validated.data as AIAnalysisResult;
     } catch (error) {
       console.error(`AI Analysis Attempt ${attempt} failed:`, error);

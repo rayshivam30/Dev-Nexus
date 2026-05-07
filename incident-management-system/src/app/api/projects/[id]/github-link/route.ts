@@ -3,10 +3,13 @@ import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 
 export const POST = withAuth(async (_req, { decoded, body, params }) => {
   const { id } = await (params as { id: string });
-  const { installationId } = body as { installationId: string };
+  const { installationId, githubRepoUrl } = body as { 
+    installationId?: string; 
+    githubRepoUrl?: string; 
+  };
 
-  if (!installationId) {
-    return apiError("installationId is required", 400);
+  if (installationId === undefined && githubRepoUrl === undefined) {
+    return apiError("installationId or githubRepoUrl is required", 400);
   }
 
   try {
@@ -24,11 +27,12 @@ export const POST = withAuth(async (_req, { decoded, body, params }) => {
     const updatedProject = await prisma.project.update({
       where: { id },
       data: {
-        githubInstallationId: String(installationId),
+        ...(installationId !== undefined && { githubInstallationId: installationId ? String(installationId) : null }),
+        ...(githubRepoUrl !== undefined && { githubRepoUrl: githubRepoUrl || null }),
       },
     });
 
-    return apiResponse("GitHub linked successfully", { project: updatedProject });
+    return apiResponse("GitHub settings updated successfully", { project: updatedProject });
   } catch (error) {
     console.error("GitHub link error:", error);
     return apiError("Failed to link GitHub", 500);

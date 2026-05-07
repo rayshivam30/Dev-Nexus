@@ -55,6 +55,104 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
   const [linkCopied, setLinkCopied] = useState(false);
   const [error, setError] = useState("");
   const [origin, setOrigin] = useState("");
+  const [githubRepoUrl, setGithubRepoUrl] = useState(project.githubRepoUrl || "");
+  const [repoSaveLoading, setRepoSaveLoading] = useState(false);
+  const [repoSaveSuccess, setRepoSaveSuccess] = useState(false);
+  const [repoSaveError, setRepoSaveError] = useState("");
+  const [isEditingRepo, setIsEditingRepo] = useState(!project.githubRepoUrl);
+  const [existingInstallId, setExistingInstallId] = useState<string | null>(null);
+
+  // Listen for the postMessage from the popup window
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "GITHUB_LINKED" && event.data?.projectId === project.id) {
+        window.location.reload();
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [project.id]);
+
+  // Fetch other projects to check for existing installations
+  useEffect(() => {
+    async function checkExistingInstallation() {
+      try {
+        const token = localStorage.getItem("incident_token") || "";
+        const res = await fetch("/api/projects", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const otherProj = data.projects?.find((p: { githubInstallationId?: string | null; id: string }) => p.githubInstallationId && p.id !== project.id);
+          if (otherProj) {
+            setExistingInstallId(otherProj.githubInstallationId);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check existing installation:", err);
+      }
+    }
+    checkExistingInstallation();
+  }, [project.id]);
+
+  async function handleUseExistingInstallation() {
+    if (!existingInstallId) return;
+    setRepoSaveLoading(true);
+    setRepoSaveError("");
+    try {
+      const token = localStorage.getItem("incident_token") || "";
+      const res = await fetch(`/api/projects/${project.id}/github-link`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          installationId: existingInstallId
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      window.location.reload();
+    } catch (err) {
+      setRepoSaveError(err instanceof Error ? err.message : "Failed to link existing installation");
+    } finally {
+      setRepoSaveLoading(false);
+    }
+  }
+
+  async function handleSaveRepoUrl(e: React.FormEvent) {
+    e.preventDefault();
+    setRepoSaveLoading(true);
+    setRepoSaveSuccess(false);
+    setRepoSaveError("");
+    try {
+      const token = localStorage.getItem("incident_token") || "";
+      const res = await fetch(`/api/projects/${project.id}/github-link`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          githubRepoUrl: githubRepoUrl.trim()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setRepoSaveSuccess(true);
+      
+      // Instantly update local state so the UI transitions smoothly
+      project.githubRepoUrl = githubRepoUrl.trim();
+      setIsEditingRepo(false);
+      
+      setTimeout(() => setRepoSaveSuccess(false), 3000);
+    } catch (err) {
+      setRepoSaveError(err instanceof Error ? err.message : "Failed to save repository URL");
+    } finally {
+      setRepoSaveLoading(false);
+    }
+  }
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -146,26 +244,135 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
 
         {/* GitHub Connection Banner */}
         {!project.githubInstallationId && (
-          <div className="mt-6 p-5 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="mt-6 p-5 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center shrink-0">
                 <Github className="w-5 h-5 text-amber-400" />
               </div>
               <div>
                 <p className="text-sm font-semibold">Connect GitHub Repository</p>
-                <p className="text-xs text-zinc-500 mt-0.5">Install the GitHub App to auto-track CI failures, PR conflicts, and more.</p>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  {existingInstallId 
+                    ? "We detected an existing GitHub connection in your organization. You can use it instantly or install a new one." 
+                    : "Install the GitHub App to auto-track CI failures, PR conflicts, and more."}
+                </p>
               </div>
             </div>
-            <button
-              onClick={() => {
-                const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG;
-                window.open(`https://github.com/apps/${appSlug}/installations/new?state=${project.id}`, "_blank");
-              }}
-              className="px-5 py-2.5 bg-white text-black rounded-xl text-sm font-semibold hover:bg-white/90 transition-all flex items-center gap-2 shrink-0"
-            >
-              <Github className="w-4 h-4" />
-              Install GitHub App
-            </button>
+            
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
+              {existingInstallId && (
+                <button
+                  onClick={handleUseExistingInstallation}
+                  disabled={repoSaveLoading}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
+                >
+                  {repoSaveLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>Use Existing Connection</>
+                  )}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG;
+                  window.open(`https://github.com/apps/${appSlug}/installations/new?state=${project.id}`, "_blank");
+                }}
+                className={cn(
+                  "px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2",
+                  existingInstallId ? "bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/[0.08]" : "bg-white text-black hover:bg-white/90"
+                )}
+              >
+                <Github className="w-4 h-4" />
+                {existingInstallId ? "Install New Connection" : "Install GitHub App"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Specific Repository Settings Form */}
+        {project.githubInstallationId && (
+          <div className="mt-6 p-6 rounded-2xl border border-white/[0.06] bg-white/[0.02] space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.04] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center">
+                  <Github className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Specific Repository Filtering</h3>
+                  <p className="text-xs text-zinc-500">Link a specific GitHub repository so this project only receives its events.</p>
+                </div>
+              </div>
+              {repoSaveSuccess && (
+                <span className="text-xs font-medium text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-lg animate-pulse">
+                  Successfully saved!
+                </span>
+              )}
+              {repoSaveError && (
+                <span className="text-xs font-medium text-red-400 bg-red-500/10 px-3 py-1 rounded-lg">
+                  {repoSaveError}
+                </span>
+              )}
+            </div>
+
+            {!isEditingRepo && project.githubRepoUrl ? (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-white/[0.01] border border-white/[0.04]">
+                <div className="space-y-1">
+                  <p className="text-xs text-zinc-600 font-medium">Currently Linked Repository</p>
+                  <a 
+                    href={project.githubRepoUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-sm font-semibold text-emerald-400 hover:underline flex items-center gap-1.5 w-fit"
+                  >
+                    {project.githubRepoUrl.replace("https://github.com/", "")}
+                    <span className="text-[10px] text-zinc-600">↗</span>
+                  </a>
+                </div>
+                <button
+                  onClick={() => setIsEditingRepo(true)}
+                  className="px-4 py-2 bg-white/[0.04] hover:bg-white/[0.08] text-white border border-white/[0.08] text-xs font-semibold rounded-lg transition-all"
+                >
+                  Edit Repository
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSaveRepoUrl} className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="url"
+                  required
+                  value={githubRepoUrl}
+                  onChange={(e) => setGithubRepoUrl(e.target.value)}
+                  placeholder="https://github.com/username/repository"
+                  className="flex-1 px-4 py-3 bg-white/[0.03] border border-white/[0.08] rounded-xl focus:outline-none focus:border-white/20 text-sm placeholder:text-zinc-700 transition-all text-white"
+                />
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    type="submit"
+                    disabled={repoSaveLoading}
+                    className="px-6 py-3 bg-white text-black font-semibold rounded-xl text-sm hover:bg-white/90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    {repoSaveLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      "Save Repository"
+                    )}
+                  </button>
+                  {project.githubRepoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGithubRepoUrl(project.githubRepoUrl || "");
+                        setIsEditingRepo(false);
+                      }}
+                      className="px-4 py-3 bg-white/[0.04] hover:bg-white/[0.08] text-white border border-white/[0.08] font-semibold rounded-xl text-sm transition-all"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
           </div>
         )}
       </div>

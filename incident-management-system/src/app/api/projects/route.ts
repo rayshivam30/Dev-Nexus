@@ -1,6 +1,17 @@
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
-import { createProject, deleteProject } from "@/services/project-service";
+import { createProject, deleteProject, getProjectsByOrg } from "@/services/project-service";
 import { PlanType } from "@prisma/client";
+
+export const GET = withAuth(async (_req, { decoded }) => {
+  if (!decoded.orgId) return apiError("Organization ID is missing in token", 401);
+  try {
+    const projects = await getProjectsByOrg(decoded.orgId);
+    return apiResponse("Projects fetched successfully", { projects });
+  } catch (error) {
+    console.error("Fetch projects error:", error);
+    return apiError("Failed to fetch projects", 500);
+  }
+});
 
 export const POST = withAuth(async (req, { decoded, body }) => {
   const { name, description, plan, githubRepoUrl } = body as {
