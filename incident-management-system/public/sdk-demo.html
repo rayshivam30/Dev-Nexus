@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevNexus SDK Interactive Demo 🚀</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070709;
+      --card-bg: rgba(17, 17, 21, 0.6);
+      --border: rgba(255, 255, 255, 0.06);
+      --purple: #818cf8;
+      --purple-glow: rgba(129, 140, 248, 0.15);
+      --green: #34d399;
+      --green-glow: rgba(52, 211, 153, 0.15);
+      --red: #f87171;
+      --red-glow: rgba(248, 113, 113, 0.15);
+      --yellow: #fbbf24;
+      --text-main: #f4f4f5;
+      --text-muted: #a1a1aa;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(129, 140, 248, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(52, 211, 153, 0.03) 0%, transparent 40%);
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 850px;
+      z-index: 10;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 2.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      margin-bottom: 2rem;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #fff;
+    }
+
+    .grid-configs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 640px) {
+      .grid-configs {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .input-group label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-left: 0.25rem;
+    }
+
+    .input-field {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: rgba(129, 140, 248, 0.4);
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 0 15px var(--purple-glow);
+    }
+
+    .btn-init {
+      width: 100%;
+      background: #fff;
+      color: #000;
+      border: none;
+      border-radius: 12px;
+      padding: 0.9rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-init:hover {
+      background: rgba(255, 255, 255, 0.9);
+      transform: translateY(-1px);
+    }
+
+    .btn-init.success {
+      background: var(--green);
+      color: #000;
+      box-shadow: 0 4px 15px var(--green-glow);
+    }
+
+    /* Demo Buttons Grid */
+    .grid-triggers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 640px) {
+      .grid-triggers {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .btn-trigger {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .btn-trigger.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .btn-trigger.active:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .btn-trigger .badge {
+      display: inline-block;
+      align-self: flex-start;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.25rem 0.6rem;
+      border-radius: 100px;
+    }
+
+    .btn-trigger.type-1 .badge { background: rgba(248, 113, 113, 0.1); color: var(--red); border: 1px solid rgba(248, 113, 113, 0.2); }
+    .btn-trigger.type-2 .badge { background: rgba(251, 191, 36, 0.1); color: var(--yellow); border: 1px solid rgba(251, 191, 36, 0.2); }
+    .btn-trigger.type-3 .badge { background: rgba(129, 140, 248, 0.1); color: var(--purple); border: 1px solid rgba(129, 140, 248, 0.2); }
+    .btn-trigger.type-4 .badge { background: rgba(52, 211, 153, 0.1); color: var(--green); border: 1px solid rgba(52, 211, 153, 0.2); }
+
+    .btn-trigger h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .btn-trigger p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Terminal Console */
+    .terminal-container {
+      margin-top: 2rem;
+    }
+
+    .terminal-header {
+      background: #18181b;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 12px 12px 0 0;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .terminal-dots {
+      display: flex;
+      gap: 0.35rem;
+    }
+
+    .terminal-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .terminal-dot.red { background: #ef4444; }
+    .terminal-dot.yellow { background: #f59e0b; }
+    .terminal-dot.green { background: #10b981; }
+
+    .terminal-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .terminal {
+      background: #09090b;
+      border: 1px solid var(--border);
+      border-radius: 0 0 12px 12px;
+      height: 200px;
+      overflow-y: auto;
+      padding: 1rem;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.85rem;
+      color: #e4e4e7;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
+    }
+
+    .log-line {
+      display: flex;
+      gap: 0.5rem;
+      animation: fadeIn 0.15s ease-out forwards;
+    }
+
+    .log-time {
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .log-msg {
+      word-break: break-all;
+    }
+
+    .log-msg.success { color: var(--green); }
+    .log-msg.error { color: var(--red); }
+    .log-msg.info { color: var(--purple); }
+
+    .helper-text {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 1.5rem;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .helper-text strong {
+      color: #fff;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(2px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>DevNexus SDK Playground</h1>
+      <p>Simulate, test, and witness live AI-assisted incident ingestion</p>
+    </header>
+
+    <div class="card">
+      <div class="section-title">
+        <span>⚙️</span> SDK Configuration & Setup
+      </div>
+
+      <div class="grid-configs">
+        <div class="input-group">
+          <label for="apiKey">SDK API Key (ADVANCED Plan Only)</label>
+          <input type="text" id="apiKey" class="input-field" placeholder="devnexus_sk_..." />
+        </div>
+        <div class="input-group">
+          <label for="baseUrl">Ingest Host URL</label>
+          <input type="text" id="baseUrl" class="input-field" value="" placeholder="Default: Localhost Ingest" />
+        </div>
+      </div>
+
+      <button id="btnInit" class="btn-init">Initialize DevNexus SDK</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title">
+        <span>🚨</span> Trigger Errors & Incidents
+      </div>
+
+      <div class="grid-triggers">
+        <!-- Error Type 1 -->
+        <button id="btnError1" class="btn-trigger type-1">
+          <span class="badge">Auto-Captured</span>
+          <h3>Unhandled Runtime Error</h3>
+          <p>Throws an uncaught exception (e.g. ReferenceError) that triggers the global window.onerror listener.</p>
+        </button>
+
+        <!-- Error Type 2 -->
+        <button id="btnError2" class="btn-trigger type-2">
+          <span class="badge">Auto-Captured</span>
+          <h3>Unhandled Promise Rejection</h3>
+          <p>Triggers an asynchronous unhandled rejection which is captured automatically by the SDK.</p>
+        </button>
+
+        <!-- Error Type 3 -->
+        <button id="btnError3" class="btn-trigger type-3">
+          <span class="badge">Manual Capture</span>
+          <h3>Manual Exception (Try-Catch)</h3>
+          <p>Simulates a graceful catch block reporting the exception directly to DevNexus.captureException().</p>
+        </button>
+
+        <!-- Error Type 4 -->
+        <button id="btnError4" class="btn-trigger type-4">
+          <span class="badge">Manual Message</span>
+          <h3>Operational Event Log</h3>
+          <p>Sends a high-level operational activity report or system milestone via DevNexus.captureMessage().</p>
+        </button>
+      </div>
+
+      <!-- Real-time Console Logs -->
+      <div class="terminal-container">
+        <div class="terminal-header">
+          <div class="terminal-dots">
+            <div class="terminal-dot red"></div>
+            <div class="terminal-dot yellow"></div>
+            <div class="terminal-dot green"></div>
+          </div>
+          <div class="terminal-title">DevNexus SDK Console Output</div>
+          <div style="width: 30px;"></div>
+        </div>
+        <div id="terminal" class="terminal">
+          <div class="log-line">
+            <span class="log-time">[System]</span>
+            <span class="log-msg">Ready to initialize. Enter your SDK API Key above to begin.</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="helper-text">
+        💡 <strong>How to view live:</strong> Open your <strong>DevNexus Dashboard</strong> in another window. Click any button above, and watch the incident instantly pop up. In ~2 seconds, the background **AI Engine** will analyze the exception, generate a professional title, identify root causes, suggest code fixes, and establish **SLA Deadlines** based on severity!
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // ── Local Log Helper ───────────────────────────────────────────────────────
+    const terminalEl = document.getElementById("terminal");
+    
+    function logToConsole(message, type = "normal") {
+      const timeStr = new Date().toLocaleTimeString();
+      const line = document.createElement("div");
+      line.className = "log-line";
+      
+      const timeSpan = document.createElement("span");
+      timeSpan.className = "log-time";
+      timeSpan.innerText = `[${timeStr}]`;
+      
+      const msgSpan = document.createElement("span");
+      msgSpan.className = `log-msg ${type}`;
+      msgSpan.innerText = message;
+      
+      line.appendChild(timeSpan);
+      line.appendChild(msgSpan);
+      terminalEl.appendChild(line);
+      terminalEl.scrollTop = terminalEl.scrollHeight;
+    }
+
+    // Default Host Detection
+    const currentOrigin = window.location.origin;
+    if (currentOrigin && currentOrigin !== "null" && !currentOrigin.startsWith("file")) {
+      document.getElementById("baseUrl").value = currentOrigin + "/api/ingest";
+    } else {
+      document.getElementById("baseUrl").value = "http://localhost:3000/api/ingest";
+    }
+
+    // Restore Key if previously used
+    const savedKey = localStorage.getItem("devnexus_demo_key");
+    if (savedKey) {
+      document.getElementById("apiKey").value = savedKey;
+    }
+
+    // Proactive CORS Warning for file:// protocol
+    if (window.location.protocol === "file:") {
+      logToConsole("⚠️ CORS Security Warning:", "error");
+      logToConsole("You opened this file directly via the file explorer (file://). Browsers block network requests from file:// origins due to CORS.", "error");
+      logToConsole("👉 Solution: Please open your browser and navigate to: http://localhost:3000/sdk-demo.html", "info");
+    }
+
+    // ── DevNexus SDK Browser Implementation ──────────────────────────────────────
+    const IssueSeverity = {
+      LOW: "LOW",
+      MEDIUM: "MEDIUM",
+      HIGH: "HIGH",
+      CRITICAL: "CRITICAL"
+    };
+
+    class DevNexusClient {
+      constructor(config) {
+        this.apiKey = config.apiKey;
+        this.baseUrl = config.baseUrl;
+        this.breadcrumbs = [];
+        this.setupAutoCapture();
+        this.setupBreadcrumbs();
+        logToConsole("SDK initialized. Active global listeners: window.onerror, unhandledrejection.", "info");
+      }
+
+      setupAutoCapture() {
+        window.onerror = (message, source, lineno, colno, error) => {
+          logToConsole(`🚨 Uncaught Exception Captured: ${message}`, "error");
+          this.captureException(error || new Error(message), {
+            severity: IssueSeverity.CRITICAL,
+            tags: { source: "window.onerror", file: source, line: String(lineno) }
+          });
+          return false;
+        };
+
+        window.addEventListener("unhandledrejection", (event) => {
+          const reason = event.reason instanceof Error ? event.reason.message : String(event.reason);
+          logToConsole(`🚨 Unhandled Promise Rejection Captured: ${reason}`, "error");
+          this.captureException(event.reason || new Error("Unhandled Rejection"), {
+            severity: IssueSeverity.HIGH,
+            tags: { source: "unhandledrejection" }
+          });
+        });
+      }
+
+      setupBreadcrumbs() {
+        const originalLog = console.log;
+        console.log = (...args) => {
+          this.breadcrumbs.push({
+            type: "console",
+            level: "info",
+            message: args.map(a => String(a)).join(" "),
+            timestamp: Date.now()
+          });
+          originalLog.apply(console, args);
+        };
+      }
+
+      async captureException(error, context = {}) {
+        const message = error instanceof Error ? error.message : String(error);
+        const stack = error instanceof Error ? error.stack : undefined;
+        return this.sendReport({ message, stack, ...context });
+      }
+
+      async captureMessage(message, context = {}) {
+        return this.sendReport({ message, ...context });
+      }
+
+      async sendReport(payload) {
+        const report = {
+          ...payload,
+          browserInfo: navigator.userAgent,
+          osInfo: navigator.platform,
+          breadcrumbs: [...this.breadcrumbs],
+          timestamp: Date.now()
+        };
+
+        logToConsole(`Reporting Incident: "${payload.message}"...`);
+
+        try {
+          const res = await fetch(this.baseUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${this.apiKey}`
+            },
+            body: JSON.stringify(report)
+          });
+
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Failed to ingest");
+
+          logToConsole(`✅ Success! Incident sent to DevNexus Dashboard. (ID: ${data.issueId || 'Queued'})`, "success");
+          return { success: true, data };
+        } catch (err) {
+          logToConsole(`❌ Ingest Failed: ${err.message}`, "error");
+          return { success: false, error: err.message };
+        }
+      }
+    }
+
+    const DevNexus = {
+      instance: null,
+      init(config) {
+        this.instance = new DevNexusClient(config);
+      },
+      captureException(err, ctx) {
+        if (!this.instance) throw new Error("SDK Not Initialized");
+        return this.instance.captureException(err, ctx);
+      },
+      captureMessage(msg, ctx) {
+        if (!this.instance) throw new Error("SDK Not Initialized");
+        return this.instance.captureMessage(msg, ctx);
+      }
+    };
+
+    // ── Button Bindings ────────────────────────────────────────────────────────
+    const btnInit = document.getElementById("btnInit");
+    const triggers = document.querySelectorAll(".btn-trigger");
+
+    btnInit.addEventListener("click", () => {
+      const apiKey = document.getElementById("apiKey").value.trim();
+      const baseUrl = document.getElementById("baseUrl").value.trim();
+
+      if (!apiKey) {
+        logToConsole("⚠️ Initialization Failed: API Key is required.", "error");
+        return;
+      }
+
+      localStorage.setItem("devnexus_demo_key", apiKey);
+
+      try {
+        DevNexus.init({ apiKey, baseUrl });
+        btnInit.innerText = "SDK Active ✓";
+        btnInit.className = "btn-init success";
+        
+        // Enable buttons
+        triggers.forEach(btn => btn.classList.add("active"));
+        logToConsole("SDK is now listening for exceptions and logs.", "success");
+      } catch (err) {
+        logToConsole(`⚠️ Error: ${err.message}`, "error");
+      }
+    });
+
+    // Button 1: Unhandled Runtime Error
+    document.getElementById("btnError1").addEventListener("click", () => {
+      logToConsole("Deliberately calling undefined variable to trigger unhandled exception...");
+      // Triggering an uncaught ReferenceError
+      setTimeout(() => {
+        const undef = undefined;
+        undef.performAction(); // Crash!
+      }, 50);
+    });
+
+    // Button 2: Unhandled Promise Rejection
+    document.getElementById("btnError2").addEventListener("click", () => {
+      logToConsole("Deliberately rejecting a Promise with no catch block...");
+      setTimeout(() => {
+        new Promise((resolve, reject) => {
+          reject(new Error("RedisConnectionException: Connection to cluster timed out."));
+        });
+      }, 50);
+    });
+
+    // Button 3: Manual Try-Catch Exception
+    document.getElementById("btnError3").addEventListener("click", async () => {
+      logToConsole("Simulating manual Try-Catch block exception capture...");
+      try {
+        // Simulating a parsed database failure
+        throw new Error("StripeAPIError: Invalid security code provided on billing transaction.");
+      } catch (err) {
+        await DevNexus.captureException(err, {
+          severity: IssueSeverity.CRITICAL,
+          tags: { environment: "PRODUCTION", gateway: "stripe", user_id: "usr_9921b" }
+        });
+      }
+    });
+
+    // Button 4: Manual Message Event Ingestion
+    document.getElementById("btnError4").addEventListener("click", async () => {
+      logToConsole("Simulating operational activity message logging...");
+      await DevNexus.captureMessage("System performance warning: CPU utilization exceeded 92% for 5 consecutive minutes", {
+        severity: IssueSeverity.MEDIUM,
+        tags: { environment: "PRODUCTION", component: "orchestrator" }
+      });
+    });
+  </script>
+</body>
+</html>
