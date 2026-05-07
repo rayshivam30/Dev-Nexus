@@ -91,6 +91,7 @@ export async function POST(req: Request) {
               ADMIN: `/dashboard/admin/issues/${issue.id}`,
               MANAGER: "/dashboard/manager/issues",
             },
+            projectId: project.id,
           });
 
           // Trigger real-time notification

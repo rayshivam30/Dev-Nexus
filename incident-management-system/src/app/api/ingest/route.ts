@@ -158,6 +158,7 @@ async function processReport(payload: IngestReportPayload, project: Project) {
         ADMIN: `/dashboard/admin/issues/${issue.id}`,
         MANAGER: "/dashboard/manager/issues",
       },
+      projectId: project.id,
     });
 
     eventEmitter.emit(EVENTS.INCIDENT_CREATED, { 

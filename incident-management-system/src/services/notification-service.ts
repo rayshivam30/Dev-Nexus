@@ -30,22 +30,32 @@ export async function notifyOrgStaff(orgId: string, data: {
   message: string;
   link?: string;
   linkByRole?: Partial<Record<StaffRole, string>>;
+  projectId?: string;
 }) {
   const staff = await prisma.user.findMany({
     where: {
       orgId,
       role: { in: ['ADMIN', 'MANAGER'] }
     },
-    select: { id: true, role: true }
+    select: { id: true, role: true, projectId: true }
   });
 
-  const notifications = staff.map(user => ({
+  const notifications = staff
+    .filter(user => {
+      if (user.role === 'MANAGER' && data.projectId && user.projectId !== data.projectId) {
+        return false;
+      }
+      return true;
+    })
+    .map(user => ({
     userId: user.id,
     type: data.type,
     title: data.title,
     message: data.message,
     link: data.linkByRole?.[user.role as StaffRole] || data.link,
   }));
+
+  if (notifications.length === 0) return [];
 
   return await prisma.notification.createMany({
     data: notifications
