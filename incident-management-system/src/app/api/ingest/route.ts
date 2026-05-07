@@ -250,7 +250,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Rate Limit Exceeded" }, { status: 429, headers: { ...corsHeaders, ...rlHeaders } });
     }
 
-    const project = await prisma.project.findUnique({ where: { sdkApiKey: hashApiKey(apiKey) } });
+    const hashedKey = apiKey.startsWith("devnexus_sk_") ? hashApiKey(apiKey) : apiKey;
+    const project = await prisma.project.findUnique({ where: { sdkApiKey: hashedKey } });
     if (!project) {
       return NextResponse.json({ error: "Invalid API Key" }, { status: 401, headers: corsHeaders });
     }
