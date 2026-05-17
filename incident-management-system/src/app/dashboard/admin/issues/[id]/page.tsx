@@ -7,15 +7,16 @@ export default async function AdminIssueDetailPage({ params }: { params: Promise
   const resolvedParams = await params;
   const id = resolvedParams.id;
 
-  // Fetch data sequentially to avoid connection pool exhaustion
-  const teams = await prisma.team.findMany({
-    select: { id: true, name: true, projectId: true }
-  });
-  
-  const developers = await prisma.user.findMany({
-    where: { role: "DEVELOPER" },
-    select: { id: true, name: true, email: true, teamId: true }
-  });
+  // Parallel queries (safe now that connection pool is properly sized)
+  const [teams, developers] = await Promise.all([
+    prisma.team.findMany({
+      select: { id: true, name: true, projectId: true }
+    }),
+    prisma.user.findMany({
+      where: { role: "DEVELOPER" },
+      select: { id: true, name: true, email: true, teamId: true }
+    }),
+  ]);
 
   return (
     <div className="p-4 md:p-8">

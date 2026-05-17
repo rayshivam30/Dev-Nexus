@@ -4,9 +4,10 @@ import { logger } from "@/lib/logger";
 import { IssueSource, IssueSeverity, Prisma, Project } from "@prisma/client";
 import { calculateSLADeadlines } from "@/services/issue-service";
 import { analyzeIncident } from "@/lib/ai-service";
-import { Redis } from "@upstash/redis";
+import { enqueueAITask, getQueueStats } from "@/lib/ai-queue";
+import { redis } from "@/lib/redis";
 import crypto from "crypto";
-import { eventEmitter, EVENTS } from "@/lib/events";
+import { EVENTS, emitEvent } from "@/lib/events";
 import { notifyOrgStaff } from "@/services/notification-service";
 
 /**
@@ -24,12 +25,7 @@ function generateFingerprint(message: string, stack?: string): string {
   return crypto.createHash("md5").update(raw).digest("hex");
 }
 
-const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-  ? new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    })
-  : null;
+// Redis client imported from @/lib/redis (shared singleton)
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 const corsHeaders = {
@@ -43,6 +39,17 @@ const RATE_WINDOW_MS = 60_000;   // 1 minute
 const RATE_MAX_REQS  = 30;       // max requests per window
 
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+
+// Periodic cleanup of stale entries to prevent memory leaks
+const CLEANUP_INTERVAL_MS = 60_000;
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitStore) {
+    if (now > entry.resetAt) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, CLEANUP_INTERVAL_MS).unref(); // .unref() so it doesn't keep the process alive
 
 interface RateLimitInfo {
   allowed: boolean;
@@ -81,8 +88,10 @@ async function checkRateLimit(key: string): Promise<RateLimitInfo> {
         reset
       };
     } catch (e) {
-      logger.error({ err: e }, "Redis rate limit error, skipping");
+      logger.error({ err: e }, "Redis rate limit error, falling back to in-memory");
     }
+  } else if (process.env.NODE_ENV === 'production') {
+    logger.warn("Redis not configured — rate limiting uses in-memory fallback (not shared across instances)");
   }
 
   const now = Date.now();
@@ -161,7 +170,7 @@ async function processReport(payload: IngestReportPayload, project: Project) {
       projectId: project.id,
     });
 
-    eventEmitter.emit(EVENTS.INCIDENT_CREATED, { 
+    await emitEvent(EVENTS.INCIDENT_CREATED, { 
       issueId: issue.id, 
       orgId: project.orgId,
       projectId: project.id,
@@ -169,13 +178,18 @@ async function processReport(payload: IngestReportPayload, project: Project) {
       severity: issue.severity
     });
 
-    // AI Analysis
+    // AI Analysis — routed through the concurrency-limited queue
     after(async () => {
       try {
-        const aiAnalysis = await analyzeIncident(
-          { message, stack: truncatedStack, browserInfo, osInfo, tags, metadata, breadcrumbs, history: { last24hCount: similarIncidentsCount + 1, isFirstOccurrence: similarIncidentsCount === 0 } },
-          (customSource as IssueSource) || IssueSource.SDK,
-          project.techStack || []
+        const stats = getQueueStats();
+        logger.info({ issueId: issue.id, ...stats }, "Enqueuing AI analysis");
+
+        const aiAnalysis = await enqueueAITask(() =>
+          analyzeIncident(
+            { message, stack: truncatedStack, browserInfo, osInfo, tags, metadata, breadcrumbs, history: { last24hCount: similarIncidentsCount + 1, isFirstOccurrence: similarIncidentsCount === 0 } },
+            (customSource as IssueSource) || IssueSource.SDK,
+            project.techStack || []
+          )
         );
 
         let finalSeverity = aiAnalysis.severity;
@@ -207,7 +221,7 @@ async function processReport(payload: IngestReportPayload, project: Project) {
           }
         });
 
-        eventEmitter.emit(EVENTS.INCIDENT_UPDATED, { 
+        await emitEvent(EVENTS.INCIDENT_UPDATED, { 
           issueId: updatedIssue.id, 
           orgId: project.orgId,
           projectId: project.id,

@@ -63,7 +63,7 @@ export async function createIssue(data: {
       }
     });
     return issue;
-  });
+  }, { maxWait: 15000, timeout: 15000 }); // Increased timeout for high concurrency
 }
 
 export async function updateIssue(id: string, data: {
@@ -114,7 +114,7 @@ export async function updateIssue(id: string, data: {
     }
 
     return updatedIssue;
-  });
+  }, { maxWait: 15000, timeout: 15000 }); // Increased timeout for high concurrency
 }
 
 export async function logActivity(issueId: string, userId: string | null, action: string) {

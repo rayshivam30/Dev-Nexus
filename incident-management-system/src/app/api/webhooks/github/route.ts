@@ -5,8 +5,9 @@ import crypto from "crypto";
 import { IssueSource, Prisma, IssueSeverity } from "@prisma/client";
 
 import { analyzeIncident } from "@/lib/ai-service";
+import { enqueueAITask } from "@/lib/ai-queue";
 import { calculateSLADeadlines } from "@/services/issue-service";
-import { eventEmitter, EVENTS } from "@/lib/events";
+import { EVENTS, emitEvent } from "@/lib/events";
 import { notifyOrgStaff } from "@/services/notification-service";
 
 export async function POST(req: Request) {
@@ -95,8 +96,8 @@ export async function POST(req: Request) {
             projectId: project.id,
           });
 
-          // Trigger real-time notification
-          eventEmitter.emit(EVENTS.INCIDENT_CREATED, { 
+          // Trigger real-time notification (local + Redis)
+          await emitEvent(EVENTS.INCIDENT_CREATED, { 
             issueId: issue.id, 
             orgId: project.orgId,
             projectId: project.id,
@@ -104,10 +105,12 @@ export async function POST(req: Request) {
             severity: issue.severity
           });
 
-          // Background AI Analysis
+          // Background AI Analysis — routed through the concurrency-limited queue
           after(async () => {
             try {
-                const aiAnalysis = await analyzeIncident(data, IssueSource.GITHUB, techStack);
+                const aiAnalysis = await enqueueAITask(() =>
+                  analyzeIncident(data, IssueSource.GITHUB, techStack)
+                );
                 const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(project.id, aiAnalysis.severity, project.plan);
 
                 const updated = await prisma.issue.update({
@@ -129,7 +132,7 @@ export async function POST(req: Request) {
                     }
                 });
 
-                eventEmitter.emit(EVENTS.INCIDENT_UPDATED, { 
+                await emitEvent(EVENTS.INCIDENT_UPDATED, { 
                     issueId: updated.id, 
                     orgId: project.orgId,
                     projectId: project.id,

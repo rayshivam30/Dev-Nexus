@@ -82,37 +82,32 @@ export async function analyzeIncident(
     Respond ONLY with a JSON object that matches the schema.
   `;
 
-  let lastError: unknown = null;
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-      const parsed = JSON.parse(text);
+  // Single attempt here — retries with exponential backoff are handled by ai-queue.ts
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    const parsed = JSON.parse(text);
 
-      const validated = aiAnalysisSchema.safeParse(parsed);
-      if (!validated.success) {
-        throw new Error("AI schema validation failed: " + JSON.stringify(validated.error.flatten().fieldErrors));
-      }
-
-      return validated.data as AIAnalysisResult;
-    } catch (error) {
-      console.error(`AI Analysis Attempt ${attempt} failed:`, error);
-      lastError = error;
-      // Small delay before retry
-      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 1000));
+    const validated = aiAnalysisSchema.safeParse(parsed);
+    if (!validated.success) {
+      throw new Error("AI schema validation failed: " + JSON.stringify(validated.error.flatten().fieldErrors));
     }
-  }
 
-  // Fallback if all retries fail
-  return {
-    title: `Incident from ${source}`,
-    description: "AI analysis failed. Raw error: " + (lastError instanceof Error ? lastError.message : String(lastError)),
-    severity: IssueSeverity.MEDIUM,
-    priority: "MEDIUM",
-    environment: EnvironmentType.PRODUCTION,
-    rootCause: "Unknown - AI Analysis Failed",
-    suggestedFixes: "Review manual logs and stack trace.",
-    _failed: true,
-  };
+    return validated.data as AIAnalysisResult;
+  } catch (error) {
+    console.error("AI Analysis failed:", error);
+
+    // Fallback response
+    return {
+      title: `Incident from ${source}`,
+      description: "AI analysis failed. Raw error: " + (error instanceof Error ? error.message : String(error)),
+      severity: IssueSeverity.MEDIUM,
+      priority: "MEDIUM",
+      environment: EnvironmentType.PRODUCTION,
+      rootCause: "Unknown - AI Analysis Failed",
+      suggestedFixes: "Review manual logs and stack trace.",
+      _failed: true,
+    };
+  }
 }

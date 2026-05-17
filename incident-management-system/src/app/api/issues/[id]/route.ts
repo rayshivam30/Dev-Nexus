@@ -3,7 +3,7 @@ import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { updateIssue, getIssueDetails } from "@/services/issue-service";
 import { IssueStatus } from "@prisma/client";
 import { updateIssueSchema } from "@/lib/validations";
-import { eventEmitter, EVENTS } from "@/lib/events";
+import { EVENTS, emitEvent } from "@/lib/events";
 import { createNotification } from "@/services/notification-service";
 
 export const GET = withAuth(async (_req, { params }) => {
@@ -76,7 +76,7 @@ export const PATCH = withAuth(async (_req, { decoded, body, params }) => {
          link: `/dashboard/developer/issues/${issue.id}`,
        });
 
-       eventEmitter.emit(EVENTS.INCIDENT_ASSIGNED, {
+       await emitEvent(EVENTS.INCIDENT_ASSIGNED, {
          issueId: issue.id,
          orgId,
          projectId: issue.projectId,
@@ -84,7 +84,7 @@ export const PATCH = withAuth(async (_req, { decoded, body, params }) => {
          assignedToId
        });
     } else {
-       eventEmitter.emit(EVENTS.INCIDENT_UPDATED, {
+       await emitEvent(EVENTS.INCIDENT_UPDATED, {
          issueId: issue.id,
          orgId,
          projectId: issue.projectId,

@@ -24,38 +24,44 @@ export default async function AdminDashboardPage() {
     redirect("/auth/login");
   }
 
-  // Fetch queries sequentially to prevent connection pool exhaustion (P2024)
-  const openIssuesCount = await prisma.issue.count({ where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] }, project: { orgId: currentUser.orgId } } });
-  const breachedCount = await prisma.issue.count({ where: { OR: [{ responseBreached: true }, { resolutionBreached: true }], project: { orgId: currentUser.orgId } } });
-  const resolvedTodayCount = await prisma.issue.count({ 
-    where: { 
-      status: 'RESOLVED', 
-      resolvedAt: { gte: new Date(new Date().setHours(0,0,0,0)) },
-      project: { orgId: currentUser.orgId }
-    } 
-  });
-  const recentIssuesRaw = await prisma.issue.findMany({
-    where: { assignedToId: null, project: { orgId: currentUser.orgId } },
-    take: 5,
-    orderBy: { createdAt: 'desc' },
-    include: { team: true, assignedTo: true, project: { select: { id: true, name: true } } }
-  });
-  const projectsRaw = await prisma.project.findMany({
-    where: { orgId: currentUser.orgId },
-    take: 5,
-    orderBy: { createdAt: 'desc' },
-    include: {
-      _count: { 
-        select: { 
-          teams: true,
-          issues: { where: { status: { not: 'RESOLVED' } } }
-        } 
+  // Parallel batch 1: independent count queries (safe now that pool is sized)
+  const [openIssuesCount, breachedCount, resolvedTodayCount] = await Promise.all([
+    prisma.issue.count({ where: { status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS'] }, project: { orgId: currentUser.orgId } } }),
+    prisma.issue.count({ where: { OR: [{ responseBreached: true }, { resolutionBreached: true }], project: { orgId: currentUser.orgId } } }),
+    prisma.issue.count({ 
+      where: { 
+        status: 'RESOLVED', 
+        resolvedAt: { gte: new Date(new Date().setHours(0,0,0,0)) },
+        project: { orgId: currentUser.orgId }
+      } 
+    }),
+  ]);
+
+  // Parallel batch 2: independent findMany queries
+  const [recentIssuesRaw, projectsRaw, allProjects, allTeams, allDevelopers] = await Promise.all([
+    prisma.issue.findMany({
+      where: { assignedToId: null, project: { orgId: currentUser.orgId } },
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      include: { team: true, assignedTo: true, project: { select: { id: true, name: true } } }
+    }),
+    prisma.project.findMany({
+      where: { orgId: currentUser.orgId },
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: { 
+          select: { 
+            teams: true,
+            issues: { where: { status: { not: 'RESOLVED' } } }
+          } 
+        }
       }
-    }
-  });
-  const allProjects = await prisma.project.findMany({ where: { orgId: currentUser.orgId }, select: { id: true, name: true } });
-  const allTeams = await prisma.team.findMany({ where: { project: { orgId: currentUser.orgId } }, select: { id: true, name: true, projectId: true } });
-  const allDevelopers = await prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER', project: { orgId: currentUser.orgId } } });
+    }),
+    prisma.project.findMany({ where: { orgId: currentUser.orgId }, select: { id: true, name: true } }),
+    prisma.team.findMany({ where: { project: { orgId: currentUser.orgId } }, select: { id: true, name: true, projectId: true } }),
+    prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER', project: { orgId: currentUser.orgId } } }),
+  ]);
 
   const recentIssues: Issue[] = recentIssuesRaw.map((issue) => {
     return {

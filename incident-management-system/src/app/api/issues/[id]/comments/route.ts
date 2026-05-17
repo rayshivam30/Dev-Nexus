@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { addComment } from "@/services/issue-service";
-import { eventEmitter, EVENTS } from "@/lib/events";
+import { EVENTS, emitEvent } from "@/lib/events";
 
 export const POST = withAuth(async (_req, { decoded, body, params }) => {
   const { id } = await (params as { id: string });
@@ -22,7 +22,7 @@ export const POST = withAuth(async (_req, { decoded, body, params }) => {
     const comment = await addComment(id, decoded.userId as string, text);
 
     // ── Emit Notification ───────────────────────────────────────────────
-    eventEmitter.emit(EVENTS.COMMENT_ADDED, {
+    await emitEvent(EVENTS.COMMENT_ADDED, {
       issueId: id,
       orgId: issue.project.orgId,
       projectId: issue.projectId,
