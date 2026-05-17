@@ -1,64 +1,71 @@
-# DevNexus: Advanced Incident Management Platform 🚀
+<div align="center">
+  <img src="https://via.placeholder.com/150/000000/FFFFFF/?text=DevNexus" alt="DevNexus Logo" width="120" height="120" />
+  <h1>🚀 DevNexus: The Ultimate Developer Incident Platform</h1>
+  <p><strong>A highly-scalable, AI-driven monorepo for capturing, analyzing, and resolving application errors in real-time.</strong></p>
+</div>
 
-DevNexus is a comprehensive, developer-centric incident management and monitoring system. It provides real-time error tracking, SLA management, and role-specific dashboards to help teams resolve issues faster.
+---
 
-## Project Structure
+## 📖 What is DevNexus?
 
-This monorepo contains the following components:
+DevNexus is an enterprise-grade incident management ecosystem. Rather than just reporting bugs, DevNexus actively acts as a virtual site-reliability engineer. 
 
-- **[incident-management-system](./incident-management-system)**: The core web application and dashboard built with Next.js, Prisma, and Tailwind CSS.
-- **[sdk](./sdk)**: The official lightweight SDK for reporting errors and incidents from your applications to DevNexus.
+By combining a lightweight client-side SDK with a massive-concurrency Node.js backend, it captures errors globally, analyzes them using Google's Gemini AI to find the root cause, and assigns the issue to the correct engineering team in real-time.
 
-## Getting Started
+## 🗂️ Monorepo Structure
+
+This repository is split into two primary components that work together seamlessly:
+
+### 1. [The Incident Management System](./incident-management-system)
+The core web application, dashboard, and API hub. Built to withstand massive concurrency spikes during application outages.
+*   **Tech:** Next.js (App Router), Prisma, Upstash Redis, Tailwind CSS v4.
+*   **Highlights:** 100+ concurrent user capability, Server-Sent Events (SSE) notification bridge, intelligent database connection multiplexing, and Throttled Task Queues (AI & Email).
+
+### 2. [The Client SDK](./sdk)
+A lightweight, zero-dependency tracking script that developers install in their own web applications to monitor errors.
+*   **Tech:** Vanilla TypeScript.
+*   **Highlights:** Automatically captures unhandled exceptions, Promise rejections, console errors, and environmental context (Browser, OS, URL) and streams them to the DevNexus API.
+
+---
+
+## ✨ Enterprise Features
+
+*   **🤖 AI Root-Cause Analysis:** Integrates `gemini-2.0-flash` to automatically analyze incoming stack traces, suggest code fixes, and assign severity labels.
+*   **⚡ High-Concurrency Ready:** Custom task queues and Redis-backed rate limiters ensure the API remains completely stable even if the SDK sends thousands of errors per minute.
+*   **🏢 Multi-Tenant RBAC:** Isolated, role-specific dashboards for **Admins**, **Managers**, and **Developers**.
+*   **🔗 GitHub Webhooks:** Automatically generates detailed issues in DevNexus when your CI/CD pipelines fail or PR checks error out.
+*   **⏱️ SLA Tracking:** Automatically calculates response and resolution deadlines based on project pricing tiers and incident severity.
+
+---
+
+## 🛠️ Quick Start Guide
 
 ### Prerequisites
+- [Bun](https://bun.sh/) (recommended) or Node.js (v18+)
+- PostgreSQL Database (e.g., Neon)
+- Upstash Redis Account
+- Google Gemini API Key
 
-- [Node.js](https://nodejs.org/) (v18+) or [Bun](https://bun.sh/)
-- PostgreSQL database (for the management system)
-
-### Running the Management System
-
-1. Navigate to the `incident-management-system` directory:
+### Launching the Management Platform
+1. Navigate to the core system:
    ```bash
    cd incident-management-system
    ```
 2. Install dependencies:
    ```bash
-   bun install # or npm install
+   bun install
    ```
-3. Set up your environment variables in a `.env` file (see `.env.example`).
-4. Run database migrations:
+3. Set up your `.env` file (refer to the [System README](./incident-management-system/README.md) for required keys).
+4. Deploy the database schema and start the system:
    ```bash
-   npx prisma migrate deploy
-   npx prisma generate
-   ```
-5. Run the development server:
-   ```bash
-   bun dev # or npm run dev
+   bun x prisma db push
+   bun dev
    ```
 
 ### Using the SDK
-
-To integrate DevNexus into your own projects, please refer to the [SDK Documentation](./sdk/README.md).
-
-## Key Features
-
-- **Multi-Role Dashboards**: Specific views and metrics for Admins, Managers, and Developers.
-- **SLA Tracking**: Automated time-to-resolve tracking based on project plans and issue severity.
-- **AI-Powered Analysis**: Gemini 2.0 Flash auto-classifies incidents with severity, root cause, and suggested fixes.
-- **GitHub Integration**: Auto-creates issues from CI/CD failures and PR conflicts.
-- **Custom SDK**: Easy-to-use client for global error capture and manual reporting.
-
-## Tech Stack
-
-- **Framework**: [Next.js](https://nextjs.org/) (App Router)
-- **ORM**: [Prisma](https://www.prisma.io/)
-- **Database**: PostgreSQL (Neon)
-- **AI**: Google Gemini 2.0 Flash
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS v4
-- **Runtime**: Bun / Node.js
+To start capturing errors from your own projects, navigate to the SDK directory and build the tracking script. See the [SDK Documentation](./sdk/README.md) for full implementation details.
 
 ---
-
-© 2026 DevNexus Team.
+<div align="center">
+  <p>Built with ❤️ by the <strong>DevNexus Team</strong> | © 2026</p>
+</div>
