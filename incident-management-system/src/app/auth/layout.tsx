@@ -5,16 +5,24 @@ import Link from "next/link";
 import { Command, ArrowLeft, Shield, Activity, Zap, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 
-
-
 /* ── Animated grid pattern ── */
 function GridPattern() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.03]">
       <svg width="100%" height="100%">
         <defs>
-          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5" />
+          <pattern
+            id="grid"
+            width="40"
+            height="40"
+            patternUnits="userSpaceOnUse"
+          >
+            <path
+              d="M 40 0 L 0 0 0 40"
+              fill="none"
+              stroke="white"
+              strokeWidth="0.5"
+            />
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill="url(#grid)" />
@@ -25,10 +33,26 @@ function GridPattern() {
 
 /* ── Rotating feature highlights ── */
 const features = [
-  { icon: Shield, title: "Enterprise Security", desc: "SOC 2 compliant with end-to-end encryption" },
-  { icon: Activity, title: "Real-time Monitoring", desc: "Track incidents as they happen, not after" },
-  { icon: Zap, title: "AI Root Cause", desc: "Gemini-powered analysis identifies issues instantly" },
-  { icon: Lock, title: "Role-based Access", desc: "Fine-grained permissions for every team member" },
+  {
+    icon: Shield,
+    title: "Enterprise Security",
+    desc: "SOC 2 compliant with end-to-end encryption",
+  },
+  {
+    icon: Activity,
+    title: "Real-time Monitoring",
+    desc: "Track incidents as they happen, not after",
+  },
+  {
+    icon: Zap,
+    title: "AI Root Cause",
+    desc: "Gemini-powered analysis identifies issues instantly",
+  },
+  {
+    icon: Lock,
+    title: "Role-based Access",
+    desc: "Fine-grained permissions for every team member",
+  },
 ];
 
 function FeatureShowcase() {
@@ -64,11 +88,17 @@ function FeatureShowcase() {
                   : "bg-white/5"
               }`}
             >
-              <Icon className={`w-4 h-4 transition-colors duration-500 ${isActive ? "text-white" : "text-white/40"}`} />
+              <Icon
+                className={`w-4 h-4 transition-colors duration-500 ${isActive ? "text-white" : "text-white/40"}`}
+              />
             </div>
             <div>
-              <h4 className="text-sm font-bold tracking-tight">{feature.title}</h4>
-              <p className="text-xs text-white/50 mt-0.5 leading-relaxed">{feature.desc}</p>
+              <h4 className="text-sm font-bold tracking-tight">
+                {feature.title}
+              </h4>
+              <p className="text-xs text-white/50 mt-0.5 leading-relaxed">
+                {feature.desc}
+              </p>
             </div>
           </motion.div>
         );
@@ -81,7 +111,10 @@ function FeatureShowcase() {
             className="h-1 rounded-full"
             animate={{
               width: i === activeIndex ? 24 : 8,
-              backgroundColor: i === activeIndex ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.15)",
+              backgroundColor:
+                i === activeIndex
+                  ? "rgba(255,255,255,0.6)"
+                  : "rgba(255,255,255,0.15)",
             }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
           />
@@ -93,11 +126,9 @@ function FeatureShowcase() {
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex relative bg-black text-white selection:bg-white/10">
-
+    <div className="min-h-screen flex relative bg-black text-white selection:bg-white/10 font-auth">
       {/* ── Left brand panel (hidden on mobile, fixed on desktop) ── */}
       <div className="hidden lg:flex w-[45%] fixed inset-y-0 left-0 flex-col p-8 overflow-hidden">
-
         <GridPattern />
 
         {/* Top — Logo */}
@@ -125,12 +156,11 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <div className="space-y-3 mb-6">
             <h2 className="text-2xl xl:text-3xl font-black tracking-tighter leading-tight">
               Incident response,{" "}
-              <span className="text-white/40">
-                reimagined.
-              </span>
+              <span className="text-white/40">reimagined.</span>
             </h2>
             <p className="text-sm text-white/40 leading-relaxed max-w-sm font-medium">
-              Join thousands of engineering teams who resolve incidents faster with AI-powered root cause analysis.
+              Join thousands of engineering teams who resolve incidents faster
+              with AI-powered root cause analysis.
             </p>
           </div>
           <FeatureShowcase />
@@ -141,7 +171,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <div className="hidden lg:block fixed left-[45%] inset-y-0 w-[1px] z-20 pointer-events-none">
         {/* The line itself with a fade-in-out gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/[0.12] to-transparent" />
-        
+
         {/* Animated glowing beam that flows down the line */}
         <motion.div
           className="absolute left-1/2 -translate-x-1/2 w-[2px] h-[100px] bg-gradient-to-b from-transparent via-white/40 to-transparent rounded-full"
@@ -164,7 +194,10 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         {/* Top nav */}
         <div className="relative z-10 flex items-center justify-between p-6 lg:px-10 flex-shrink-0">
           {/* Mobile logo */}
-          <Link href="/" className="flex items-center space-x-2 group lg:hidden">
+          <Link
+            href="/"
+            className="flex items-center space-x-2 group lg:hidden"
+          >
             <div className="w-8 h-8 bg-white flex items-center justify-center rounded-xl transition-all group-hover:scale-110">
               <Command className="w-3.5 h-3.5 text-black" />
             </div>
@@ -182,12 +215,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
         {/* Form container — scrollable */}
         <main className="relative z-10 flex-1 flex flex-col justify-center px-6 lg:px-12 xl:px-20 py-4">
-          <div className="w-full max-w-md mx-auto lg:mx-0">
-            {children}
-          </div>
+          <div className="w-full max-w-md mx-auto lg:mx-0">{children}</div>
         </main>
-
-    
       </div>
     </div>
   );
