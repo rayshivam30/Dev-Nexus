@@ -45,3 +45,8 @@ next-env.d.ts
 # Add these to your .gitignore
 playwright-report/
 test-results/
+
+# Docker
+docker-compose.override.yml
+
+

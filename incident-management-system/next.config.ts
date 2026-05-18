@@ -15,6 +15,7 @@ const cspHeader = `
 
 const nextConfig: NextConfig = {
   /* config options here */
+  output: 'standalone',
   images: {
     remotePatterns: [
       {

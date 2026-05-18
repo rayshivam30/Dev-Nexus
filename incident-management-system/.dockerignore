@@ -1,0 +1,47 @@
+# ── Dependencies ──
+node_modules
+.pnp
+.pnp.*
+.yarn/*
+
+# ── Build artifacts ──
+.next
+out
+build
+dist
+
+# ── Environment ──
+.env
+.env.*
+!.env.example
+
+# ── IDE & OS ──
+.vscode
+.idea
+.DS_Store
+*.swp
+*.swo
+
+# ── Testing ──
+coverage
+playwright-report
+test-results
+e2e
+tests
+
+# ── Version Control ──
+.git
+.github
+.gitignore
+.gitattributes
+
+# ── Docker (prevent recursive copies) ──
+Dockerfile
+docker-compose*.yml
+
+# ── Misc ──
+README.md
+CLAUDE.md
+AGENTS.md
+*.md
+!prisma/*.md

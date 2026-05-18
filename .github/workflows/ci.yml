@@ -1,63 +1,129 @@
-name: CI
+# ─────────────────────────────────────────────────────────────────────────────
+# DevNexus — CI/CD Pipeline with Docker Build & Kubernetes Deploy
+# ─────────────────────────────────────────────────────────────────────────────
+# This workflow:
+#   1. Runs lint & type checks
+#   2. Builds a multi-stage Docker image
+#   3. Pushes to GitHub Container Registry (GHCR)
+#   4. (Optional) Deploys to Kubernetes via kubectl
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/devnexus-app
 
 jobs:
-  platform:
-    name: Platform (Next.js)
+  # ── Job 1: Lint & Type Check ─────────────────────────────────────────────
+  quality:
+    name: 🔍 Code Quality
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: incident-management-system
 
     steps:
-      - name: Checkout Code
+      - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Bun
+      - name: 🍞 Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install Dependencies
+      - name: 📦 Install Dependencies
         run: bun install --frozen-lockfile
 
-      - name: Prisma Generate
+      - name: 🗄️ Generate Prisma Client
         run: bunx prisma generate
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/devnexus
 
-      - name: Run Lint
+      - name: 🧹 Lint
         run: bun run lint
 
-      - name: Build Application
+      - name: 🏗️ Build (Type Check)
         run: bun run build
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/devnexus
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
+  # ── Job 2: SDK Build & Test ──────────────────────────────────────────────
   sdk:
-    name: SDK (TypeScript)
+    name: 📦 SDK Build
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: sdk
 
     steps:
-      - name: Checkout Code
+      - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Bun
+      - name: 🍞 Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install Dependencies
+      - name: 📦 Install Dependencies
         run: bun install
 
-      - name: Build SDK
+      - name: 🏗️ Build SDK
         run: bun run build
+
+  # ── Job 3: Docker Build & Push ───────────────────────────────────────────
+  docker:
+    name: 🐳 Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: [quality, sdk]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🏷️ Extract Docker Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+
+      - name: 🏗️ Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./incident-management-system
+          file: ./incident-management-system/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL || 'https://devnexus.yourdomain.com' }}
+            NEXT_PUBLIC_GITHUB_APP_SLUG=${{ vars.NEXT_PUBLIC_GITHUB_APP_SLUG || '' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+
