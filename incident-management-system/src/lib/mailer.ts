@@ -21,6 +21,12 @@ const transporter = nodemailer.createTransport({
   maxMessages: 50,
 });
 
+// Verify transporter at startup and log any auth/connection issues early
+transporter
+  .verify()
+  .then(() => logger.info({ user: process.env.GMAIL_USER }, "SMTP transporter ready"))
+  .catch((err) => logger.warn({ err }, "SMTP transporter verification failed"));
+
 interface SendMailOptions {
   to: string;
   subject: string;
@@ -133,6 +139,26 @@ export async function sendMail({ to, subject, html }: SendMailOptions) {
       "⚠️  GMAIL_USER or GMAIL_APP_PASSWORD not set or invalid — skipping email send."
     );
     return null;
+  }
+
+  const mailOptions = {
+    from: `DevNexus <${gmailUser}>`,
+    to,
+    subject,
+    html,
+  };
+
+  // In production (or when explicitly requested) send synchronously so serverful
+  // hosts perform the send during the request and we immediately surface errors.
+  if (process.env.NODE_ENV === "production" || process.env.EMAIL_SYNC === "true") {
+    try {
+      await transporter.sendMail(mailOptions);
+      logger.info({ to, subject }, "Email sent synchronously (production)");
+      return { sent: true };
+    } catch (err) {
+      logger.error({ to, err }, "Synchronous email send failed");
+      return null;
+    }
   }
 
   if (emailQueue.length >= MAX_QUEUE_SIZE) {
