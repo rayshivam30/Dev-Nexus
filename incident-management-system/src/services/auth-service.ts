@@ -20,7 +20,9 @@ export async function registerAdmin(email: string, passwordPlain: string, orgNam
   const verificationToken = generateToken();
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-  return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  // Increase interactive transaction timeout to avoid P2028 when operations take longer
+  return await prisma.$transaction(
+    async (tx: Prisma.TransactionClient) => {
     const org = await tx.organization.create({
       data: { name: orgName },
     });
@@ -44,7 +46,9 @@ export async function registerAdmin(email: string, passwordPlain: string, orgNam
     });
 
     return { user, verificationToken };
-  });
+  },
+  { timeout: 30000 }
+  );
 }
 
 export async function verifyEmail(token: string) {

@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
+    pass: process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, ""),
   },
   // Connection pooling — reuse SMTP connections for better throughput
   pool: true,
@@ -124,9 +124,13 @@ queueTimer.unref(); // Don't keep process alive
  * Silently skips if Gmail credentials are not configured.
  */
 export async function sendMail({ to, subject, html }: SendMailOptions) {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+  // Allow pasting the 16-char Gmail App Password with or without spaces
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailAppPassword = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, "");
+
+  if (!gmailUser || !gmailAppPassword) {
     console.warn(
-      "⚠️  GMAIL_USER or GMAIL_APP_PASSWORD not set — skipping email send."
+      "⚠️  GMAIL_USER or GMAIL_APP_PASSWORD not set or invalid — skipping email send."
     );
     return null;
   }
