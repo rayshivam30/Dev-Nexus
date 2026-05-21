@@ -157,11 +157,10 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
             <label className="text-xs font-medium text-zinc-500 ml-1 flex items-center gap-1.5">
               <Layers className="w-3 h-3" /> Plan *
             </label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-6">
               {[
                 { id: "BASIC", name: "Basic", desc: "Indie" },
-                { id: "ADVANCED", name: "Advanced", desc: "Teams" },
-                { id: "PRO", name: "Pro", desc: "Enterprise" }
+                { id: "ADVANCED", name: "Advanced", desc: "Teams" }
               ].map((p) => (
                 <div 
                   key={p.id}
@@ -180,19 +179,12 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
             </div>
           </div>
 
-          {plan === 'PRO' && (
-            <div className="p-8 rounded-xl border border-white/[0.06] bg-white/[0.02] text-center space-y-2">
-              <p className="text-sm font-semibold text-zinc-400">Enterprise tier coming soon</p>
-              <p className="text-xs text-zinc-600">Contact us for early access.</p>
-            </div>
-          )}
-
           <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.06]">
             <button type="button" onClick={onClose} 
               className="px-5 py-2.5 rounded-xl text-sm font-medium text-zinc-400 border border-white/[0.06] hover:bg-white/[0.04] transition-all">
               Cancel
             </button>
-            <button type="submit" disabled={createProjectLoading || !newProjectName.trim() || plan === 'PRO'} 
+            <button type="submit" disabled={createProjectLoading || !newProjectName.trim()} 
               className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-500 transition-all disabled:opacity-50 flex items-center gap-2">
               {createProjectLoading ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</>
