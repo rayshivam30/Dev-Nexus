@@ -72,7 +72,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy node_modules for Prisma runtime (needed for prisma client)
-COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=deps /app/node_modules/@devnexus/prisma-client ./node_modules/@devnexus/prisma-client
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 
 # Set runtime environment
