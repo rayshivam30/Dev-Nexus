@@ -2,7 +2,7 @@ import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 
-import { IssueSource, Prisma, IssueSeverity } from "@prisma/client";
+import { IssueSource, Prisma, IssueSeverity } from "@devnexus/prisma-client";
 
 import { analyzeIncident } from "@/lib/ai-service";
 import { enqueueAITask } from "@/lib/ai-queue";
@@ -14,14 +14,31 @@ export async function POST(req: Request) {
   try {
     const rawBody = await req.text();
     const signature = req.headers.get("x-hub-signature-256");
-    const isMock = process.env.NODE_ENV === "development" || req.headers.get("x-mock-simulation") === "true";
+    const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
+    const isMock =
+      process.env.NODE_ENV === "test" &&
+      req.headers.get("x-mock-simulation") === "true";
 
-    if (process.env.GITHUB_WEBHOOK_SECRET && !isMock) {
+    if (!isMock) {
+      if (!webhookSecret) {
+        console.error("GITHUB_WEBHOOK_SECRET is not configured");
+        return NextResponse.json(
+          { error: "Webhook verification is unavailable" },
+          { status: 503 }
+        );
+      }
       if (!signature) {
         return NextResponse.json({ error: "Missing signature" }, { status: 401 });
       }
-      const expected = "sha256=" + crypto.createHmac("sha256", process.env.GITHUB_WEBHOOK_SECRET).update(rawBody).digest("hex");
-      if (signature !== expected) {
+      const expected =
+        "sha256=" +
+        crypto.createHmac("sha256", webhookSecret).update(rawBody).digest("hex");
+      const signatureBuffer = Buffer.from(signature);
+      const expectedBuffer = Buffer.from(expected);
+      if (
+        signatureBuffer.length !== expectedBuffer.length ||
+        !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
+      ) {
         return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
       }
     }

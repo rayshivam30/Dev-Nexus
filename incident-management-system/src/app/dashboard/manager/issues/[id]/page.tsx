@@ -1,21 +1,16 @@
 import AdminIssueDetailClient from "@/components/dashboard/admin/issue-detail/AdminIssueDetailClient";
 import { prisma } from "@/lib/db";
-import { verifyToken } from "@/lib/jwt";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function ManagerIssueDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("incident_token")?.value;
-  if (!token) redirect("/auth/login");
-
-  const decoded = verifyToken(token);
-  if (!decoded || decoded.role !== "MANAGER") redirect("/auth/login");
+  const currentUser = await getCurrentUser();
+  if (!currentUser || currentUser.role !== "MANAGER") redirect("/auth/login");
 
   const user = await prisma.user.findUnique({
-    where: { id: decoded.userId },
+    where: { id: currentUser.userId, status: "ACTIVE" },
     select: { projectId: true },
   });
 

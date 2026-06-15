@@ -1,14 +1,20 @@
 import { prisma } from "@/lib/db";
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { updateIssue, getIssueDetails } from "@/services/issue-service";
-import { IssueStatus } from "@prisma/client";
+import { IssueStatus } from "@devnexus/prisma-client";
 import { updateIssueSchema } from "@/lib/validations";
 import { EVENTS, emitEvent } from "@/lib/events";
 import { createNotification } from "@/services/notification-service";
+import { getActiveSessionUser, getAuthorizedIssue } from "@/lib/authorization";
 
-export const GET = withAuth(async (_req, { params }) => {
+export const GET = withAuth(async (_req, { decoded, params }) => {
   const { id } = await (params as { id: string });
   try {
+    const user = await getActiveSessionUser(decoded);
+    if (!user) return apiError("Unauthorized", 401);
+    const authorizedIssue = await getAuthorizedIssue(id, user);
+    if (!authorizedIssue) return apiError("Issue not found", 404);
+
     const issue = await getIssueDetails(id);
     if (!issue) return apiError("Issue not found", 404);
     return apiResponse("Success", { issue });
@@ -27,12 +33,34 @@ export const PATCH = withAuth(async (_req, { decoded, body, params }) => {
 
   const { status, teamId, assignedToId, rootCause } = result.data;
   try {
-    const existingIssue = await prisma.issue.findUnique({
-      where: { id },
-      include: { project: { select: { orgId: true } } }
-    });
-
+    const user = await getActiveSessionUser(decoded);
+    if (!user) return apiError("Unauthorized", 401);
+    const existingIssue = await getAuthorizedIssue(id, user);
     if (!existingIssue) return apiError("Issue not found", 404);
+
+    if (teamId) {
+      const team = await prisma.team.findFirst({
+        where: { id: teamId, projectId: existingIssue.projectId },
+        select: { id: true },
+      });
+      if (!team) return apiError("Team does not belong to this issue's project", 400);
+    }
+
+    if (assignedToId) {
+      const developer = await prisma.user.findFirst({
+        where: {
+          id: assignedToId,
+          role: "DEVELOPER",
+          status: "ACTIVE",
+          orgId: existingIssue.project.orgId,
+          team: { projectId: existingIssue.projectId },
+        },
+        select: { id: true },
+      });
+      if (!developer) {
+        return apiError("Assignee does not belong to this issue's project", 400);
+      }
+    }
 
     // Permission Logic
     const updateData: {
@@ -43,10 +71,7 @@ export const PATCH = withAuth(async (_req, { decoded, body, params }) => {
       rootCause?: string;
     } = { userId: decoded.userId as string };
     
-    if (decoded.role === "DEVELOPER") {
-      if (existingIssue.assignedToId !== decoded.userId) {
-        return apiError("Not authorized to update this issue", 403);
-      }
+    if (user.role === "DEVELOPER") {
       if (status) {
         if (!["IN_PROGRESS", "RESOLVED"].includes(status)) {
           return apiError("Invalid status transition for developer", 400);

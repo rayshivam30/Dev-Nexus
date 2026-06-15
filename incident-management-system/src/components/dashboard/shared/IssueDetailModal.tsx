@@ -61,10 +61,7 @@ export function IssueDetailModal({
     async function fetchIssueDetails(id: string) {
       setLoading(true);
       try {
-        const token = localStorage.getItem("incident_token") || "";
-        const res = await fetch(`/api/issues/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetch(`/api/issues/${id}`);
         const data = await res.json();
         if (res.ok) {
           setIssue(data.issue);
@@ -89,10 +86,9 @@ export function IssueDetailModal({
     if (!commentText.trim() || !issue) return;
     setCommenting(true);
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch(`/api/issues/${issue.id}/comments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: commentText })
       });
       if (res.ok) {
@@ -103,9 +99,7 @@ export function IssueDetailModal({
           description: "Your update is now attached to the issue.",
         });
         if (initialIssue) {
-          const resDetail = await fetch(`/api/issues/${issue.id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const resDetail = await fetch(`/api/issues/${issue.id}`);
           const dataDetail = await resDetail.json();
           if (resDetail.ok) setIssue(dataDetail.issue);
         }
@@ -128,11 +122,8 @@ export function IssueDetailModal({
     e.preventDefault();
     if (onAssignSubmit) {
       await onAssignSubmit(assignTeamId, assignDevId);
-      const token = localStorage.getItem("incident_token") || "";
       if (issue) {
-        const resDetail = await fetch(`/api/issues/${issue.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const resDetail = await fetch(`/api/issues/${issue.id}`);
         const dataDetail = await resDetail.json();
         if (resDetail.ok) {
           setIssue(dataDetail.issue);
@@ -149,10 +140,7 @@ export function IssueDetailModal({
     try {
       await onStatusChange(issue.id, "RESOLVED", rootCauseInput);
       setIsResolving(false);
-      const token = localStorage.getItem("incident_token") || "";
-      const resDetail = await fetch(`/api/issues/${issue.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const resDetail = await fetch(`/api/issues/${issue.id}`);
       const dataDetail = await resDetail.json();
       if (resDetail.ok) setIssue(dataDetail.issue);
     } finally {

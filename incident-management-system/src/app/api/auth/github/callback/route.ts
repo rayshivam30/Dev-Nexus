@@ -1,192 +1,101 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/api-utils";
+import { verifyToken } from "@/lib/jwt";
+import { getBaseUrl } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const installationId = searchParams.get("installation_id");
-  const projectId = searchParams.get("state"); // We passed projectId in the 'state' parameter
+  const state = searchParams.get("state");
+  const baseUrl = getBaseUrl();
 
-  const protocol = req.headers.get("x-forwarded-proto") || "http";
-  const host = req.headers.get("host");
-  const baseUrl = `${protocol}://${host}`;
+  if (!installationId || !state) {
+    return NextResponse.redirect(
+      `${baseUrl}/dashboard/admin?error=github_missing_data`
+    );
+  }
 
-  if (!installationId || !projectId) {
-    return NextResponse.redirect(`${baseUrl}/dashboard/admin?error=github_missing_data`);
+  const currentUser = await getCurrentUser();
+  const statePayload = verifyToken(state);
+  if (
+    !currentUser ||
+    currentUser.role !== "ADMIN" ||
+    !statePayload ||
+    statePayload.userId !== currentUser.userId ||
+    statePayload.orgId !== currentUser.orgId ||
+    !statePayload.projectId
+  ) {
+    return NextResponse.redirect(
+      `${baseUrl}/dashboard/admin?error=github_invalid_state`
+    );
   }
 
   try {
-    // Link the GitHub Installation ID to the project in our database
-    await prisma.project.update({
-      where: { id: projectId },
+    const updated = await prisma.project.updateMany({
+      where: {
+        id: statePayload.projectId,
+        orgId: currentUser.orgId,
+      },
       data: {
         githubInstallationId: installationId,
       },
     });
 
+    if (updated.count !== 1) {
+      return NextResponse.redirect(
+        `${baseUrl}/dashboard/admin?error=github_project_not_found`
+      );
+    }
+
+    const safeOrigin = JSON.stringify(new URL(baseUrl).origin);
+    const safeProjectId = JSON.stringify(statePayload.projectId);
     const successHtml = `
       <!DOCTYPE html>
       <html>
       <head>
+        <meta charset="utf-8">
         <title>GitHub Connected</title>
         <style>
-          body {
-            background-color: #0b0b0c;
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
-          }
-          .container {
-            padding: 2.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 20px;
-            background-color: rgba(255, 255, 255, 0.02);
-            backdrop-filter: blur(10px);
-            max-width: 420px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-          }
-          .icon-box {
-            width: 64px;
-            height: 64px;
-            background-color: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px auto;
-          }
-          .icon {
-            color: #10b981;
-            font-size: 32px;
-            font-weight: bold;
-          }
-          h1 { font-size: 22px; font-weight: 800; margin-bottom: 10px; tracking: -0.5px; }
-          p { color: #82828c; font-size: 14px; margin-bottom: 24px; line-height: 1.5; }
-          button {
-            background-color: #ffffff;
-            color: #000000;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-          }
-          button:hover {
-            opacity: 0.9;
-            transform: scale(0.98);
-          }
+          body { background:#0b0b0c; color:#fff; font-family:Arial,sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; text-align:center; }
+          main { max-width:420px; padding:40px; border:1px solid #27272a; border-radius:16px; }
+          p { color:#a1a1aa; line-height:1.5; }
+          button { padding:12px 20px; border:0; border-radius:8px; cursor:pointer; }
         </style>
       </head>
       <body>
-        <div class="container">
-          <div class="icon-box">
-            <span class="icon">✓</span>
-          </div>
-          <h1>GitHub Connected!</h1>
-          <p>DevNexus is now successfully connected to your GitHub. This window will automatically close shortly.</p>
+        <main>
+          <h1>GitHub Connected</h1>
+          <p>The installation is now linked to your DevNexus project.</p>
           <button onclick="window.close()">Close Window</button>
-        </div>
+        </main>
         <script>
+          const targetOrigin = ${safeOrigin};
+          const channel = new BroadcastChannel("devnexus-github");
+          channel.postMessage({ type: "GITHUB_LINKED", projectId: ${safeProjectId} });
+          channel.close();
           if (window.opener) {
-            window.opener.postMessage({ type: 'GITHUB_LINKED', projectId: '${projectId}' }, '*');
+            window.opener.postMessage(
+              { type: "GITHUB_LINKED", projectId: ${safeProjectId} },
+              targetOrigin
+            );
           }
-          setTimeout(function() { window.close(); }, 3500);
+          setTimeout(function () { window.close(); }, 3500);
         </script>
       </body>
       </html>
     `;
 
     return new NextResponse(successHtml, {
-      headers: { "Content-Type": "text/html" }
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
     });
-
   } catch (error) {
     console.error("GitHub Callback Error:", error);
-    const errorHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Connection Failed</title>
-        <style>
-          body {
-            background-color: #0b0b0c;
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
-          }
-          .container {
-            padding: 2.5rem;
-            border: 1px solid rgba(239, 68, 68, 0.1);
-            border-radius: 20px;
-            background-color: rgba(239, 68, 68, 0.02);
-            backdrop-filter: blur(10px);
-            max-width: 420px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-          }
-          .icon-box {
-            width: 64px;
-            height: 64px;
-            background-color: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px auto;
-          }
-          .icon {
-            color: #ef4444;
-            font-size: 32px;
-            font-weight: bold;
-          }
-          h1 { font-size: 22px; font-weight: 800; margin-bottom: 10px; tracking: -0.5px; }
-          p { color: #82828c; font-size: 14px; margin-bottom: 24px; line-height: 1.5; }
-          button {
-            background-color: #ffffff;
-            color: #000000;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-          }
-          button:hover {
-            opacity: 0.9;
-            transform: scale(0.98);
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="icon-box">
-            <span class="icon">✗</span>
-          </div>
-          <h1>Connection Failed</h1>
-          <p>We were unable to complete the GitHub connection. Please try again.</p>
-          <button onclick="window.close()">Close Window</button>
-        </div>
-      </body>
-      </html>
-    `;
-
-    return new NextResponse(errorHtml, {
-      headers: { "Content-Type": "text/html" }
-    });
+    return NextResponse.redirect(
+      `${baseUrl}/dashboard/admin?error=github_callback_failed`
+    );
   }
 }

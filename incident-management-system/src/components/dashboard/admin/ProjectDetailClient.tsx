@@ -39,6 +39,8 @@ interface DetailedProject {
   _count?: { issues: number };
   plan?: string;
   sdkApiKey?: string | null;
+  hasSdkKey?: boolean;
+  allowedOrigins?: string[];
   githubRepoUrl?: string | null;
   githubInstallationId?: string | null;
   isSdkConnected?: boolean;
@@ -61,26 +63,46 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
   const [repoSaveError, setRepoSaveError] = useState("");
   const [isEditingRepo, setIsEditingRepo] = useState(!project.githubRepoUrl);
   const [existingInstallId, setExistingInstallId] = useState<string | null>(null);
+  const [allowedOriginsText, setAllowedOriginsText] = useState(
+    (project.allowedOrigins || []).join("\n")
+  );
+  const [originsSaving, setOriginsSaving] = useState(false);
+  const [originsMessage, setOriginsMessage] = useState("");
 
   // Listen for the postMessage from the popup window
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === "GITHUB_LINKED" && event.data?.projectId === project.id) {
+      if (
+        event.origin === window.location.origin &&
+        event.data?.type === "GITHUB_LINKED" &&
+        event.data?.projectId === project.id
+      ) {
+        window.location.reload();
+      }
+    };
+    const channel = new BroadcastChannel("devnexus-github");
+    const handleBroadcast = (event: MessageEvent) => {
+      if (
+        event.data?.type === "GITHUB_LINKED" &&
+        event.data?.projectId === project.id
+      ) {
         window.location.reload();
       }
     };
     window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+    channel.addEventListener("message", handleBroadcast);
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      channel.removeEventListener("message", handleBroadcast);
+      channel.close();
+    };
   }, [project.id]);
 
   // Fetch other projects to check for existing installations
   useEffect(() => {
     async function checkExistingInstallation() {
       try {
-        const token = localStorage.getItem("incident_token") || "";
-        const res = await fetch("/api/projects", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
+        const res = await fetch("/api/projects");
         if (res.ok) {
           const data = await res.json();
           const otherProj = data.projects?.find((p: { githubInstallationId?: string | null; id: string }) => p.githubInstallationId && p.id !== project.id);
@@ -100,12 +122,10 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
     setRepoSaveLoading(true);
     setRepoSaveError("");
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch(`/api/projects/${project.id}/github-link`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           installationId: existingInstallId
@@ -127,12 +147,10 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
     setRepoSaveSuccess(false);
     setRepoSaveError("");
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch(`/api/projects/${project.id}/github-link`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           githubRepoUrl: githubRepoUrl.trim()
@@ -151,6 +169,35 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
       setRepoSaveError(err instanceof Error ? err.message : "Failed to save repository URL");
     } finally {
       setRepoSaveLoading(false);
+    }
+  }
+
+  async function handleSaveAllowedOrigins(e: React.FormEvent) {
+    e.preventDefault();
+    setOriginsSaving(true);
+    setOriginsMessage("");
+    try {
+      const allowedOrigins = allowedOriginsText
+        .split(/\r?\n|,/)
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+      const response = await fetch(`/api/projects/${project.id}/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ allowedOrigins }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save allowed origins");
+      }
+      setAllowedOriginsText(data.project.allowedOrigins.join("\n"));
+      setOriginsMessage("Allowed origins saved");
+    } catch (error) {
+      setOriginsMessage(
+        error instanceof Error ? error.message : "Failed to save allowed origins"
+      );
+    } finally {
+      setOriginsSaving(false);
     }
   }
 
@@ -274,9 +321,34 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
                 </button>
               )}
               <button
-                onClick={() => {
-                  const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG;
-                  window.open(`https://github.com/apps/${appSlug}/installations/new?state=${project.id}`, "_blank");
+                onClick={async () => {
+                  setRepoSaveError("");
+                  try {
+                    const response = await fetch(
+                      `/api/projects/${project.id}/github-link`,
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ createInstallationState: true }),
+                      }
+                    );
+                    const data = await response.json();
+                    if (!response.ok) {
+                      throw new Error(data.error || "Failed to start GitHub connection");
+                    }
+                    const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG;
+                    window.open(
+                      `https://github.com/apps/${appSlug}/installations/new?state=${encodeURIComponent(data.state)}`,
+                      "_blank",
+                      "noopener,noreferrer"
+                    );
+                  } catch (error) {
+                    setRepoSaveError(
+                      error instanceof Error
+                        ? error.message
+                        : "Failed to start GitHub connection"
+                    );
+                  }
                 }}
                 className={cn(
                   "px-5 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2",
@@ -542,7 +614,7 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
           </div>
 
           {/* SDK Integration Section */}
-          {project.plan === "ADVANCED" && project.sdkApiKey && (
+          {project.plan === "ADVANCED" && (
             <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
               <div className="p-5 border-b border-white/[0.06]">
                 <div className="flex items-center justify-between">
@@ -559,6 +631,12 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
               </div>
 
               <div className="p-5 space-y-5">
+                {project.hasSdkKey && !project.sdkApiKey && (
+                  <p className="text-xs text-zinc-500">
+                    The SDK key was shown once when this project was created and
+                    is not stored in recoverable form.
+                  </p>
+                )}
                 {/* Install */}
                 <div className="space-y-2">
                   <p className="text-[10px] text-zinc-600 font-medium">1. Install</p>
@@ -582,13 +660,14 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
 {`import { DevNexus } from '@devnexus/sdk';
 
 DevNexus.init({
-  apiKey: '${project.sdkApiKey}',
+  apiKey: '${project.sdkApiKey || "YOUR_SDK_API_KEY"}',
   baseUrl: '${origin || "<YOUR_APP_URL>"}/api/ingest'
 });`}
                   </div>
                 </div>
 
                 {/* API Key */}
+                {project.sdkApiKey && (
                 <div className="space-y-2 pt-4 border-t border-white/[0.06]">
                   <label className="text-[10px] text-zinc-600 font-medium">API Key</label>
                   <div className="relative">
@@ -601,6 +680,35 @@ DevNexus.init({
                     </button>
                   </div>
                 </div>
+                )}
+
+                <form
+                  onSubmit={handleSaveAllowedOrigins}
+                  className="space-y-3 pt-4 border-t border-white/[0.06]"
+                >
+                  <label className="text-[10px] text-zinc-600 font-medium">
+                    Browser origins, one per line
+                  </label>
+                  <textarea
+                    value={allowedOriginsText}
+                    onChange={(event) => setAllowedOriginsText(event.target.value)}
+                    placeholder="https://app.example.com"
+                    rows={3}
+                    className="w-full resize-none rounded-lg border border-white/[0.06] bg-black/40 px-3 py-2 text-xs text-zinc-300 outline-none focus:border-white/20"
+                  />
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[10px] text-zinc-600">
+                      {originsMessage || "Browser SDK requests are denied until an origin is added."}
+                    </span>
+                    <button
+                      type="submit"
+                      disabled={originsSaving}
+                      className="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-black disabled:opacity-50"
+                    >
+                      {originsSaving ? "Saving..." : "Save origins"}
+                    </button>
+                  </div>
+                </form>
 
                 {project.githubRepoUrl && (
                   <div className="flex items-center gap-2 text-[10px] text-emerald-400">

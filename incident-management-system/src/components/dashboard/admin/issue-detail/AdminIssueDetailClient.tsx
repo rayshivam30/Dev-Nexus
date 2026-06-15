@@ -82,10 +82,7 @@ export default function AdminIssueDetailClient({
   const fetchIssueDetail = useCallback(async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("incident_token") || "";
-      const res = await fetch(`/api/issues/${issueId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch(`/api/issues/${issueId}`);
       const data = await res.json();
       if (res.ok) {
         setIssue(data.issue);
@@ -110,10 +107,9 @@ export default function AdminIssueDetailClient({
     if (!commentText.trim() || !issue) return;
     setCommenting(true);
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch(`/api/issues/${issue.id}/comments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: commentText })
       });
       if (res.ok) {
@@ -144,10 +140,9 @@ export default function AdminIssueDetailClient({
     if (!issue) return;
     setIsAssigning(true);
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch(`/api/issues/${issue.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           teamId: assignTeamId,
           assignedToId: assignDevId || null,
@@ -183,10 +178,9 @@ export default function AdminIssueDetailClient({
   async function handleStatusUpdate(newStatus: string, rootCause?: string) {
     if (!issue) return;
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch(`/api/issues/${issue.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           status: newStatus,
           rootCause: rootCause 

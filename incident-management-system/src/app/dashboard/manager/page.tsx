@@ -1,23 +1,17 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { verifyToken } from "@/lib/jwt";
+import { getCurrentUser } from "@/lib/api-utils";
 import { ManagerDashboardClient } from "@/components/dashboard/manager/ManagerDashboardClient";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
 
 export const dynamic = "force-dynamic";
 
 export default async function ManagerDashboardPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("incident_token")?.value;
-
-  if (!token) redirect("/auth/login");
-
-  const decoded = verifyToken(token);
-  if (!decoded || decoded.role !== "MANAGER") redirect("/auth/login");
+  const currentUser = await getCurrentUser();
+  if (!currentUser || currentUser.role !== "MANAGER") redirect("/auth/login");
 
   const user = await prisma.user.findUnique({
-    where: { id: decoded.userId },
+    where: { id: currentUser.userId, status: "ACTIVE" },
     include: { project: true },
   });
   if (!user) redirect("/auth/login");

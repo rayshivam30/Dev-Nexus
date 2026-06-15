@@ -1,12 +1,11 @@
-import { verifyToken, JwtPayload } from "@/lib/jwt";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ProjectDetailClient } from "@/components/dashboard/admin/ProjectDetailClient";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { formatTimeAgo } from "@/lib/utils";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
+import { getCurrentUser } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -17,25 +16,16 @@ export default async function ProjectDetailsPage({
 }) {
   const { id } = await params;
 
-  // 🔐 GET USER FROM TOKEN
-  const cookieStore = await cookies();
-  const token = cookieStore.get("incident_token")?.value;
-
-  if (!token) return notFound();
-
-  let user: JwtPayload | null = null;
-  try {
-    user = verifyToken(token);
-    if (!user) return notFound();
-  } catch {
-    return notFound();
+  const currentUser = await getCurrentUser();
+  if (!currentUser || currentUser.role !== "ADMIN" || !currentUser.orgId) {
+    redirect("/auth/login");
   }
 
   // 🔥 MAIN SECURITY: FILTER AT PROJECT LEVEL ONLY
   const projectRaw = await prisma.project.findFirst({
     where: {
       id,
-      orgId: user.orgId,
+      orgId: currentUser.orgId,
     },
     include: {
       _count: {
@@ -98,6 +88,8 @@ export default async function ProjectDetailsPage({
 
   const project = {
     ...projectRaw,
+    sdkApiKey: null,
+    hasSdkKey: Boolean(projectRaw.sdkApiKey),
     isSdkConnected: !!hasSdkIssues,
     issues,
   };

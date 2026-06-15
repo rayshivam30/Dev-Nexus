@@ -48,7 +48,6 @@ export async function POST(request: Request) {
     // Return the token. In a real app we might set this in an HttpOnly cookie.
     const response = NextResponse.json({
       message: 'Login successful',
-      token,
       user: {
         id: user.id,
         email: user.email,

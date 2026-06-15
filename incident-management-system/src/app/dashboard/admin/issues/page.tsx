@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { verifyToken } from "@/lib/jwt";
+import { getCurrentUser } from "@/lib/api-utils";
 import { AdminIssuesClient } from "@/components/dashboard/admin/AdminIssuesClient";
 import { formatTimeAgo } from "@/lib/utils";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
@@ -9,28 +8,25 @@ import { Issue } from "@/components/dashboard/shared/RecentIssues";
 export const dynamic = "force-dynamic";
 
 export default async function AdminIssuesPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("incident_token")?.value;
-  if (!token) redirect("/auth/login");
+  const currentUser = await getCurrentUser();
+  if (!currentUser || currentUser.role !== "ADMIN") redirect("/auth/login");
+  if (!currentUser.orgId) redirect("/auth/login");
 
-  const decoded = verifyToken(token);
-  if (!decoded || decoded.role !== "ADMIN") redirect("/auth/login");
-
-  const user = await prisma.user.findUnique({ select: { orgId: true }, where: { id: decoded.userId } });
+  const orgId = currentUser.orgId;
   
   // Fetch only unassigned issues (assignedToId: null) across admin's organization
   const issuesRaw = await prisma.issue.findMany({
     where: { 
       assignedToId: null,
-      project: { orgId: user?.orgId ?? undefined }
+      project: { orgId }
     },
     orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
     include: { team: true, assignedTo: true, project: { select: { id: true, name: true } } },
   });
 
   const [allTeams, allDevelopers] = await Promise.all([
-    prisma.team.findMany({ select: { id: true, name: true, projectId: true }, where: { project: { orgId: user?.orgId ?? undefined } } }),
-    prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER', team: { project: { orgId: user?.orgId ?? undefined } } } })
+    prisma.team.findMany({ select: { id: true, name: true, projectId: true }, where: { project: { orgId } } }),
+    prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER', team: { project: { orgId } } } })
   ]);
 
   const mappedIssues: Issue[] = issuesRaw.map(issue => ({

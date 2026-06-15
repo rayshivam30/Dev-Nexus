@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { IssueSeverity, EnvironmentType, Role, IssueStatus, IssuePriority } from "@prisma/client";
+import { IssueSeverity, EnvironmentType, Role, IssueStatus, IssuePriority } from "@devnexus/prisma-client";
 
 // Auth Schemas
 export const loginSchema = z.object({
@@ -15,9 +15,24 @@ export const registerSchema = z.object({
 
 export const inviteSchema = z.object({
   email: z.string().email(),
-  role: z.nativeEnum(Role),
+  role: z.enum([Role.MANAGER, Role.DEVELOPER]),
   projectId: z.string().optional(),
   teamId: z.string().optional(),
+}).superRefine((data, context) => {
+  if (data.role === Role.MANAGER && !data.projectId) {
+    context.addIssue({
+      code: "custom",
+      path: ["projectId"],
+      message: "Manager invites require a project",
+    });
+  }
+  if (data.role === Role.DEVELOPER && !data.teamId) {
+    context.addIssue({
+      code: "custom",
+      path: ["teamId"],
+      message: "Developer invites require a team",
+    });
+  }
 });
 
 export const acceptInviteSchema = z.object({

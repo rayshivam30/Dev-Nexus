@@ -1,14 +1,8 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@devnexus/prisma-client';
 import { prisma } from '@/lib/db';
 import { hashPassword } from '@/lib/hash';
 import crypto from 'crypto';
 
-/**
- * Generates a random verification token.
- */
-function generateToken(): string {
-  return crypto.randomBytes(32).toString('hex');
-}
 
 export async function registerAdmin(email: string, passwordPlain: string, orgName: string) {
   const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -17,7 +11,9 @@ export async function registerAdmin(email: string, passwordPlain: string, orgNam
   }
 
   const hashedPassword = await hashPassword(passwordPlain);
-  const verificationToken = generateToken();
+  // Generate a raw token to send in the email; store only its SHA-256 hash
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
   // Increase interactive transaction timeout to avoid P2028 when operations take longer
@@ -40,20 +36,21 @@ export async function registerAdmin(email: string, passwordPlain: string, orgNam
     await tx.verificationToken.create({
       data: {
         email,
-        token: verificationToken,
+        token: hashedToken,
         expiresAt,
       },
     });
 
-    return { user, verificationToken };
+    return { user, verificationToken: rawToken };
   },
   { timeout: 30000 }
   );
 }
 
 export async function verifyEmail(token: string) {
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
   const vToken = await prisma.verificationToken.findUnique({
-    where: { token }
+    where: { token: hashedToken }
   });
 
   if (!vToken || vToken.expiresAt < new Date()) {
@@ -70,7 +67,7 @@ export async function verifyEmail(token: string) {
     });
 
     await tx.verificationToken.delete({
-      where: { token }
+      where: { token: hashedToken }
     });
 
     return user;

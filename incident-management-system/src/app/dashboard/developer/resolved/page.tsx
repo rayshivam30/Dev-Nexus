@@ -1,22 +1,19 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { verifyToken } from "@/lib/jwt";
 import { DeveloperResolvedClient } from "@/components/dashboard/developer/DeveloperResolvedClient";
 import { formatTimeAgo } from "@/lib/utils";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
+import { getCurrentUser } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function DeveloperResolvedPage() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("incident_token")?.value;
-  if (!token) redirect("/auth/login");
+  const currentUser = await getCurrentUser();
+  if (!currentUser || currentUser.role !== "DEVELOPER") redirect("/auth/login");
 
-  const decoded = verifyToken(token);
-  if (!decoded || decoded.role !== "DEVELOPER") redirect("/auth/login");
-
-  const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+  const user = await prisma.user.findUnique({
+    where: { id: currentUser.userId, status: "ACTIVE" }
+  });
   if (!user) redirect("/auth/login");
 
   const resolvedIssuesRaw = await prisma.issue.findMany({

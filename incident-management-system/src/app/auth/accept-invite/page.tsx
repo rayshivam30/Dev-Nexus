@@ -5,29 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Loader2, ShieldCheck, AlertCircle, Lock, Mail, Eye, EyeOff, UserPlus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Safely decode email from the JWT payload (middle segment, base64url encoded)
-function decodeTokenEmail(token: string): string {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-    return decoded.email || "";
-  } catch {
-    return "";
-  }
-}
-
-function decodeTokenRole(token: string): string {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-    return decoded.role || "";
-  } catch {
-    return "";
-  }
-}
-
-
-
 function AcceptInviteContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -38,6 +15,7 @@ function AcceptInviteContent() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -45,10 +23,37 @@ function AcceptInviteContent() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   useEffect(() => {
-    if (token) {
-      setEmail(decodeTokenEmail(token));
-      setRole(decodeTokenRole(token));
+    if (!token) {
+      setPreviewLoading(false);
+      return;
     }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/auth/accept-invite/preview?token=${encodeURIComponent(token)}`
+        );
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Invalid invite link");
+        }
+        if (!cancelled) {
+          setEmail(data.email || "");
+          setRole(data.role || "");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Invalid invite link");
+        }
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   if (!token) {
@@ -65,6 +70,31 @@ function AcceptInviteContent() {
         <p className="text-sm text-white/40 max-w-xs mx-auto">
           This invite link is missing or malformed. Please ask your admin to resend the invite.
         </p>
+      </motion.div>
+    );
+  }
+
+  if (previewLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-16">
+        <Loader2 className="w-8 h-8 animate-spin text-white/40" />
+        <p className="text-sm text-white/40">Verifying invite...</p>
+      </div>
+    );
+  }
+
+  if (error && !email) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="space-y-6 text-center"
+      >
+        <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.1] flex items-center justify-center mx-auto">
+          <AlertCircle className="w-8 h-8 text-white/60" />
+        </div>
+        <h1 className="text-3xl font-black tracking-tighter">Invalid Invite Link</h1>
+        <p className="text-sm text-white/40 max-w-xs mx-auto">{error}</p>
       </motion.div>
     );
   }
@@ -97,9 +127,6 @@ function AcceptInviteContent() {
       }
 
       // Save session token & cookie — same pattern as login page
-      localStorage.setItem("incident_token", data.token);
-      document.cookie = `incident_token=${data.token}; path=/; max-age=604800`;
-
       // Redirect to the correct dashboard based on role
       const roleDashboard: Record<string, string> = {
         ADMIN: "/dashboard/admin",

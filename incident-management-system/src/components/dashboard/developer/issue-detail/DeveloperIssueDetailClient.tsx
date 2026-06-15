@@ -44,10 +44,7 @@ export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperI
   useEffect(() => {
     async function fetchIssueDetails() {
       try {
-        const token = localStorage.getItem("incident_token") || "";
-        const res = await fetch(`/api/issues/${issueId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetch(`/api/issues/${issueId}`);
         const data = await res.json();
         if (res.ok) {
           setIssue(data.issue);
@@ -65,10 +62,9 @@ export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperI
     if (!commentText.trim() || !issue) return;
     setCommenting(true);
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch(`/api/issues/${issue.id}/comments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: commentText })
       });
       if (res.ok) {
@@ -78,9 +74,7 @@ export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperI
           title: "Comment added",
           description: "Your update was posted to the issue.",
         });
-        const resDetail = await fetch(`/api/issues/${issue.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const resDetail = await fetch(`/api/issues/${issue.id}`);
         const dataDetail = await resDetail.json();
         if (resDetail.ok) setIssue(dataDetail.issue);
       } else {
@@ -100,10 +94,9 @@ export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperI
 
   async function handleStatusChange(issueId: string, newStatus: string, rootCause?: string) {
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch(`/api/issues/${issueId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus, rootCause })
       });
       if (!res.ok) {
@@ -112,9 +105,7 @@ export function DeveloperIssueDetailClient({ issueId, initialIssue }: DeveloperI
       }
       
       // Refresh local data
-      const resDetail = await fetch(`/api/issues/${issueId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const resDetail = await fetch(`/api/issues/${issueId}`);
       const dataDetail = await resDetail.json();
       if (resDetail.ok) setIssue(dataDetail.issue);
 

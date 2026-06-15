@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { PlanType } from "@prisma/client";
+import { PlanType } from "@devnexus/prisma-client";
 import crypto from "crypto";
 
 /**
@@ -46,7 +46,7 @@ export async function createProject(
 }
 
 export async function getProjectsByOrg(orgId: string) {
-  return await prisma.project.findMany({
+  const projects = await prisma.project.findMany({
     where: { orgId },
     include: {
       teams: true,
@@ -55,10 +55,14 @@ export async function getProjectsByOrg(orgId: string) {
       }
 }
   });
+  return projects.map(({ sdkApiKey, ...project }) => ({
+    ...project,
+    hasSdkKey: Boolean(sdkApiKey),
+  }));
 }
 
-export async function deleteProject(id: string) {
-  return await prisma.project.delete({
-    where: { id }
+export async function deleteProject(id: string, orgId: string) {
+  return await prisma.project.deleteMany({
+    where: { id, orgId }
   });
 }

@@ -54,6 +54,28 @@ export const POST = withAuth(async (req, { decoded, body }) => {
     }
   }
 
+  if (assignedToId) {
+    if (user.role === "DEVELOPER") {
+      return apiError("Developers cannot assign issues", 403);
+    }
+    const assignee = await prisma.user.findFirst({
+      where: {
+        id: assignedToId,
+        role: "DEVELOPER",
+        status: "ACTIVE",
+        orgId: user.orgId,
+        team: { projectId },
+      },
+      select: { id: true, teamId: true },
+    });
+    if (!assignee) {
+      return apiError("Assignee does not belong to the selected project", 400);
+    }
+    if (teamId && assignee.teamId !== teamId) {
+      return apiError("Assignee does not belong to the selected team", 400);
+    }
+  }
+
   try {
     const issue = await createIssue({
       title,

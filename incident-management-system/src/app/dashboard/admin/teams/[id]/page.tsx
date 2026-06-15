@@ -1,17 +1,26 @@
 import { prisma } from "@/lib/db";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { TeamDetailClient } from "@/components/dashboard/admin/TeamDetailClient";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { formatTimeAgo } from "@/lib/utils";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
+import { getCurrentUser } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function TeamDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser || currentUser.role !== "ADMIN" || !currentUser.orgId) {
+    redirect("/auth/login");
+  }
+
   const { id } = await params;
-  const teamRaw = await prisma.team.findUnique({
-    where: { id },
+  const teamRaw = await prisma.team.findFirst({
+    where: { 
+      id,
+      project: { orgId: currentUser.orgId }
+    },
     include: {
       project: { select: { name: true, id: true } },
       members: { select: { id: true, email: true, status: true, role: true } },

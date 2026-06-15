@@ -9,7 +9,14 @@ import { getCurrentUser } from "@/lib/api-utils";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const organization = await prisma.organization.findFirst();
+  const currentUser = await getCurrentUser();
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    redirect("/auth/login");
+  }
+
+  const organization = await prisma.organization.findFirst({
+    where: { id: currentUser.orgId }
+  });
   
   if (!organization) {
     return (
@@ -17,11 +24,6 @@ export default async function AdminDashboardPage() {
         No organization found in the database. Please register an admin account first.
       </div>
     );
-  }
-
-  const currentUser = await getCurrentUser();
-  if (!currentUser || currentUser.role !== 'ADMIN') {
-    redirect("/auth/login");
   }
 
   // Parallel batch 1: independent count queries (safe now that pool is sized)
@@ -60,7 +62,7 @@ export default async function AdminDashboardPage() {
     }),
     prisma.project.findMany({ where: { orgId: currentUser.orgId }, select: { id: true, name: true } }),
     prisma.team.findMany({ where: { project: { orgId: currentUser.orgId } }, select: { id: true, name: true, projectId: true } }),
-    prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER', project: { orgId: currentUser.orgId } } }),
+    prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER', team: { project: { orgId: currentUser.orgId } } } }),
   ]);
 
   const recentIssues: Issue[] = recentIssuesRaw.map((issue) => {

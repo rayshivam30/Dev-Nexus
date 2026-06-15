@@ -32,6 +32,19 @@ export function formatTimeAgo(date: Date) {
   return `${diffDays}d ago`;
 }
 
+export function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    };
+    return entities[character];
+  });
+}
+
 export class FetchError extends Error {
   info: unknown;
   status: number;

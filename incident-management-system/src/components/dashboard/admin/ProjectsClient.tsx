@@ -35,10 +35,8 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
     if (!confirm("Are you sure you want to delete this project? All associated teams and issues might be affected.")) return;
     setDeleteLoadingId(id);
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch(`/api/projects?id=${id}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
+        method: "DELETE"
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to delete project");

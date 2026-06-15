@@ -36,10 +36,9 @@ export function ManagerTeamNode({ team, projectId, isExpanded, onToggleExpand }:
     setInviteLink("");
     setInviteLoading(true);
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch("/api/auth/invite", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: inviteEmail || "", role: "DEVELOPER", projectId, teamId: team.id }),
       });
       const data = await res.json();

@@ -55,7 +55,7 @@ services:
       dockerfile: Dockerfile
       target: deps
     container_name: devnexus-migrations
-    command: bun x prisma db push --skip-generate
+    command: bun x prisma migrate deploy
     environment:
       DATABASE_URL: postgresql://devnexus:${POSTGRES_PASSWORD:-devnexus_secret}@postgres:5432/devnexus?connect_timeout=30
     depends_on:
@@ -81,14 +81,14 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://devnexus:${POSTGRES_PASSWORD:-devnexus_secret}@postgres:5432/devnexus?connect_timeout=30&connection_limit=10&pool_timeout=30
-      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GMAIL_USER: ${GMAIL_USER:-}
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
       GITHUB_APP_ID: ${GITHUB_APP_ID:-}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
-      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:?GITHUB_WEBHOOK_SECRET must be set}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       NEXT_PUBLIC_GITHUB_APP_SLUG: ${NEXT_PUBLIC_GITHUB_APP_SLUG:-}
       UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-}

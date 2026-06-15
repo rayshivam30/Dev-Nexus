@@ -109,11 +109,7 @@ export function ProfileClient() {
   const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("incident_token") || "";
-
-      const res = await fetch("/api/user/profile", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch("/api/user/profile");
 
       if (res.status === 401) {
         router.push("/auth/login");
@@ -158,9 +154,7 @@ export function ProfileClient() {
     setSuccess(false);
 
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers.Authorization = `Bearer ${token}`;
 
       const res = await fetch("/api/user/profile", {
         method: "PATCH",

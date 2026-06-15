@@ -38,12 +38,10 @@ export function DeveloperDashboardClient({
 
   async function handleStatusChange(issueId: string, newStatus: string, rootCause?: string) {
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch(`/api/issues/${issueId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ 
           status: newStatus,

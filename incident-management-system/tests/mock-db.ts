@@ -14,6 +14,7 @@ export interface PrismaMock {
     findUnique: ReturnType<typeof mock>;
     create: ReturnType<typeof mock>;
     delete: ReturnType<typeof mock>;
+    deleteMany: ReturnType<typeof mock>;
     findMany: ReturnType<typeof mock>;
     count: ReturnType<typeof mock>;
   };
@@ -44,6 +45,13 @@ export interface PrismaMock {
   };
   team: {
     create: ReturnType<typeof mock>;
+    findFirst: ReturnType<typeof mock>;
+  };
+  invite: {
+    create: ReturnType<typeof mock>;
+    findFirst: ReturnType<typeof mock>;
+    findUnique: ReturnType<typeof mock>;
+    update: ReturnType<typeof mock>;
   };
   $transaction: ReturnType<typeof mock>;
 }
@@ -63,6 +71,7 @@ export const createPrismaMock = (): PrismaMock => {
       findUnique: mock(() => Promise.resolve({ id: "project-1", orgId: "org-1", sdkApiKey: "hashed-key", plan: "ADVANCED" })),
       create: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "project-1", ...args.data })),
       delete: mock(() => Promise.resolve({ id: "deleted-id" })),
+      deleteMany: mock(() => Promise.resolve({ count: 1 })),
       findMany: mock(() => Promise.resolve([{ id: "p1", name: "P1" }, { id: "p2", name: "P2" }])),
       count: mock(() => Promise.resolve(2)),
     },
@@ -97,6 +106,13 @@ export const createPrismaMock = (): PrismaMock => {
     },
     team: {
       create: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "team-1", ...args.data })),
+      findFirst: mock(() => Promise.resolve({ id: "team-1", projectId: "project-1" })),
+    },
+    invite: {
+      create: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "invite-1", ...args.data })),
+      findFirst: mock(() => Promise.resolve(null)),
+      findUnique: mock(() => Promise.resolve(null)),
+      update: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "invite-1", ...args.data })),
     },
     $transaction: mock(async (cb: (tx: PrismaMock) => Promise<unknown>) => {
       return cb(prismaMock);

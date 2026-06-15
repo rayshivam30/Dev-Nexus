@@ -28,6 +28,15 @@ mock.module("next/server", () => ({
 
 describe("API Teams Route", () => {
   beforeEach(() => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: "user-1",
+      email: "admin@example.com",
+      role: "ADMIN",
+      status: "ACTIVE",
+      orgId: "org-1",
+      projectId: null,
+      teamId: null,
+    });
     prismaMock.project.findUnique.mockClear();
     prismaMock.project.findUnique.mockResolvedValue({ id: "project-1", orgId: "org-1" });
     prismaMock.team.create.mockClear();
@@ -50,7 +59,15 @@ describe("API Teams Route", () => {
   });
 
   test("returns 403 if user is not ADMIN or MANAGER", async () => {
-    (verifyToken as unknown as { mockReturnValue: (val: unknown) => void }).mockReturnValue({ role: "DEVELOPER" });
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: "user-1",
+      email: "developer@example.com",
+      role: "DEVELOPER",
+      status: "ACTIVE",
+      orgId: "org-1",
+      projectId: null,
+      teamId: "team-1",
+    });
 
     const req = new Request("http://localhost/api/teams", {
       method: "POST",

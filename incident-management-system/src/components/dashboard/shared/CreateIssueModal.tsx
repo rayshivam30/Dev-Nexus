@@ -79,12 +79,10 @@ export function CreateIssueModal({
     setSubmitting(true);
     
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch("/api/issues", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           title,

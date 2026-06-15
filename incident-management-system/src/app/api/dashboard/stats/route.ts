@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { withAuth, apiResponse } from "@/lib/api-utils";
+import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { formatTimeAgo } from "@/lib/utils";
 import { redis } from "@/lib/redis";
 import { logger } from "@/lib/logger";
@@ -12,6 +12,7 @@ const CACHE_TTL_SECONDS = 30;
 
 export const GET = withAuth(async (req, { decoded }) => {
   const { orgId } = decoded;
+  if (!orgId) return apiError("Organization is required", 403);
   const cacheKey = `dashboard:stats:${orgId}`;
 
   // ── Try cache first ────────────────────────────────────────────────────

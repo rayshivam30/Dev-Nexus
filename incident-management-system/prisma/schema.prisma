@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/@devnexus/prisma-client"
 }
 
 datasource db {
@@ -145,6 +146,7 @@ model Project {
   githubRepoUrl        String?
   githubInstallationId String?
   sdkApiKey            String?      @unique
+  allowedOrigins       String[]     @default([])
 
   teams                Team[]
   issues               Issue[]
@@ -233,6 +235,11 @@ model Invite {
   token     String   @unique
   role      String
   projectId String
+  orgId     String?
+  teamId    String?
   expiresAt DateTime
+  acceptedAt DateTime?
   createdAt DateTime @default(now())
+
+  @@index([email, projectId])
 }

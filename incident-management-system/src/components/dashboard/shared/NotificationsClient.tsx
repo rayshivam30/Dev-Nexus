@@ -30,10 +30,7 @@ export function NotificationsClient() {
 
   async function fetchNotifications() {
     try {
-      const token = localStorage.getItem("incident_token");
-      const res = await fetch("/api/notifications", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch("/api/notifications");
       const data = await res.json();
       if (res.ok) setNotifications(data.notifications);
     } catch (err) {
@@ -45,10 +42,8 @@ export function NotificationsClient() {
 
   async function markRead(id: string) {
     try {
-      const token = localStorage.getItem("incident_token");
       await fetch(`/api/notifications/${id}`, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
       });
       setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
     } catch (err) {
@@ -58,10 +53,8 @@ export function NotificationsClient() {
 
   async function markAllRead() {
     try {
-      const token = localStorage.getItem("incident_token");
       await fetch("/api/notifications", {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
       });
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch (err) {

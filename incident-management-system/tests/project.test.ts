@@ -58,10 +58,11 @@ describe("Project Service (Security)", () => {
   });
 
   test("deleteProject calls delete correctly", async () => {
-    const result = await deleteProject("p1");
-    expect(result.id).toBe("deleted-id");
-    expect(prismaMock.project.delete).toHaveBeenCalledWith({
-      where: { id: "p1" }
+    prismaMock.project.deleteMany.mockResolvedValue({ count: 1 });
+    const result = await deleteProject("p1", "org-1");
+    expect(result.count).toBe(1);
+    expect(prismaMock.project.deleteMany).toHaveBeenCalledWith({
+      where: { id: "p1", orgId: "org-1" }
     });
   });
 });

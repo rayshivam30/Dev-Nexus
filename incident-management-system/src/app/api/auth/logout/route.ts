@@ -9,7 +9,8 @@ export async function POST() {
     path: "/",
     expires: new Date(0),
     httpOnly: true,
-    secure: process.env.NODE_SET !== "development",
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
   });
 
   return NextResponse.json({ success: true, message: "Logged out successfully" });

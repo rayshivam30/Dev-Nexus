@@ -1,22 +1,14 @@
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/jwt';
+import { getCurrentUser } from '@/lib/api-utils';
 
 export default async function DashboardIndex() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('incident_token')?.value;
+  const currentUser = await getCurrentUser();
 
-  if (!token) {
+  if (!currentUser) {
     redirect('/auth/login');
   }
 
-  const decoded = verifyToken(token!);
-
-  if (!decoded) {
-    redirect('/auth/login');
-  }
-
-  switch (decoded.role) {
+  switch (currentUser.role) {
     case 'ADMIN':
       redirect('/dashboard/admin');
     case 'MANAGER':

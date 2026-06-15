@@ -1,28 +1,20 @@
-import jwt from "jsonwebtoken";
-import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { ProjectsClient } from "@/components/dashboard/admin/ProjectsClient";
+import { getCurrentUser } from "@/lib/api-utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
-  // 🔐 GET USER FROM TOKEN
-  const cookieStore = await cookies();
-  const token = cookieStore.get("incident_token")?.value;
-
-  if (!token) throw new Error("Unauthorized");
-
-  let user: { orgId: string };
-  try {
-    user = jwt.verify(token, process.env.JWT_SECRET!) as { orgId: string };
-  } catch {
-    throw new Error("Invalid token");
+  const currentUser = await getCurrentUser();
+  if (!currentUser || currentUser.role !== "ADMIN" || !currentUser.orgId) {
+    redirect("/auth/login");
   }
 
   // 🔥 MAIN FIX: FILTER BY orgId
   const projects = await prisma.project.findMany({
     where: {
-      orgId: user.orgId,
+      orgId: currentUser.orgId,
     },
     include: {
       teams: true,

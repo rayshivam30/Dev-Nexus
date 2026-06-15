@@ -5,6 +5,10 @@ const prismaMock = createPrismaMock();
 // Register all mock modules BEFORE standard imports
 mock.module("@/lib/db", () => ({ prisma: prismaMock }));
 mock.module("../src/lib/db", () => ({ prisma: prismaMock }));
+// api-ingest.test mocks this module globally; restore the real service here
+mock.module("@/services/notification-service", () =>
+  import("../src/services/notification-service")
+);
 
 import { expect, test, describe } from "bun:test";
 import { notifyOrgStaff, createNotification, getNotifications, markAsRead, markAllAsRead } from "../src/services/notification-service";
@@ -21,15 +25,15 @@ describe("Notification Service", () => {
       { id: "staff-1", role: "ADMIN" },
       { id: "staff-2", role: "MANAGER" }
     ]);
-    prismaMock.notification.createMany.mockClear();
-    prismaMock.notification.createMany.mockResolvedValue({ count: 2 });
+    prismaMock.notification.createMany.mockImplementation(() =>
+      Promise.resolve({ count: 2 })
+    );
     const result = await notifyOrgStaff("org-1", {
       type: "INCIDENT_CREATED",
       title: "Alert",
       message: "Something happened"
     });
 
-    console.log("DEBUG notifyOrgStaff result:", result);
     expect(result).toBeDefined();
     expect((result as { count: number }).count).toBe(2);
     

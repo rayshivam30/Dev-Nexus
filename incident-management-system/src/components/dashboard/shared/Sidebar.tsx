@@ -34,10 +34,7 @@ export function Sidebar({ navItems, roleTitle }: SidebarProps) {
 
     async function fetchUnreadCount() {
       try {
-        const token = localStorage.getItem("incident_token");
-        const res = await fetch("/api/notifications", {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        });
+        const res = await fetch("/api/notifications");
 
         if (!res.ok) return;
 
@@ -72,7 +69,6 @@ export function Sidebar({ navItems, roleTitle }: SidebarProps) {
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
       if (res.ok) {
-        localStorage.removeItem("incident_token");
         router.push("/auth/login");
         router.refresh();
       }

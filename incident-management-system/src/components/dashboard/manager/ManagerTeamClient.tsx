@@ -40,10 +40,9 @@ export function ManagerTeamClient({ projectId, projectName, teams }: ManagerTeam
     setTeamError("");
     setTeamLoading(true);
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch("/api/teams", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: teamName, projectId }),
       });
       const data = await res.json();

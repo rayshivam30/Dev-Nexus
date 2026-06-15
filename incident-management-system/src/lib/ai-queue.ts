@@ -79,7 +79,6 @@ async function processQueue(): Promise<void> {
         queue.unshift(item);
         processQueue();
       }, delay);
-      activeCount--;
       return; // Don't process next yet
     }
 

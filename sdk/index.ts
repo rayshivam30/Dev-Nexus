@@ -16,6 +16,8 @@ export interface DevNexusConfig {
   autoCapture?: boolean;
   maxRetries?: number;
   flushInterval?: number; // ms
+  /** Persist queued reports in localStorage. Disabled by default to limit sensitive data exposure. */
+  persistOffline?: boolean;
   /** Hook to modify or scrub data before it is sent. Return null to cancel. */
   beforeSend?: (payload: any) => any | null;
 }
@@ -52,6 +54,8 @@ class DevNexusClient {
   private queue: any[] = [];
   private flushTimer: any = null;
   private flushInterval: number;
+  private persistOffline: boolean;
+  private storageKey: string;
 
   constructor(config: DevNexusConfig) {
     this.apiKey     = config.apiKey;
@@ -59,6 +63,8 @@ class DevNexusClient {
     this.maxRetries = config.maxRetries ?? 3;
     this.flushInterval = config.flushInterval ?? DEFAULT_FLUSH_INT;
     this.beforeSend = config.beforeSend;
+    this.persistOffline = config.persistOffline ?? false;
+    this.storageKey = `${STORAGE_KEY}:${config.apiKey.slice(-12)}`;
 
     this.loadFromStorage();
 
@@ -238,16 +244,16 @@ class DevNexusClient {
   // ── Persistence ─────────────────────────────────────────────────────────────
 
   private saveToStorage() {
-      if (typeof window === "undefined" || !window.localStorage) return;
+      if (!this.persistOffline || typeof window === "undefined" || !window.localStorage) return;
       try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue.slice(-50)));
+          localStorage.setItem(this.storageKey, JSON.stringify(this.queue.slice(-50)));
       } catch (e) {}
   }
 
   private loadFromStorage() {
-      if (typeof window === "undefined" || !window.localStorage) return;
+      if (!this.persistOffline || typeof window === "undefined" || !window.localStorage) return;
       try {
-          const stored = localStorage.getItem(STORAGE_KEY);
+          const stored = localStorage.getItem(this.storageKey);
           if (stored) {
               this.queue = JSON.parse(stored);
           }

@@ -1,84 +1,136 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { hashPassword } from '@/lib/hash';
-import { verifyToken, signToken, JwtPayload } from '@/lib/jwt';
-import { acceptInviteSchema } from '@/lib/validations';
+import crypto from "crypto";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { hashPassword } from "@/lib/hash";
+import { signToken } from "@/lib/jwt";
+import { acceptInviteSchema } from "@/lib/validations";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const result = acceptInviteSchema.safeParse(body);
-
     if (!result.success) {
-      return NextResponse.json({ error: 'Missing or invalid fields', details: result.error.flatten() }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Missing or invalid fields",
+          details: result.error.flatten(),
+        },
+        { status: 400 }
+      );
     }
 
     const { token, password } = result.data;
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const invite = await prisma.invite.findUnique({
+      where: { token: tokenHash },
+    });
 
-    // Verify the invite token
-    const decoded = verifyToken(token) as JwtPayload;
-    if (!decoded || !decoded.email || !decoded.role || !decoded.orgId) {
-      return NextResponse.json({ error: 'Invalid or expired invite link' }, { status: 400 });
+    if (
+      !invite ||
+      invite.acceptedAt ||
+      invite.expiresAt < new Date() ||
+      !invite.orgId ||
+      !["MANAGER", "DEVELOPER"].includes(invite.role)
+    ) {
+      return NextResponse.json(
+        { error: "Invalid or expired invite link" },
+        { status: 400 }
+      );
     }
 
-    const { email, role, orgId, projectId, teamId } = decoded;
+    const role = invite.role as "MANAGER" | "DEVELOPER";
+    const project = await prisma.project.findFirst({
+      where: { id: invite.projectId, orgId: invite.orgId },
+      select: { id: true },
+    });
+    if (!project) {
+      return NextResponse.json(
+        { error: "Invite target no longer exists" },
+        { status: 400 }
+      );
+    }
 
-    // Managers and Developers can only register via invite.
-    // Check if this email is already taken.
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (role === "DEVELOPER") {
+      const team = await prisma.team.findFirst({
+        where: { id: invite.teamId || undefined, projectId: invite.projectId },
+        select: { id: true },
+      });
+      if (!team) {
+        return NextResponse.json(
+          { error: "Invite team no longer exists" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: invite.email },
+    });
     if (existingUser) {
       return NextResponse.json(
-        { error: 'This email is already registered. Please log in instead.' },
+        { error: "This email is already registered. Please log in instead." },
         { status: 409 }
       );
     }
 
     const passwordHash = await hashPassword(password);
-
-    // Create the user as ACTIVE immediately — no approval needed for invited users
-    // For MANAGER role, save the projectId from the invite token
-    // For DEVELOPER role, save the teamId from the invite token
-    const user = await prisma.user.create({
-      data: {
-        email: email as string,
-        passwordHash,
-        role,
-        status: 'ACTIVE',
-        orgId,
-        ...(role === 'MANAGER' && projectId ? { projectId } : {}),
-        ...(role === 'DEVELOPER' && teamId ? { teamId } : {}),
-      },
+    const user = await prisma.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: {
+          email: invite.email,
+          passwordHash,
+          role,
+          status: "ACTIVE",
+          orgId: invite.orgId,
+          ...(role === "MANAGER" ? { projectId: invite.projectId } : {}),
+          ...(role === "DEVELOPER" && invite.teamId
+            ? { teamId: invite.teamId }
+            : {}),
+        },
+      });
+      await tx.invite.update({
+        where: { id: invite.id },
+        data: { acceptedAt: new Date() },
+      });
+      return createdUser;
     });
 
-    // Sign a session token so the user is immediately logged in
     const sessionToken = signToken(
-      { userId: user.id, role: user.role, orgId: user.orgId || undefined },
-      '7d'
+      {
+        userId: user.id,
+        role: user.role,
+        orgId: user.orgId || undefined,
+      },
+      "7d"
     );
 
-    const response = NextResponse.json({
-      message: 'Account created successfully',
-      token: sessionToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        orgId: user.orgId,
+    const response = NextResponse.json(
+      {
+        message: "Account created successfully",
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          orgId: user.orgId,
+        },
       },
-    }, { status: 201 });
+      { status: 201 }
+    );
 
-    response.cookies.set('incident_token', sessionToken, {
+    response.cookies.set("incident_token", sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
     });
 
     return response;
-
   } catch (error) {
-    console.error('Accept invite error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Accept invite error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

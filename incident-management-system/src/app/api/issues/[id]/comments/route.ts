@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/db";
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { addComment } from "@/services/issue-service";
 import { EVENTS, emitEvent } from "@/lib/events";
+import { getActiveSessionUser, getAuthorizedIssue } from "@/lib/authorization";
 
 export const POST = withAuth(async (_req, { decoded, body, params }) => {
   const { id } = await (params as { id: string });
@@ -12,11 +12,9 @@ export const POST = withAuth(async (_req, { decoded, body, params }) => {
   }
 
   try {
-    const issue = await prisma.issue.findUnique({
-      where: { id },
-      include: { project: { select: { orgId: true } } }
-    });
-
+    const user = await getActiveSessionUser(decoded);
+    if (!user) return apiError("Unauthorized", 401);
+    const issue = await getAuthorizedIssue(id, user);
     if (!issue) return apiError("Issue not found", 404);
 
     const comment = await addComment(id, decoded.userId as string, text);

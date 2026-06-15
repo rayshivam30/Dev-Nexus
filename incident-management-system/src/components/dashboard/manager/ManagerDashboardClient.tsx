@@ -62,12 +62,10 @@ export function ManagerDashboardClient({
     setCreateError("");
     setCreating(true);
     try {
-      const token = localStorage.getItem("incident_token") || "";
       const res = await fetch("/api/teams", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ name: teamName, projectId: project.id }),
       });

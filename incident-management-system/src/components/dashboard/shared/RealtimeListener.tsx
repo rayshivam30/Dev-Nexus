@@ -49,10 +49,6 @@ export function RealtimeListener() {
     // Only establish connection if we are in the dashboard area
     if (!pathname.startsWith("/dashboard")) return;
 
-    // Check if the user is logged in
-    const token = localStorage.getItem("incident_token");
-    if (!token) return;
-
     let eventSource: EventSource;
 
     const connectSSE = () => {
@@ -61,7 +57,6 @@ export function RealtimeListener() {
 
       // Helper to post message to Service Worker for background native OS notifications
       const triggerSystemNotification = (title: string, body: string, url: string, issueId?: string, severity?: string) => {
-        const authToken = localStorage.getItem("incident_token");
         if (
           "Notification" in window &&
           Notification.permission === "granted" &&
@@ -70,7 +65,7 @@ export function RealtimeListener() {
         ) {
           navigator.serviceWorker.controller.postMessage({
             type: "SHOW_NOTIFICATION",
-            payload: { title, body, url, token: authToken, issueId, severity },
+            payload: { title, body, url, issueId, severity },
           });
         }
       };

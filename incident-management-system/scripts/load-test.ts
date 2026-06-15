@@ -287,7 +287,7 @@ async function testManualIssueCreation(token: string, projectId: string | null):
 async function getTestData(): Promise<{ token: string; projectId: string | null }> {
   // Try to find a real admin user and a project from the database
   try {
-    const { PrismaClient } = await import("@prisma/client");
+    const { PrismaClient } = await import("@devnexus/prisma-client");
     const prisma = new PrismaClient({ log: [] });
     
     const admin = await prisma.user.findFirst({

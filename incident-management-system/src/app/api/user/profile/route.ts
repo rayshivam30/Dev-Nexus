@@ -109,21 +109,16 @@ export const GET = withAuth(async (req, { decoded }) => {
     const now = new Date();
 
     if (user.role === "ADMIN") {
-      // Find all project IDs in the admin's organization
-      let targetOrgId = user.orgId;
-      if (!targetOrgId) {
-        // Fallback for primary admin if orgId is missing but role is ADMIN
-        const firstOrg = await prisma.organization.findFirst({ select: { id: true } });
-        targetOrgId = firstOrg?.id || null;
-      }
+      const targetOrgId = user.orgId;
+      if (!targetOrgId) return apiError("Organization is required", 403);
 
       const [resolved, breached, total] = await Promise.all([
         prisma.issue.count({
-          where: { project: { orgId: targetOrgId || undefined }, status: "RESOLVED" },
+          where: { project: { orgId: targetOrgId }, status: "RESOLVED" },
         }),
         prisma.issue.count({
           where: { 
-            project: { orgId: targetOrgId || undefined }, 
+            project: { orgId: targetOrgId },
             OR: [
               { responseBreached: true }, 
               { resolutionBreached: true },
@@ -133,7 +128,7 @@ export const GET = withAuth(async (req, { decoded }) => {
           },
         }),
         prisma.issue.count({
-          where: { project: { orgId: targetOrgId || undefined } },
+          where: { project: { orgId: targetOrgId } },
         })
       ]);
       resolvedCount = resolved;
@@ -225,10 +220,11 @@ export const GET = withAuth(async (req, { decoded }) => {
 
     if (user.role === "ADMIN") {
       const orgId = user.orgId || user.organization?.id;
+      if (!orgId) return apiError("Organization is required", 403);
       const [projectCount, teamCount, memberCount] = await Promise.all([
-        prisma.project.count({ where: { orgId: orgId || undefined } }),
-        prisma.team.count({ where: { project: { orgId: orgId || undefined } } }),
-        prisma.user.count({ where: { orgId: orgId || undefined } }),
+        prisma.project.count({ where: { orgId } }),
+        prisma.team.count({ where: { project: { orgId } } }),
+        prisma.user.count({ where: { orgId } }),
       ]);
 
       roleContext = {

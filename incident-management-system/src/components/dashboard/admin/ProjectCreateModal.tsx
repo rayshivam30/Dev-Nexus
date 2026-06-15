@@ -20,11 +20,9 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
     e.preventDefault();
     setCreateProjectLoading(true);
     try {
-      const token = localStorage.getItem("incident_token") || "";
-      
       const projectRes = await fetch("/api/projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newProjectName, description: newProjectDesc, plan })
       });
       
@@ -38,10 +36,7 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
       if (inviteManagerEmail.trim()) {
         const inviteRes = await fetch("/api/auth/invite", {
           method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: inviteManagerEmail.trim(),
             role: "MANAGER",
@@ -60,10 +55,21 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
     }
   }
 
-  const handleConnectGitHub = () => {
+  const handleConnectGitHub = async () => {
+      if (!createdProjectId) return;
+      const response = await fetch(`/api/projects/${createdProjectId}/github-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ createInstallationState: true }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || "Failed to start GitHub connection");
+        return;
+      }
       const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG;
-      const githubAppUrl = `https://github.com/apps/${appSlug}/installations/new?state=${createdProjectId}`;
-      window.open(githubAppUrl, "_blank");
+      const githubAppUrl = `https://github.com/apps/${appSlug}/installations/new?state=${encodeURIComponent(data.state)}`;
+      window.open(githubAppUrl, "_blank", "noopener,noreferrer");
       onSuccess(createdSdkKey || undefined, createdProjectId || undefined);
   };
 

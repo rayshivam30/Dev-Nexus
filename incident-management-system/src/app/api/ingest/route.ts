@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { IssueSource, IssueSeverity, Prisma, Project } from "@prisma/client";
+import { IssueSource, IssueSeverity, Prisma, Project } from "@devnexus/prisma-client";
 import { calculateSLADeadlines } from "@/services/issue-service";
 import { analyzeIncident } from "@/lib/ai-service";
 import { enqueueAITask, getQueueStats } from "@/lib/ai-queue";
@@ -33,6 +33,17 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
+
+function getProjectCorsHeaders(req: Request, allowedOrigins: string[]) {
+  const origin = req.headers.get("origin");
+  if (!origin) return corsHeaders;
+  if (!allowedOrigins.includes(origin)) return null;
+  return {
+    ...corsHeaders,
+    "Access-Control-Allow-Origin": origin,
+    "Vary": "Origin",
+  };
+}
 
 // ── Rate limiter ─────────────────────────────────────────────────────────────
 const RATE_WINDOW_MS = 60_000;   // 1 minute
@@ -114,12 +125,30 @@ async function checkRateLimit(key: string): Promise<RateLimitInfo> {
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MAX_PAYLOAD_BYTES = 512 * 1024;  // Increased to 512 KB for batches
 const MAX_STACK_CHARS   = 10_000;
+const MAX_MESSAGE_CHARS = 10_000;
+const MAX_BATCH_REPORTS = 50;
 
 async function processReport(payload: IngestReportPayload, project: Project) {
     const { message, stack, browserInfo, osInfo, severity: severityOverride, tags, source: customSource, metadata, breadcrumbs } = payload;
 
-    if (!message || typeof message !== "string") {
+    if (
+      !message ||
+      typeof message !== "string" ||
+      message.length > MAX_MESSAGE_CHARS
+    ) {
       throw new Error("Invalid message");
+    }
+    if (
+      customSource &&
+      !Object.values(IssueSource).includes(customSource as IssueSource)
+    ) {
+      throw new Error("Invalid source");
+    }
+    if (
+      severityOverride &&
+      !Object.values(IssueSeverity).includes(severityOverride as IssueSeverity)
+    ) {
+      throw new Error("Invalid severity");
     }
 
     const truncatedStack = stack ? String(stack).substring(0, MAX_STACK_CHARS) : undefined;
@@ -253,16 +282,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
     }
     const apiKey = authHeader.split(" ")[1];
-
-    const rateCheck = await checkRateLimit(apiKey);
-    const rlHeaders = {
-      "X-RateLimit-Limit": String(rateCheck.limit),
-      "X-RateLimit-Remaining": String(rateCheck.remaining),
-      "X-RateLimit-Reset": String(rateCheck.reset),
-    };
-
-    if (!rateCheck.allowed) {
-      return NextResponse.json({ error: "Rate Limit Exceeded" }, { status: 429, headers: { ...corsHeaders, ...rlHeaders } });
+    if (!apiKey || apiKey.length > 256) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
     }
 
     const hashedKey = apiKey.startsWith("devnexus_sk_") ? hashApiKey(apiKey) : apiKey;
@@ -270,10 +291,47 @@ export async function POST(req: Request) {
     if (!project) {
       return NextResponse.json({ error: "Invalid API Key" }, { status: 401, headers: corsHeaders });
     }
+    const projectCorsHeaders = getProjectCorsHeaders(req, project.allowedOrigins);
+    if (!projectCorsHeaders) {
+      return NextResponse.json(
+        { error: "Origin is not allowed for this project" },
+        { status: 403 }
+      );
+    }
 
-    const payload = await req.json();
+    const rateCheck = await checkRateLimit(project.id);
+    const rlHeaders = {
+      "X-RateLimit-Limit": String(rateCheck.limit),
+      "X-RateLimit-Remaining": String(rateCheck.remaining),
+      "X-RateLimit-Reset": String(rateCheck.reset),
+    };
+
+    if (!rateCheck.allowed) {
+      return NextResponse.json({ error: "Rate Limit Exceeded" }, { status: 429, headers: { ...projectCorsHeaders, ...rlHeaders } });
+    }
+
+    const rawBody = await req.text();
+    if (Buffer.byteLength(rawBody, "utf8") > MAX_PAYLOAD_BYTES) {
+      return NextResponse.json({ error: "Payload Too Large" }, { status: 413, headers: projectCorsHeaders });
+    }
+
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(rawBody) as Record<string, unknown>;
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: projectCorsHeaders });
+    }
     
     if (payload.isBatch && Array.isArray(payload.reports)) {
+      if (
+        payload.reports.length === 0 ||
+        payload.reports.length > MAX_BATCH_REPORTS
+      ) {
+        return NextResponse.json(
+          { error: `Batch must contain between 1 and ${MAX_BATCH_REPORTS} reports` },
+          { status: 400, headers: { ...projectCorsHeaders, ...rlHeaders } }
+        );
+      }
       const issueIds = [];
       for (const report of payload.reports) {
         try {
@@ -283,11 +341,14 @@ export async function POST(req: Request) {
           logger.error({ err: e }, "Failed to process report in batch");
         }
       }
-      return NextResponse.json({ success: true, issueIds }, { status: 201, headers: { ...corsHeaders, ...rlHeaders } });
+      return NextResponse.json({ success: true, issueIds }, { status: 201, headers: { ...projectCorsHeaders, ...rlHeaders } });
     }
 
-    const issueId = await processReport(payload, project);
-    return NextResponse.json({ success: true, issueId }, { status: 201, headers: { ...corsHeaders, ...rlHeaders } });
+    const issueId = await processReport(
+      payload as unknown as IngestReportPayload,
+      project
+    );
+    return NextResponse.json({ success: true, issueId }, { status: 201, headers: { ...projectCorsHeaders, ...rlHeaders } });
 
   } catch (error) {
     logger.error({ err: error }, "SDK Ingest API Error");

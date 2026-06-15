@@ -1,6 +1,6 @@
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { createProject, deleteProject, getProjectsByOrg } from "@/services/project-service";
-import { PlanType } from "@prisma/client";
+import { PlanType } from "@devnexus/prisma-client";
 
 export const GET = withAuth(async (_req, { decoded }) => {
   if (!decoded.orgId) return apiError("Organization ID is missing in token", 401);
@@ -33,14 +33,16 @@ export const POST = withAuth(async (req, { decoded, body }) => {
   }
 }, ["ADMIN"]);
 
-export const DELETE = withAuth(async (req) => {
+export const DELETE = withAuth(async (req, { decoded }) => {
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
 
   if (!id) return apiError("Project ID is required", 400);
+  if (!decoded.orgId) return apiError("Organization ID is missing", 403);
 
   try {
-    await deleteProject(id);
+    const result = await deleteProject(id, decoded.orgId);
+    if (result.count !== 1) return apiError("Project not found", 404);
     return apiResponse("Project deleted successfully!");
   } catch (error) {
     console.error("Project deletion error:", error);
