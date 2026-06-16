@@ -1,10 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Generate a secure 32-character random hex token
-    const token = crypto.randomBytes(16).toString("hex");
+    // Reuse existing CSRF token from cookie if present and valid (32-character hex)
+    let token = request.cookies.get("csrf_token")?.value;
+    
+    if (!token || !/^[a-f0-9]{32}$/i.test(token)) {
+      token = crypto.randomBytes(16).toString("hex");
+    }
     
     // Create response returning the token
     const response = NextResponse.json({ token });

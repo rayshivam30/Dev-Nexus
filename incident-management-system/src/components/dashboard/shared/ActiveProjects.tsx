@@ -1,7 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { FolderKanban } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "./EmptyState";
 
 export interface ProjectStats {
   id: string;
@@ -21,7 +23,7 @@ export function ActiveProjects({ projects }: { projects: ProjectStats[] }) {
 
       <div className="space-y-3">
         {projects.map((project, idx) => (
-          <div key={project.id} className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+          <div key={project.id} className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover-card-polish">
             <div className="flex justify-between items-center mb-3">
               <div>
                 <span className="text-sm font-semibold text-white">{project.name}</span>
@@ -52,9 +54,11 @@ export function ActiveProjects({ projects }: { projects: ProjectStats[] }) {
         ))}
         
         {projects.length === 0 && (
-          <div className="text-sm text-zinc-600 text-center py-8 border border-white/[0.06] border-dashed rounded-xl">
-            No projects found
-          </div>
+          <EmptyState
+            icon={FolderKanban}
+            title="No projects yet"
+            description="Create your first project to start tracking incidents across your infrastructure."
+          />
         )}
         
         {projects.length > 0 && (

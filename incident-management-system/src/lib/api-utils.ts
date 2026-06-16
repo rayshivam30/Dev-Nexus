@@ -12,24 +12,55 @@ export function verifyCsrf(req: NextRequest): boolean {
 
   const origin = req.headers.get("origin");
   const referer = req.headers.get("referer");
-  const host = req.headers.get("host") || "";
+  
+  // Resolve host (checking x-forwarded-host for proxies)
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
+
+  console.log("CSRF verification attempt:", { origin, referer, host });
+
+  const isDev = process.env.NODE_ENV === "development";
+
+  const isHostAllowed = (clientHost: string, headerHost: string) => {
+    if (clientHost === headerHost) return true;
+    
+    if (isDev) {
+      const normalize = (h: string) => {
+        const name = h.split(":")[0];
+        return name === "127.0.0.1" ? "localhost" : name;
+      };
+      
+      // Allow localhost and 127.0.0.1 interchangeably
+      if (normalize(clientHost) === normalize(headerHost)) return true;
+      
+      // Ignore port differences if proxying or port forwarding is active in dev
+      const clientName = clientHost.split(":")[0];
+      const headerName = headerHost.split(":")[0];
+      if (normalize(clientName) === normalize(headerName)) return true;
+    }
+    
+    return false;
+  };
 
   if (origin) {
     try {
       const originUrl = new URL(origin);
-      if (originUrl.host !== host) {
+      if (!isHostAllowed(originUrl.host, host)) {
+        console.log("CSRF fail: Origin host mismatch", { originHost: originUrl.host, hostHeader: host });
         return false;
       }
-    } catch {
+    } catch (e) {
+      console.log("CSRF fail: invalid origin URL", origin, e);
       return false;
     }
   } else if (referer) {
     try {
       const refererUrl = new URL(referer);
-      if (refererUrl.host !== host) {
+      if (!isHostAllowed(refererUrl.host, host)) {
+        console.log("CSRF fail: Referer host mismatch", { refererHost: refererUrl.host, hostHeader: host });
         return false;
       }
-    } catch {
+    } catch (e) {
+      console.log("CSRF fail: invalid referer URL", referer, e);
       return false;
     }
   }
@@ -39,9 +70,11 @@ export function verifyCsrf(req: NextRequest): boolean {
   const csrfHeader = req.headers.get("x-csrf-token");
   
   if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
+    console.log("CSRF fail: Double-submit token check failed", { csrfCookie, csrfHeader });
     return false;
   }
 
+  console.log("CSRF verification passed");
   return true;
 }
 

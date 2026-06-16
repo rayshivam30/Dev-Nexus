@@ -37,7 +37,7 @@ export default function RootLayout({
       lang="en"
       className={`font-sans h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-glow-spotlight">
         <CsrfInit />
         <NetworkStatus />
         <ToastProvider>{children}</ToastProvider>

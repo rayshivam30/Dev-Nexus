@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { isAllowedUrl } from "@/lib/sanitize";
 import { Issue } from "./RecentIssues";
 import { useToast } from "@/components/ui/ToastProvider";
+import { motion, AnimatePresence } from "framer-motion";
 
 export interface TeamData { id: string; name: string; projectId: string; }
 export interface DeveloperData { id: string; name?: string | null; email: string; teamId: string | null; }
@@ -149,8 +150,6 @@ export function IssueDetailModal({
     }
   };
 
-  if (!initialIssue) return null;
-
   const showAssignForm = allowAssign && issue?.status === "OPEN";
   const inputClass = "w-full px-4 py-3 bg-white/[0.03] border border-white/[0.08] rounded-xl focus:outline-none focus:border-white/20 text-sm transition-all";
 
@@ -162,8 +161,21 @@ export function IssueDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[150] flex items-center justify-center p-4 sm:p-8 overflow-y-auto">
-      <div className="bg-[#111113] border border-white/[0.08] rounded-2xl w-full max-w-5xl flex flex-col md:flex-row relative animate-in zoom-in-95 duration-200 max-h-[90vh]">
+    <AnimatePresence>
+      {initialIssue && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[150] flex items-center justify-center p-4 sm:p-8 overflow-y-auto"
+        >
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="bg-[#111113] border border-white/[0.08] rounded-2xl w-full max-w-5xl flex flex-col md:flex-row relative max-h-[90vh]"
+          >
         
         {/* Mobile header */}
         <div className="md:hidden flex justify-between items-center p-4 border-b border-white/[0.06]">
@@ -470,8 +482,10 @@ export function IssueDetailModal({
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
   );
 }
 

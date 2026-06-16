@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { ArrowRight, Bell, CheckCheck, Clock, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/dashboard/shared/EmptyState";
 
 interface Notification {
   id: string;
@@ -91,17 +92,18 @@ export function NotificationsClient() {
           <p className="text-sm text-zinc-600 animate-pulse">Loading notifications...</p>
         </div>
       ) : notifications.length === 0 ? (
-        <div className="p-16 text-center border border-white/[0.06] border-dashed rounded-2xl space-y-3">
-          <Inbox className="w-12 h-12 mx-auto text-zinc-700" />
-          <p className="text-sm text-zinc-500">No notifications</p>
-        </div>
+        <EmptyState
+          icon={Inbox}
+          title="All clear"
+          description="You have no notifications. When incidents are created, assigned, or resolved, you'll see updates here."
+        />
       ) : (
         <div className="space-y-2">
           {notifications.map((notification) => (
             <div
               key={notification.id}
               className={cn(
-                "p-4 rounded-xl border transition-all flex items-start gap-4",
+                "p-4 rounded-xl border transition-all hover-card-polish flex items-start gap-4",
                 notification.isRead
                   ? "border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.03]"
                   : "border-emerald-500/20 bg-emerald-500/[0.03] hover:bg-emerald-500/[0.06]"

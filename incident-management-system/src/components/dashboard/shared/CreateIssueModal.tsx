@@ -5,6 +5,7 @@ import { Loader2, X, AlertCircle, Plus, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/ToastProvider";
 import { sanitizeText } from "@/lib/input-sanitizer";
+import { motion, AnimatePresence } from "framer-motion";
 
 export interface ProjectData { id: string; name: string; }
 export interface TeamData { id: string; name: string; projectId: string; }
@@ -64,7 +65,6 @@ export function CreateIssueModal({
     return developers;
   }, [developers, selectedTeamId]);
 
-  if (!isOpen) return null;
 
   const projectRequired = !fixedProjectId && projects && projects.length > 0;
 
@@ -138,8 +138,21 @@ export function CreateIssueModal({
   const labelClass = "text-xs text-zinc-500 ml-1 mb-1.5 block";
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 md:p-8 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-[#111113] border border-white/[0.08] rounded-2xl w-full max-w-3xl animate-in zoom-in-95 duration-200 my-auto">
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 md:p-8 overflow-y-auto"
+        >
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="bg-[#111113] border border-white/[0.08] rounded-2xl w-full max-w-3xl my-auto"
+          >
         
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-white/[0.06]">
@@ -326,7 +339,9 @@ export function CreateIssueModal({
             </div>
           </form>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

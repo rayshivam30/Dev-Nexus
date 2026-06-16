@@ -143,13 +143,11 @@ export function TeamDetailClient({ team }: { team: Team }) {
         </div>
       </div>
 
-      {viewingIssue && (
-        <IssueDetailModal
-          issue={viewingIssue}
-          onClose={() => setViewingIssue(null)}
-          allowAssign={false}
-        />
-      )}
+      <IssueDetailModal
+        issue={viewingIssue}
+        onClose={() => setViewingIssue(null)}
+        allowAssign={false}
+      />
     </div>
   );
 }

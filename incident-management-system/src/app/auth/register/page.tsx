@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from "framer-motion";
 
 /* ── Password strength calculator ── */
 function getPasswordStrength(password: string): { score: number; label: string; color: string } {
-  const fullRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{12,128}$/;
   const hasUpperCase = /[A-Z]/.test(password);
   const hasLowerCase = /[a-z]/.test(password);
   const hasNumbers = /\d/.test(password);
@@ -28,7 +27,7 @@ function getPasswordStrength(password: string): { score: number; label: string; 
   if (password.length >= 16) score = 3;
   if (password.length >= 20 && /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]{2,}/.test(password)) score = 4;
 
-  if (!fullRegex.test(password)) {
+  if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar || password.length > 128) {
     return { score: 1, label: "Weak/Invalid", color: "bg-orange-500" };
   }
 

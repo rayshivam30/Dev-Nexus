@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { AlertTriangle, ArrowRight, Search, X, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "./EmptyState";
 
 export interface Issue {
   id: string;
@@ -180,15 +181,17 @@ export function RecentIssues({ issues, onAssignClick, onStatusChange, onRowClick
 
       <div className="space-y-2">
         {filteredIssues.length === 0 ? (
-          <div className="p-12 border border-white/[0.06] border-dashed rounded-2xl text-center">
-            <p className="text-sm text-zinc-600">No matching incidents found.</p>
-          </div>
+          <EmptyState 
+            icon={Search}
+            title="No incidents found"
+            description="We couldn't find any incidents matching your current filters and search query."
+          />
         ) : (
           filteredIssues.map((issue) => (
           <div 
             key={issue.id} 
             onClick={() => onRowClick && onRowClick(issue)}
-            className="group cursor-pointer p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all"
+            className="group cursor-pointer p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover-card-polish"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 min-w-0 flex-1">

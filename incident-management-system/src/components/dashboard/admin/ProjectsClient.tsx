@@ -7,6 +7,7 @@ import { ProjectSdkKeyModal } from "./ProjectSdkKeyModal";
 import Link from "next/link";
 import { useToast } from "@/components/ui/ToastProvider";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { EmptyState } from "@/components/dashboard/shared/EmptyState";
 
 interface TeamSummary {
   id: string;
@@ -82,18 +83,24 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {initialProjects.length === 0 ? (
-          <div className="col-span-full p-16 border border-white/[0.06] border-dashed rounded-2xl bg-white/[0.02] text-center">
-            <p className="text-sm text-zinc-500">No projects found</p>
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="mt-4 text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
-            >
-              Create your first project
-            </button>
+          <div className="col-span-full">
+            <EmptyState
+              icon={FolderKanban}
+              title="No projects yet"
+              description="Create your first project to start tracking incidents across your infrastructure."
+              action={
+                <button 
+                  onClick={() => setIsModalOpen(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-500 transition-all"
+                >
+                  <Plus className="w-4 h-4" /> Create your first project
+                </button>
+              }
+            />
           </div>
         ) : (
           initialProjects.map(p => (
-            <div key={p.id} className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all flex flex-col">
+            <div key={p.id} className="group rounded-2xl border border-white/[0.06] bg-white/[0.02] hover-card-polish flex flex-col">
                <div className="p-6 flex-1">
                   <div className="flex justify-between items-start mb-4">
                     <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">

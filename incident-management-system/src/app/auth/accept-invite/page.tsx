@@ -107,7 +107,6 @@ function AcceptInviteContent() {
       setError("Passwords do not match.");
       return;
     }
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{12,128}$/;
     if (!password) {
       setError("Password is required.");
       return;
@@ -116,12 +115,17 @@ function AcceptInviteContent() {
       setError("Password must be at least 12 characters.");
       return;
     }
-    if (!passwordRegex.test(password)) {
-      setError("Password must contain uppercase, lowercase, number, and special character (!@#$%^&*).");
-      return;
-    }
     if (password.length > 128) {
       setError("Password cannot exceed 128 characters.");
+      return;
+    }
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
+      setError("Password must contain at least one uppercase letter, lowercase letter, number, and special character.");
       return;
     }
 

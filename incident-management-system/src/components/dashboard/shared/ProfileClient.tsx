@@ -520,7 +520,10 @@ export function ProfileClient() {
               </AnimatePresence>
 
               {skills.length === 0 ? (
-                <p className="w-full py-4 text-center text-sm text-zinc-700">No skills added</p>
+                <div className="w-full py-6 text-center rounded-xl border border-dashed border-white/[0.06] bg-white/[0.01]">
+                  <p className="text-sm text-zinc-600">No skills added yet</p>
+                  {isEditing && <p className="text-xs text-zinc-700 mt-1">Type above and press Enter to add</p>}
+                </div>
               ) : null}
             </div>
           </div>
