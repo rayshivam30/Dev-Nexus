@@ -199,7 +199,7 @@ export async function POST(request: Request) {
     response.cookies.set("incident_token", sessionToken, {
       httpOnly: true,
       secure: true,
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: 60 * 60,
       path: "/",
     });
