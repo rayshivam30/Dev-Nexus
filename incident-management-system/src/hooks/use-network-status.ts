@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer } from "react";
 
 interface NetworkConnection {
   effectiveType?: string;
@@ -12,52 +12,118 @@ interface NavigatorWithConnection extends Navigator {
   webkitConnection?: NetworkConnection;
 }
 
+interface NetworkState {
+  isOnline: boolean;
+  isSlowConnection: boolean;
+}
+
+type NetworkAction =
+  | {
+      type: "INIT";
+      payload: {
+        isOnline: boolean;
+        isSlowConnection: boolean;
+      };
+    }
+  | { type: "SET_ONLINE"; payload: boolean }
+  | { type: "SET_SLOW_CONNECTION"; payload: boolean };
+
+function networkReducer(
+  state: NetworkState,
+  action: NetworkAction
+): NetworkState {
+  switch (action.type) {
+    case "INIT":
+      return {
+        ...state,
+        isOnline: action.payload.isOnline,
+        isSlowConnection: action.payload.isSlowConnection,
+      };
+
+    case "SET_ONLINE":
+      return {
+        ...state,
+        isOnline: action.payload,
+      };
+
+    case "SET_SLOW_CONNECTION":
+      return {
+        ...state,
+        isSlowConnection: action.payload,
+      };
+
+    default:
+      return state;
+  }
+}
+
 export function useNetworkStatus() {
-  const [isOnline, setIsOnline] = useState(true); // Always start with true to avoid hydration mismatch
-  const [isSlowConnection, setIsSlowConnection] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+  const [state, dispatch] = useReducer(networkReducer, {
+    // SSR-safe defaults
+    isOnline: true,
+    isSlowConnection: false,
+  });
 
   useEffect(() => {
-    setIsClient(true);
-    
-    if (typeof window === "undefined") return;
+    const handleOnline = () => {
+      dispatch({
+        type: "SET_ONLINE",
+        payload: true,
+      });
+    };
 
-    // Set initial online status after client hydration
-    setIsOnline(navigator.onLine);
+    const handleOffline = () => {
+      dispatch({
+        type: "SET_ONLINE",
+        payload: false,
+      });
+    };
 
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const nav = navigator as NavigatorWithConnection;
+
+    const conn =
+      nav.connection ||
+      nav.mozConnection ||
+      nav.webkitConnection;
+
+    const isSlowConnection =
+      !!conn &&
+      ["slow-2g", "2g"].includes(
+        conn.effectiveType ?? ""
+      );
+
+    // Initialize network state once on mount
+    dispatch({
+      type: "INIT",
+      payload: {
+        isOnline: navigator.onLine,
+        isSlowConnection,
+      },
+    });
+
+    const checkSpeed = () => {
+      dispatch({
+        type: "SET_SLOW_CONNECTION",
+        payload:
+          !!conn &&
+          ["slow-2g", "2g", "3g"].includes(
+            conn.effectiveType ?? ""
+          ),
+      });
+    };
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // Speed / quality check
-    const nav = navigator as NavigatorWithConnection;
-    const conn = nav.connection || nav.mozConnection || nav.webkitConnection;
-
-    const checkSpeed = () => {
-      if (conn) {
-        setIsSlowConnection(
-          conn.effectiveType === "slow-2g" ||
-          conn.effectiveType === "2g" ||
-          conn.effectiveType === "3g"
-        );
-      }
-    };
-
-    checkSpeed();
-    if (conn && conn.addEventListener) {
-      conn.addEventListener("change", checkSpeed);
-    }
+    conn?.addEventListener?.("change", checkSpeed);
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
-      if (conn && conn.removeEventListener) {
-        conn.removeEventListener("change", checkSpeed);
-      }
+
+      conn?.removeEventListener?.("change", checkSpeed);
     };
   }, []);
 
-  return { isOnline: isClient ? isOnline : true, isSlowConnection: isClient ? isSlowConnection : false };
+  return state;
 }
