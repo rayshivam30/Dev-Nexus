@@ -3,9 +3,20 @@
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { AlertCircle, WifiOff } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 export function NetworkStatus() {
   const { isOnline, isSlowConnection } = useNetworkStatus();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Don't render anything during SSR to prevent hydration mismatch
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <AnimatePresence>

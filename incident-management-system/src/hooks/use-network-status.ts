@@ -13,13 +13,17 @@ interface NavigatorWithConnection extends Navigator {
 }
 
 export function useNetworkStatus() {
-  const [isOnline, setIsOnline] = useState(() => 
-    typeof navigator !== "undefined" ? navigator.onLine : true
-  );
+  const [isOnline, setIsOnline] = useState(true); // Always start with true to avoid hydration mismatch
   const [isSlowConnection, setIsSlowConnection] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+    
     if (typeof window === "undefined") return;
+
+    // Set initial online status after client hydration
+    setIsOnline(navigator.onLine);
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -55,5 +59,5 @@ export function useNetworkStatus() {
     };
   }, []);
 
-  return { isOnline, isSlowConnection };
+  return { isOnline: isClient ? isOnline : true, isSlowConnection: isClient ? isSlowConnection : false };
 }
