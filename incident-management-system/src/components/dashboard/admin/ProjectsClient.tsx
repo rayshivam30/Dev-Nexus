@@ -5,6 +5,8 @@ import { Loader2, Trash2, FolderKanban, Plus } from "lucide-react";
 import { ProjectCreateModal } from "./ProjectCreateModal";
 import { ProjectSdkKeyModal } from "./ProjectSdkKeyModal";
 import Link from "next/link";
+import { useToast } from "@/components/ui/ToastProvider";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface TeamSummary {
   id: string;
@@ -27,12 +29,13 @@ interface Project {
 }
 
 export function ProjectsClient({ initialProjects }: { initialProjects: Project[] }) {
+  const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [createdSdkKey, setCreatedSdkKey] = useState<string | null>(null);
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
 
   async function handleDeleteProject(id: string) {
-    if (!confirm("Are you sure you want to delete this project? All associated teams and issues might be affected.")) return;
     setDeleteLoadingId(id);
     try {
       const res = await fetch(`/api/projects?id=${id}`, {
@@ -40,11 +43,23 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to delete project");
+      
+      showToast({
+        tone: "success",
+        title: "Project deleted",
+        description: "The project has been deleted successfully.",
+      });
+      
       window.location.reload();
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to delete project");
+      showToast({
+        tone: "error",
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Failed to delete project",
+      });
     } finally {
       setDeleteLoadingId(null);
+      setProjectToDelete(null);
     }
   }
 
@@ -89,7 +104,7 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        handleDeleteProject(p.id);
+                        setProjectToDelete(p.id);
                       }}
                       disabled={deleteLoadingId === p.id}
                       className="text-zinc-700 hover:text-red-400 transition-colors p-1"
@@ -154,6 +169,21 @@ export function ProjectsClient({ initialProjects }: { initialProjects: Project[]
           }}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={projectToDelete !== null}
+        title="Delete Project"
+        description="Are you sure you want to delete this project? All associated teams and issues might be affected. This action cannot be undone."
+        confirmText="Delete"
+        isDangerous={true}
+        isLoading={deleteLoadingId !== null}
+        onConfirm={() => {
+          if (projectToDelete) {
+            handleDeleteProject(projectToDelete);
+          }
+        }}
+        onCancel={() => setProjectToDelete(null)}
+      />
     </div>
   );
 }

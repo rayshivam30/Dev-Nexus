@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { useState, useMemo } from "react";
+import { AlertTriangle, ArrowRight, Search, X, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface Issue {
@@ -71,23 +72,119 @@ const severityDot: Record<string, string> = {
 };
 
 export function RecentIssues({ issues, onAssignClick, onStatusChange, onRowClick }: RecentIssuesProps) {
-  if (issues.length === 0) {
-    return (
-      <div className="p-12 border border-white/[0.06] border-dashed rounded-2xl text-center">
-        <p className="text-sm text-zinc-600">No active incidents</p>
-      </div>
-    );
-  }
+  const [searchQuery, setSearchQuery] = useState("");
+  const [severityFilter, setSeverityFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+
+  const filteredIssues = useMemo(() => {
+    return issues.filter((issue) => {
+      const matchesSearch =
+        issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        issue.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        issue.id.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesSeverity = severityFilter ? issue.severity.toUpperCase() === severityFilter.toUpperCase() : true;
+      const matchesStatus = statusFilter ? issue.status?.toUpperCase() === statusFilter.toUpperCase() : true;
+
+      return matchesSearch && matchesSeverity && matchesStatus;
+    });
+  }, [issues, searchQuery, severityFilter, statusFilter]);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-lg font-bold tracking-tight">Recent Incidents</h2>
-        <span className="text-xs font-medium text-zinc-500 bg-white/[0.03] border border-white/[0.06] rounded-lg px-2.5 py-1">{issues.length} total</span>
+        <span className="text-xs font-medium text-zinc-500 bg-white/[0.03] border border-white/[0.06] rounded-lg px-2.5 py-1">
+          {filteredIssues.length} of {issues.length} displayed
+        </span>
+      </div>
+
+      {/* Search and Filter panel */}
+      <div className="space-y-3 p-4 rounded-2xl border border-white/[0.06] bg-[#0c0c0e]">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search incidents by title, description, or ID..."
+            className="w-full pl-11 pr-10 py-2.5 bg-white/[0.02] border border-white/[0.06] rounded-xl text-sm focus:outline-none focus:border-white/20 transition-all placeholder:text-zinc-600 text-white"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-white rounded-lg transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-3 items-center text-xs">
+          <span className="text-zinc-500 font-medium flex items-center gap-1">
+            <SlidersHorizontal className="w-3.5 h-3.5" /> Filters:
+          </span>
+          
+          {/* Severity Filters */}
+          <div className="flex flex-wrap gap-1 border-r border-white/[0.06] pr-3">
+            {["CRITICAL", "HIGH", "MEDIUM", "LOW"].map((sev) => (
+              <button
+                key={sev}
+                type="button"
+                onClick={() => setSeverityFilter(severityFilter === sev ? null : sev)}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer",
+                  severityFilter === sev
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                    : "bg-white/[0.02] text-zinc-500 border-white/[0.06] hover:bg-white/[0.04] hover:text-zinc-400"
+                )}
+              >
+                {sev}
+              </button>
+            ))}
+          </div>
+
+          {/* Status Filters */}
+          <div className="flex flex-wrap gap-1">
+            {["OPEN", "ASSIGNED", "IN_PROGRESS", "RESOLVED"].map((st) => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setStatusFilter(statusFilter === st ? null : st)}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer",
+                  statusFilter === st
+                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                    : "bg-white/[0.02] text-zinc-500 border-white/[0.06] hover:bg-white/[0.04] hover:text-zinc-400"
+                )}
+              >
+                {st.replace("_", " ")}
+              </button>
+            ))}
+          </div>
+
+          {(severityFilter || statusFilter || searchQuery) && (
+            <button
+              onClick={() => {
+                setSeverityFilter(null);
+                setStatusFilter(null);
+                setSearchQuery("");
+              }}
+              className="ml-auto text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors"
+            >
+              Clear All
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">
-        {issues.map((issue) => (
+        {filteredIssues.length === 0 ? (
+          <div className="p-12 border border-white/[0.06] border-dashed rounded-2xl text-center">
+            <p className="text-sm text-zinc-600">No matching incidents found.</p>
+          </div>
+        ) : (
+          filteredIssues.map((issue) => (
           <div 
             key={issue.id} 
             onClick={() => onRowClick && onRowClick(issue)}
@@ -175,10 +272,11 @@ export function RecentIssues({ issues, onAssignClick, onStatusChange, onRowClick
                 )}
 
                 <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-zinc-400 transition-colors" />
-              </div>
             </div>
           </div>
-        ))}
+        </div>
+      ))
+    )}
       </div>
     </div>
   );

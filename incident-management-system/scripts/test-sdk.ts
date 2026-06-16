@@ -8,10 +8,11 @@ async function runTest() {
   // NOTE: To test this, you MUST have the DevNexus server running!
   // Run: npm run dev
   
-  const API_KEY = 'devnexus_sk_6b6720cf-8261-4eb0-a439-80214a3ace89'; // Get this from Project -> SDK Integration
+  const API_KEY = process.env.TEST_SDK_API_KEY;
   
-  if (API_KEY != 'devnexus_sk_6b6720cf-8261-4eb0-a439-80214a3ace89') {
-    console.warn('⚠️  Warning: No API key provided. Testing will likely fail with 401.');
+  if (!API_KEY) {
+    console.error('❌ TEST_SDK_API_KEY environment variable is required. Set it in your .env file.');
+    process.exit(1);
   }
 
   // Initialize SDK

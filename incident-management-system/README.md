@@ -94,7 +94,10 @@ bun run start
 ---
 
 ## 📈 Load Testing
-DevNexus includes a custom built-in load-testing suite to verify system stability and concurrency caps. With the production server running, execute:
+DevNexus includes a custom built-in load-testing suite to verify system stability and concurrency caps. With the production server running:
+
+1. Ensure `JWT_SECRET` and `TEST_SDK_API_KEY` are set in your `.env` file.
+2. Run the test:
 ```bash
 npx tsx scripts/load-test.ts
 ```

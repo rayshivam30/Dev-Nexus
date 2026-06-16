@@ -1,6 +1,6 @@
 {
   "name": "devnexus-sdk",
-  "version": "2.0.0",
+  "version": "2.1.1",
   "description": "Official SDK for DevNexus Incident Management System",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -30,6 +30,7 @@
   "author": "DevNexus Team",
   "license": "MIT",
   "devDependencies": {
+    "@types/bun": "^1.3.13",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

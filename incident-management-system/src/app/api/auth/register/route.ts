@@ -18,11 +18,12 @@ export async function POST(request: Request) {
     const { user, verificationToken } = await registerAdmin(email, password, orgName);
 
     // ── Send Verification Email ───────────────────────────────────────────
+    let emailSent = false;
     try {
       const baseUrl = getBaseUrl();
       const verifyUrl = `${baseUrl}/api/auth/verify?token=${verificationToken}`;
 
-      await sendMail({
+      const mailResult = await sendMail({
         to: email,
         subject: "Verify your DevNexus Account",
         html: `
@@ -36,8 +37,19 @@ export async function POST(request: Request) {
           </div>
         `,
       });
+      if (mailResult) {
+        emailSent = true;
+      }
     } catch (emailError) {
       console.error("Failed to send verification email:", emailError);
+    }
+
+    if (!emailSent) {
+      return NextResponse.json({
+        message: 'Registration successful, but we could not send the verification email. Please contact support.',
+        userId: user.id,
+        warning: 'email_delivery_failed'
+      }, { status: 201 });
     }
 
     return NextResponse.json({

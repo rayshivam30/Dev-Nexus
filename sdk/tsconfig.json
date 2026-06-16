@@ -3,6 +3,7 @@
     "target": "ESNext",
     "module": "CommonJS",
     "lib": ["ESNext", "DOM"],
+    "jsx": "react-jsx",
     "declaration": true,
     "declarationMap": true,
     "strict": true,
@@ -12,6 +13,6 @@
     "outDir": "./dist",
     "rootDir": "."
   },
-  "include": ["index.ts"],
+  "include": ["index.ts", "sdk.test.ts", "react.tsx", "react.test.tsx"],
   "exclude": ["node_modules", "dist"]
 }

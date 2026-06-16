@@ -46,20 +46,90 @@ export function escapeHtml(value: string) {
 }
 
 export class FetchError extends Error {
-  info: unknown;
-  status: number;
-  constructor(message: string, info: unknown, status: number) {
+  constructor(
+    message: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    public info: any,
+    public status: number
+  ) {
     super(message);
-    this.info = info;
-    this.status = status;
+    this.name = "FetchError";
   }
 }
 
 export const fetcher = async (url: string) => {
-  const res = await fetch(url);
-  if (!res.ok) {
-    const info = await res.json();
-    throw new FetchError('An error occurred while fetching the data.', info, res.status);
+  try {
+    const res = await fetch(url);
+
+    // Handle non-OK responses
+    if (!res.ok) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let errorData: any = {};
+      
+      try {
+        errorData = await res.json();
+      } catch {
+        errorData = { error: `HTTP ${res.status}: ${res.statusText}` };
+      }
+
+      // Handle network / CORS issues specifically
+      if (res.status === 0) {
+        throw new FetchError(
+          "Network error - CORS or connection failed",
+          { status: 0, error: "CORS_ERROR" },
+          0
+        );
+      }
+
+      throw new FetchError(
+        errorData.error || "An error occurred while fetching the data.",
+        errorData,
+        res.status
+      );
+    }
+
+    // Parse response
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new FetchError(
+        "Invalid JSON response from server",
+        { error: "PARSE_ERROR" },
+        res.status
+      );
+    }
+
+    return data;
+  } catch (err) {
+    // Handle network errors
+    if (err instanceof TypeError) {
+      if (err.message.includes("CORS")) {
+        throw new FetchError(
+          "CORS error - cross-origin request blocked",
+          err,
+          0
+        );
+      }
+      if (err.message.includes("Failed to fetch")) {
+        throw new FetchError(
+          "Network error - check your connection",
+          err,
+          0
+        );
+      }
+    }
+
+    // Re-throw FetchError as-is
+    if (err instanceof FetchError) {
+      throw err;
+    }
+
+    // Handle unknown errors
+    throw new FetchError(
+      "An unexpected error occurred",
+      err,
+      500
+    );
   }
-  return res.json();
 };

@@ -62,11 +62,12 @@ export async function notifyOrgStaff(orgId: string, data: {
   });
 }
 
-export async function getNotifications(userId: string) {
+export async function getNotifications(userId: string, skip = 0, take = 50) {
   return await prisma.notification.findMany({
     where: { userId },
     orderBy: { createdAt: 'desc' },
-    take: 50
+    skip,
+    take
   });
 }
 

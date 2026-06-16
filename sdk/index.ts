@@ -43,6 +43,41 @@ const DEDUP_MAX_SIZE     = 100;    // max fingerprints to keep in memory
 const MAX_BREADCRUMBS    = 20;
 const DEFAULT_FLUSH_INT  = 5000;
 const STORAGE_KEY        = "devnexus_offline_queue";
+const STORAGE_TTL_MS     = 24 * 60 * 60 * 1000; // 24 hours
+
+function isValidQueueEntry(entry: any): boolean {
+  if (typeof entry !== "object" || entry === null) return false;
+  if (entry.message !== undefined && typeof entry.message !== "string") return false;
+  if (entry.stack !== undefined && typeof entry.stack !== "string") return false;
+  if (entry.browserInfo !== undefined && typeof entry.browserInfo !== "string") return false;
+  if (entry.osInfo !== undefined && typeof entry.osInfo !== "string") return false;
+  if (entry.timestamp !== undefined && typeof entry.timestamp !== "number") return false;
+  if (entry._persistedAt !== undefined && typeof entry._persistedAt !== "number") return false;
+  
+  if (entry.tags !== undefined) {
+    if (typeof entry.tags !== "object" || entry.tags === null) return false;
+    for (const key of Object.keys(entry.tags)) {
+      if (typeof entry.tags[key] !== "string") return false;
+    }
+  }
+  
+  if (entry.metadata !== undefined) {
+    if (typeof entry.metadata !== "object" || entry.metadata === null) return false;
+  }
+  
+  if (entry.breadcrumbs !== undefined) {
+    if (!Array.isArray(entry.breadcrumbs)) return false;
+    for (const crumb of entry.breadcrumbs) {
+      if (typeof crumb !== "object" || crumb === null) return false;
+      if (typeof crumb.message !== "string") return false;
+      if (typeof crumb.type !== "string") return false;
+      if (typeof crumb.level !== "string") return false;
+      if (typeof crumb.timestamp !== "number") return false;
+    }
+  }
+  
+  return true;
+}
 
 class DevNexusClient {
   private apiKey: string;
@@ -246,7 +281,12 @@ class DevNexusClient {
   private saveToStorage() {
       if (!this.persistOffline || typeof window === "undefined" || !window.localStorage) return;
       try {
-          localStorage.setItem(this.storageKey, JSON.stringify(this.queue.slice(-50)));
+          // Strip stack traces from persisted entries to limit sensitive data exposure
+          const safeQueue = this.queue.slice(-50).map(entry => {
+            const { stack, ...rest } = entry;
+            return { ...rest, _persistedAt: Date.now() };
+          });
+          localStorage.setItem(this.storageKey, JSON.stringify(safeQueue));
       } catch (e) {}
   }
 
@@ -255,7 +295,18 @@ class DevNexusClient {
       try {
           const stored = localStorage.getItem(this.storageKey);
           if (stored) {
-              this.queue = JSON.parse(stored);
+              const parsed = JSON.parse(stored);
+              // Discard entries older than TTL
+              const now = Date.now();
+              this.queue = Array.isArray(parsed)
+                ? parsed
+                    .filter((entry: any) => isValidQueueEntry(entry))
+                    .filter((entry: any) => !entry._persistedAt || (now - entry._persistedAt) < STORAGE_TTL_MS)
+                : [];
+              // Clean up storage if all entries expired
+              if (this.queue.length === 0) {
+                localStorage.removeItem(this.storageKey);
+              }
           }
       } catch (e) {}
   }
@@ -329,22 +380,24 @@ class DevNexusClient {
 
   private setupAutoCapture() {
     if (typeof window !== "undefined") {
-      const prevOnError = window.onerror;
-      window.onerror = (message, source, lineno, _colno, error) => {
+      window.addEventListener("error", (event) => {
+        const error = event.error;
+        const message = event.message || "Unknown error";
+        const file = event.filename || "";
+        const line = event.lineno ? String(event.lineno) : "";
+        
         this.captureException(error || message, {
-          tags: { source: "window.onerror", file: String(source), line: String(lineno) },
+          tags: { source: "window.onerror", file, line },
           severity: IssueSeverity.HIGH,
         }).catch(() => {});
-        if (prevOnError) return prevOnError(message, source, lineno, _colno, error);
-        return false;
-      };
+      }, true);
 
       window.addEventListener("unhandledrejection", (event) => {
         this.captureException(event.reason, {
           tags: { source: "unhandledrejection" },
           severity: IssueSeverity.HIGH,
         }).catch(() => {});
-      });
+      }, true);
     } else if (typeof process !== "undefined" && process.on) {
       process.on("unhandledRejection", (reason) => {
         this.captureException(reason, {

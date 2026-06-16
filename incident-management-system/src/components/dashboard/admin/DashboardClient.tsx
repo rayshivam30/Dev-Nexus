@@ -7,8 +7,9 @@ import { ActiveProjects, ProjectStats } from "@/components/dashboard/shared/Acti
 import { CreateIssueModal, ProjectData, TeamData, DeveloperData } from "@/components/dashboard/shared/CreateIssueModal";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import { fetcher } from "@/lib/utils";
+import { Skeleton, SkeletonCard, SkeletonTable } from "@/components/ui/Skeleton";
 
 interface DashboardClientProps {
   orgName: string;
@@ -37,7 +38,7 @@ export function DashboardClient({
   const [isCreateIssueOpen, setIsCreateIssueOpen] = useState(false);
 
   // Poll for live stats and recent issues every 10 seconds
-  const { data } = useSWR("/api/dashboard/stats", fetcher, {
+  const { data, isLoading } = useSWR("/api/dashboard/stats", fetcher, {
     refreshInterval: 10000,
     fallbackData: {
       stats: {
@@ -49,8 +50,17 @@ export function DashboardClient({
     }
   });
 
-  const { openIssuesCount, breachedCount, resolvedTodayCount } = data.stats;
-  const recentIssues = data.recentIssues;
+  const statsData = data || {
+    stats: {
+      openIssuesCount: initialOpenIssues,
+      breachedCount: initialBreached,
+      resolvedTodayCount: initialResolved,
+    },
+    recentIssues: initialRecentIssues
+  };
+
+  const { openIssuesCount, breachedCount, resolvedTodayCount } = statsData.stats;
+  const recentIssues = statsData.recentIssues;
 
   const stats = useMemo(() => [
     { title: "Active Incidents", value: openIssuesCount, icon: AlertTriangle, color: "text-amber-400", bgClass: "" },
@@ -58,6 +68,33 @@ export function DashboardClient({
     { title: "Resolved Today", value: resolvedTodayCount, icon: CheckCircle, color: "text-emerald-400", bgClass: "" },
     { title: "Avg. Resolution", value: "2.4h", icon: Clock, color: "text-teal-400", bgClass: "" },
   ], [openIssuesCount, breachedCount, resolvedTodayCount]);
+
+  if (isLoading && !data) {
+    return (
+      <div className="space-y-8 pb-24 max-w-[1600px] mx-auto p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-10 w-64" />
+          </div>
+          <Skeleton className="h-11 w-36 rounded-xl" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array(4).fill(null).map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-2xl bg-white/[0.03] border border-white/[0.06]" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <SkeletonTable />
+          </div>
+          <div>
+            <SkeletonCard />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-24 max-w-[1600px] mx-auto">
@@ -113,7 +150,10 @@ export function DashboardClient({
       <CreateIssueModal 
         isOpen={isCreateIssueOpen} 
         onClose={() => setIsCreateIssueOpen(false)} 
-        onSuccess={() => router.refresh()}
+        onSuccess={() => {
+          mutate("/api/dashboard/stats");
+          router.refresh();
+        }}
         projects={allProjects}
         teams={allTeams}
         developers={allDevelopers}

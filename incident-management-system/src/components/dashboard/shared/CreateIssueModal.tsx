@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Loader2, X, AlertCircle, Plus, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/ToastProvider";
+import { sanitizeText } from "@/lib/input-sanitizer";
 
 export interface ProjectData { id: string; name: string; }
 export interface TeamData { id: string; name: string; projectId: string; }
@@ -76,6 +77,19 @@ export function CreateIssueModal({
       return;
     }
 
+    const sanitizedTitle = sanitizeText(title, { maxLength: 255 });
+    const sanitizedDescription = sanitizeText(description, { maxLength: 10000 });
+
+    if (!sanitizedTitle) {
+      setError("Title is required");
+      return;
+    }
+
+    if (sanitizedTitle.length < 5) {
+      setError("Title must be at least 5 characters");
+      return;
+    }
+
     setSubmitting(true);
     
     try {
@@ -85,8 +99,8 @@ export function CreateIssueModal({
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          title,
-          description,
+          title: sanitizedTitle,
+          description: sanitizedDescription,
           severity,
           priority,
           environment,

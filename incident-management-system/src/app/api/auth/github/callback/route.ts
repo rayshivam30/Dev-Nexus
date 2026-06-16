@@ -10,6 +10,18 @@ export async function GET(req: NextRequest) {
   const state = searchParams.get("state");
   const baseUrl = getBaseUrl();
 
+  // Validate baseUrl is a proper URL (prevents misconfigured NEXT_PUBLIC_APP_URL)
+  try {
+    const parsed = new URL(baseUrl);
+    if (process.env.NODE_ENV === "production" && parsed.protocol !== "https:") {
+      console.error("GitHub callback: baseUrl must use HTTPS in production:", baseUrl);
+      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+    }
+  } catch {
+    console.error("GitHub callback: invalid baseUrl:", baseUrl);
+    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+  }
+
   if (!installationId || !state) {
     return NextResponse.redirect(
       `${baseUrl}/dashboard/admin?error=github_missing_data`

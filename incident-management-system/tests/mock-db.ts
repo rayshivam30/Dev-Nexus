@@ -3,6 +3,7 @@ import { mock } from "bun:test";
 export interface PrismaMock {
   user: {
     findUnique: ReturnType<typeof mock>;
+    findFirst: ReturnType<typeof mock>;
     create: ReturnType<typeof mock>;
     update: ReturnType<typeof mock>;
     findMany: ReturnType<typeof mock>;
@@ -60,6 +61,7 @@ export const createPrismaMock = (): PrismaMock => {
   const prismaMock: PrismaMock = {
     user: {
       findUnique: mock(() => Promise.resolve(null)),
+      findFirst: mock(() => Promise.resolve(null)),
       create: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "user-1", ...args.data })),
       update: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "user-1", ...args.data })),
       findMany: mock(() => Promise.resolve([{ id: "staff-1" }, { id: "staff-2" }])),

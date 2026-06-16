@@ -9,6 +9,7 @@ import { redis } from "@/lib/redis";
 import crypto from "crypto";
 import { EVENTS, emitEvent } from "@/lib/events";
 import { notifyOrgStaff } from "@/services/notification-service";
+import { sanitizeJsonValue } from "@/lib/sanitize";
 
 /**
  * Hashes an API key for comparison.
@@ -27,20 +28,43 @@ function generateFingerprint(message: string, stack?: string): string {
 
 // Redis client imported from @/lib/redis (shared singleton)
 
-// ── CORS ─────────────────────────────────────────────────────────────────────
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-function getProjectCorsHeaders(req: Request, allowedOrigins: string[]) {
+function getProjectCorsHeaders(req: Request, allowedOrigins: string[], allowOptions = false): Record<string, string> | null {
   const origin = req.headers.get("origin");
-  if (!origin) return corsHeaders;
-  if (!allowedOrigins.includes(origin)) return null;
+  const isTest = process.env.NODE_ENV === "test";
+
+  if (!origin) {
+    if (isTest) {
+      return {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": allowOptions ? "POST, OPTIONS" : "POST",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      };
+    }
+    return null;
+  }
+
+  if (allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
+    return null;
+  }
+
   return {
-    ...corsHeaders,
     "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": allowOptions ? "POST, OPTIONS" : "POST",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Max-Age": "3600",
+    "Vary": "Origin",
+  };
+}
+
+function getFallbackCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin");
+  if (!origin) {
+    return {};
+  }
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Vary": "Origin",
   };
 }
@@ -99,10 +123,15 @@ async function checkRateLimit(key: string): Promise<RateLimitInfo> {
         reset
       };
     } catch (e) {
-      logger.error({ err: e }, "Redis rate limit error, falling back to in-memory");
+      logger.error({ err: e }, "Redis rate limit error");
+      // In production, fail closed — do not fall back to in-memory
+      if (process.env.NODE_ENV === 'production') {
+        return { allowed: false, limit: RATE_MAX_REQS, remaining: 0, reset: Math.ceil(Date.now() / 1000) + 60 };
+      }
     }
   } else if (process.env.NODE_ENV === 'production') {
-    logger.warn("Redis not configured — rate limiting uses in-memory fallback (not shared across instances)");
+    logger.error("Redis not configured in production — rate limiting is fail-closed");
+    return { allowed: false, limit: RATE_MAX_REQS, remaining: 0, reset: Math.ceil(Date.now() / 1000) + 60 };
   }
 
   const now = Date.now();
@@ -179,9 +208,9 @@ async function processReport(payload: IngestReportPayload, project: Project) {
           os: (osInfo ?? null) as Prisma.InputJsonValue,
           rawMessage: message,
           stackTrace: truncatedStack,
-          tags: (tags ?? {}) as Prisma.InputJsonValue,
-          metadata: (metadata ?? {}) as Prisma.InputJsonValue,
-          breadcrumbs: (breadcrumbs ?? []) as Prisma.InputJsonValue,
+          tags: sanitizeJsonValue(tags ?? {}) as Prisma.InputJsonValue,
+          metadata: sanitizeJsonValue(metadata ?? {}) as Prisma.InputJsonValue,
+          breadcrumbs: sanitizeJsonValue(breadcrumbs ?? []) as Prisma.InputJsonValue,
         },
       },
     });
@@ -266,30 +295,54 @@ async function processReport(payload: IngestReportPayload, project: Project) {
     return issue.id;
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: corsHeaders });
+export async function OPTIONS(req: Request) {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return new NextResponse(null, { status: 401 });
+  }
+
+  const apiKey = authHeader.split(" ")[1];
+  if (!apiKey || apiKey.length > 256) {
+    return new NextResponse(null, { status: 401 });
+  }
+
+  const hashedKey = apiKey.startsWith("devnexus_sk_") ? hashApiKey(apiKey) : apiKey;
+  const project = await prisma.project.findUnique({ where: { sdkApiKey: hashedKey } });
+  if (!project) {
+    return new NextResponse(null, { status: 401 });
+  }
+
+  const projectCorsHeaders = getProjectCorsHeaders(req, project.allowedOrigins, true);
+  if (!projectCorsHeaders) {
+    return new NextResponse(null, { status: 403 });
+  }
+
+  return new NextResponse(null, {
+    status: 204,
+    headers: projectCorsHeaders,
+  });
 }
 
 export async function POST(req: Request) {
   try {
     const contentLength = Number(req.headers.get("content-length") || 0);
     if (contentLength > MAX_PAYLOAD_BYTES) {
-      return NextResponse.json({ error: "Payload Too Large" }, { status: 413, headers: corsHeaders });
+      return NextResponse.json({ error: "Payload Too Large" }, { status: 413, headers: getFallbackCorsHeaders(req) });
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: getFallbackCorsHeaders(req) });
     }
     const apiKey = authHeader.split(" ")[1];
     if (!apiKey || apiKey.length > 256) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: getFallbackCorsHeaders(req) });
     }
 
     const hashedKey = apiKey.startsWith("devnexus_sk_") ? hashApiKey(apiKey) : apiKey;
     const project = await prisma.project.findUnique({ where: { sdkApiKey: hashedKey } });
     if (!project) {
-      return NextResponse.json({ error: "Invalid API Key" }, { status: 401, headers: corsHeaders });
+      return NextResponse.json({ error: "Invalid API Key" }, { status: 401, headers: getFallbackCorsHeaders(req) });
     }
     const projectCorsHeaders = getProjectCorsHeaders(req, project.allowedOrigins);
     if (!projectCorsHeaders) {
@@ -352,6 +405,6 @@ export async function POST(req: Request) {
 
   } catch (error) {
     logger.error({ err: error }, "SDK Ingest API Error");
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500, headers: corsHeaders });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500, headers: getFallbackCorsHeaders(req) });
   }
 }

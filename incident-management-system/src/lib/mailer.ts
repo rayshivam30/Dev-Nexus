@@ -21,10 +21,19 @@ const transporter = nodemailer.createTransport({
   maxMessages: 50,
 });
 
+function maskEmail(email?: string): string {
+  if (!email) return "undefined";
+  const parts = email.split("@");
+  if (parts.length !== 2) return "[REDACTED]";
+  const [local, domain] = parts;
+  if (local.length <= 2) return `*@${domain}`;
+  return `${local[0]}***${local[local.length - 1]}@${domain}`;
+}
+
 // Verify transporter at startup and log any auth/connection issues early
 transporter
   .verify()
-  .then(() => logger.info({ user: process.env.GMAIL_USER }, "SMTP transporter ready"))
+  .then(() => logger.info({ user: maskEmail(process.env.GMAIL_USER) }, "SMTP transporter ready"))
   .catch((err) => logger.warn({ err }, "SMTP transporter verification failed"));
 
 interface SendMailOptions {
@@ -69,7 +78,27 @@ function resetDailyCountIfNeeded() {
 
 const DAILY_LIMIT = 450; // Stay under Gmail's 500/day with buffer
 
+export function pruneStaleEmails() {
+  const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
+  const originalLength = emailQueue.length;
+  let i = 0;
+  while (i < emailQueue.length) {
+    if (emailQueue[i].addedAt < twoHoursAgo) {
+      emailQueue.splice(i, 1);
+    } else {
+      i++;
+    }
+  }
+  if (emailQueue.length < originalLength) {
+    logger.info(
+      { pruned: originalLength - emailQueue.length, currentLength: emailQueue.length },
+      "Pruned stale emails from queue"
+    );
+  }
+}
+
 async function processEmailQueue() {
+  pruneStaleEmails();
   if (isProcessing || emailQueue.length === 0) return;
   isProcessing = true;
 
@@ -160,6 +189,8 @@ export async function sendMail({ to, subject, html }: SendMailOptions) {
       return null;
     }
   }
+
+  pruneStaleEmails();
 
   if (emailQueue.length >= MAX_QUEUE_SIZE) {
     logger.warn(

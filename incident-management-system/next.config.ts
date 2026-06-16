@@ -8,16 +8,16 @@ const isProd = process.env.NODE_ENV === "production";
 const cspHeader = isProd
   ? `
     default-src 'self';
-    script-src 'self' 'unsafe-inline' https://github.com;
+    script-src 'self' 'unsafe-inline';
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     img-src 'self' blob: data: https://i.natgeofe.com https://images.unsplash.com https://res.cloudinary.com https://github.com https://avatars.githubusercontent.com;
     font-src 'self' data: https://fonts.gstatic.com;
     connect-src 'self';
     object-src 'none';
     base-uri 'self';
-    form-action 'self' https://github.com;
+    form-action 'self';
     frame-ancestors 'none';
-    frame-src 'self' https://github.com;
+    frame-src 'self';
     upgrade-insecure-requests;
 `
   : `

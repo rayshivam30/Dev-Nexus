@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
 
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
+import { profileUpdateSchema } from "@/lib/validations";
+import { invalidateUserCache } from "@/lib/authorization";
 
 export const PATCH = withAuth(async (req, { decoded, body }) => {
   try {
@@ -8,6 +10,12 @@ export const PATCH = withAuth(async (req, { decoded, body }) => {
 
     if (!body) {
       return apiError("Missing request body", 400);
+    }
+
+    const parsed = profileUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      return apiError("Validation failed: " + JSON.stringify(fieldErrors), 400);
     }
 
     const { 
@@ -19,17 +27,7 @@ export const PATCH = withAuth(async (req, { decoded, body }) => {
       githubUrl, 
       linkedinUrl, 
       skills 
-    } = body as {
-      name?: string;
-      bio?: string;
-      image?: string;
-      phoneNumber?: string;
-      location?: string;
-      githubUrl?: string;
-      linkedinUrl?: string;
-      skills?: string[];
-    };
-
+    } = parsed.data;
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -57,6 +55,10 @@ export const PATCH = withAuth(async (req, { decoded, body }) => {
         skills: true,
       }
     });
+
+    if (userId) {
+      await invalidateUserCache(userId);
+    }
 
     return apiResponse("Profile updated successfully", { user: updatedUser });
   } catch (error) {
@@ -279,4 +281,3 @@ export const GET = withAuth(async (req, { decoded }) => {
     return apiError("Failed to fetch profile", 500);
   }
 });
-

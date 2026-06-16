@@ -7,8 +7,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
 
-    if (!token) {
-      return NextResponse.json({ error: 'Missing verification token' }, { status: 400 });
+    if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
+      const baseUrl = getBaseUrl();
+      return NextResponse.redirect(`${baseUrl}/auth/login?error=verification_failed`);
     }
 
     await verifyEmail(token);

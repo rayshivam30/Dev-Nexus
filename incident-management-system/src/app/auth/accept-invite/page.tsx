@@ -107,8 +107,21 @@ function AcceptInviteContent() {
       setError("Passwords do not match.");
       return;
     }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{12,128}$/;
+    if (!password) {
+      setError("Password is required.");
+      return;
+    }
+    if (password.length < 12) {
+      setError("Password must be at least 12 characters.");
+      return;
+    }
+    if (!passwordRegex.test(password)) {
+      setError("Password must contain uppercase, lowercase, number, and special character (!@#$%^&*).");
+      return;
+    }
+    if (password.length > 128) {
+      setError("Password cannot exceed 128 characters.");
       return;
     }
 
@@ -247,13 +260,13 @@ function AcceptInviteContent() {
             <input
               type={showPassword ? "text" : "password"}
               required
-              minLength={6}
+              minLength={12}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onFocus={() => setFocusedField("password")}
               onBlur={() => setFocusedField(null)}
               className="w-full pl-16 pr-14 py-4 bg-white/[0.03] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] focus:shadow-[0_0_0_4px_rgba(255,255,255,0.03)] transition-all duration-300 text-sm placeholder:text-white/20 font-medium"
-              placeholder="••••••••"
+              placeholder="Min. 12 characters"
             />
             <button
               type="button"
@@ -281,13 +294,13 @@ function AcceptInviteContent() {
             <input
               type={showConfirmPassword ? "text" : "password"}
               required
-              minLength={6}
+              minLength={12}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               onFocus={() => setFocusedField("confirm")}
               onBlur={() => setFocusedField(null)}
               className="w-full pl-16 pr-14 py-4 bg-white/[0.03] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] focus:shadow-[0_0_0_4px_rgba(255,255,255,0.03)] transition-all duration-300 text-sm placeholder:text-white/20 font-medium"
-              placeholder="••••••••"
+              placeholder="Min. 12 characters"
             />
             <button
               type="button"

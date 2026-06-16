@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { IssueSeverity, IssueSource, EnvironmentType, IssuePriority } from "@devnexus/prisma-client";
 import { aiAnalysisSchema } from "@/lib/validations";
+import { sanitizeJsonValue } from "@/lib/sanitize";
+import { logger } from "@/lib/logger";
 
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
@@ -94,14 +96,19 @@ export async function analyzeIncident(
       throw new Error("AI schema validation failed: " + JSON.stringify(validated.error.flatten().fieldErrors));
     }
 
-    return validated.data as AIAnalysisResult;
+    // Sanitize AI-generated text to prevent content injection
+    return sanitizeJsonValue(validated.data) as AIAnalysisResult;
   } catch (error) {
-    console.error("AI Analysis failed:", error);
+    logger.error({
+      errorCode: 'AI_ANALYSIS_FAILED',
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : "Non-error object thrown"
+    }, "AI Analysis failed");
 
     // Fallback response
     return {
       title: `Incident from ${source}`,
-      description: "AI analysis failed. Raw error: " + (error instanceof Error ? error.message : String(error)),
+      description: "AI analysis failed. Please review raw incident logs.",
       severity: IssueSeverity.MEDIUM,
       priority: "MEDIUM",
       environment: EnvironmentType.PRODUCTION,

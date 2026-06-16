@@ -16,9 +16,17 @@ import jwt from "jsonwebtoken";
 const BASE_URL = "http://localhost:3000";
 const CONCURRENT_USERS = 100;
 
-// Generate a test JWT token using the same secret from .env
-const JWT_SECRET = "8f3b9c2e1d7a4f6b8e5c0a9d3f1b7e6c2a4d8f9b1c3e7a5d6f2c9b8e1a4d7c3";
-const SDK_API_KEY = "devnexus_sk_6b6720cf-8261-4eb0-a439-80214a3ace89";
+// Read secrets from environment — never hardcode in source
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error("❌ JWT_SECRET environment variable is required. Set it in your .env file.");
+  process.exit(1);
+}
+const SDK_API_KEY = process.env.TEST_SDK_API_KEY;
+if (!SDK_API_KEY) {
+  console.error("❌ TEST_SDK_API_KEY environment variable is required. Set it in your .env file.");
+  process.exit(1);
+}
 
 // ── Metrics ──────────────────────────────────────────────────────────────────
 interface TestResult {

@@ -1,14 +1,36 @@
 import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
+import { z } from "zod";
+
+const githubWebhookPayloadSchema = z.object({
+  action: z.string().optional(),
+  installation: z.object({
+    id: z.number()
+  }).optional(),
+  repository: z.object({
+    html_url: z.string().url()
+  }).optional(),
+  workflow_run: z.object({
+    name: z.string(),
+    conclusion: z.string().nullable().optional(),
+    html_url: z.string().url(),
+  }).optional(),
+  pull_request: z.object({
+    number: z.number(),
+    title: z.string(),
+    html_url: z.string().url(),
+    mergeable_state: z.string().nullable().optional(),
+  }).optional(),
+}).passthrough();
 
 import { IssueSource, Prisma, IssueSeverity } from "@devnexus/prisma-client";
-
 import { analyzeIncident } from "@/lib/ai-service";
 import { enqueueAITask } from "@/lib/ai-queue";
 import { calculateSLADeadlines } from "@/services/issue-service";
 import { EVENTS, emitEvent } from "@/lib/events";
 import { notifyOrgStaff } from "@/services/notification-service";
+import { sanitizeJsonValue } from "@/lib/sanitize";
 
 export async function POST(req: Request) {
   try {
@@ -43,10 +65,25 @@ export async function POST(req: Request) {
       }
     }
 
-    const payload = JSON.parse(rawBody);
+    let payload: unknown;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
+
+    const parseResult = githubWebhookPayloadSchema.safeParse(payload);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Invalid webhook payload structure", details: parseResult.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const validatedPayload = parseResult.data;
     const event = req.headers.get("x-github-event");
-    const installationId = payload.installation?.id?.toString();
-    const repoUrl = payload.repository?.html_url;
+    const installationId = validatedPayload.installation?.id?.toString();
+    const repoUrl = validatedPayload.repository?.html_url;
     let project = null;
 
     if (installationId && repoUrl) {
@@ -95,7 +132,7 @@ export async function POST(req: Request) {
               source: IssueSource.GITHUB,
               severity: IssueSeverity.MEDIUM,
               logs: {
-                github_raw: data as unknown as Prisma.InputJsonValue,
+                github_raw: sanitizeJsonValue(data) as unknown as Prisma.InputJsonValue,
               } as Prisma.InputJsonValue,
             }
           });
@@ -143,7 +180,7 @@ export async function POST(req: Request) {
                         responseSlaDeadline,
                         resolutionSlaDeadline,
                         logs: {
-                            github_raw: data as unknown as Prisma.InputJsonValue,
+                            github_raw: sanitizeJsonValue(data) as unknown as Prisma.InputJsonValue,
                             aiFullAnalysis: aiAnalysis as unknown as Prisma.InputJsonValue,
                         } as Prisma.InputJsonValue
                     }
@@ -166,36 +203,38 @@ export async function POST(req: Request) {
     };
 
     // 1. CI/CD Failures
-    if (event === "workflow_run" && payload.action === "completed" && payload.workflow_run?.conclusion === "failure") {
+    if (event === "workflow_run" && validatedPayload.action === "completed" && validatedPayload.workflow_run?.conclusion === "failure") {
       await handleGitHubIncident(
-          payload.workflow_run, 
-          `CI Failure: ${payload.workflow_run.name}`, 
-          payload.workflow_run.html_url
+          validatedPayload.workflow_run, 
+          `CI Failure: ${validatedPayload.workflow_run.name}`, 
+          validatedPayload.workflow_run.html_url
       );
       return NextResponse.json({ created: true, type: "workflow_run_failure" });
     }
 
     // 2. PR Conflicts & Auto-detection
     if (event === "pull_request") {
-      const pr = payload.pull_request;
-      const isConflict = pr.mergeable_state === "dirty";
-      
-      if (isConflict) {
-          await handleGitHubIncident(
-              pr, 
-              `MERGE CONFLICT: PR #${pr.number}`, 
-              pr.html_url
-          );
-          return NextResponse.json({ created: true, type: "pr_conflict" });
-      }
+      const pr = validatedPayload.pull_request;
+      if (pr) {
+        const isConflict = pr.mergeable_state === "dirty";
+        
+        if (isConflict) {
+            await handleGitHubIncident(
+                pr, 
+                `MERGE CONFLICT: PR #${pr.number}`, 
+                pr.html_url
+            );
+            return NextResponse.json({ created: true, type: "pr_conflict" });
+        }
 
-      if (payload.action === "opened") {
-          await handleGitHubIncident(
-              pr, 
-              `New PR: ${pr.title}`, 
-              pr.html_url
-          );
-          return NextResponse.json({ created: true, type: "pr_opened" });
+        if (validatedPayload.action === "opened") {
+            await handleGitHubIncident(
+                pr, 
+                `New PR: ${pr.title}`, 
+                pr.html_url
+            );
+            return NextResponse.json({ created: true, type: "pr_opened" });
+        }
       }
     }
 

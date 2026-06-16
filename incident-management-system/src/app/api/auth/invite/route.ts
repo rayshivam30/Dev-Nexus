@@ -87,7 +87,7 @@ export const POST = withAuth(async (_request, { decoded, body }) => {
         orgId: decoded.orgId,
         projectId: targetProjectId as string,
         teamId: role === "DEVELOPER" ? teamId : null,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
       },
     });
 
@@ -95,8 +95,9 @@ export const POST = withAuth(async (_request, { decoded, body }) => {
     const safeRole = escapeHtml(role.toLowerCase());
     const safeInviteLink = escapeHtml(inviteLink);
 
+    let emailSent = false;
     try {
-      await sendMail({
+      const mailResult = await sendMail({
         to: email,
         subject: `You're invited to join DevNexus as a ${safeRole}`,
         html: `
@@ -106,8 +107,22 @@ export const POST = withAuth(async (_request, { decoded, body }) => {
           <a href="${safeInviteLink}">${safeInviteLink}</a>
         `,
       });
+      if (mailResult) {
+        emailSent = true;
+      }
     } catch (emailError) {
       console.error("Failed to send invite email:", emailError);
+    }
+
+    if (!emailSent) {
+      return NextResponse.json(
+        {
+          message: "Invite created but failed to send email. Please share the link manually.",
+          inviteLink,
+          warning: "email_delivery_failed",
+        },
+        { status: 200 }
+      );
     }
 
     return NextResponse.json(

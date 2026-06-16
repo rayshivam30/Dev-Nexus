@@ -1,10 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, JwtPayload } from "@/lib/jwt";
+import { isTokenBlacklisted } from "@/lib/session-blacklist";
 import { logger } from "@/lib/logger";
 import {
   getActiveSessionUser,
   sessionUserToPayload,
 } from "@/lib/authorization";
+
+export function verifyCsrf(req: NextRequest): boolean {
+  if (process.env.NODE_ENV === "test") return true;
+
+  const origin = req.headers.get("origin");
+  const referer = req.headers.get("referer");
+  const host = req.headers.get("host") || "";
+
+  if (origin) {
+    try {
+      const originUrl = new URL(origin);
+      if (originUrl.host !== host) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  } else if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      if (refererUrl.host !== host) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  }
+
+  // Double-submit token validation
+  const csrfCookie = req.cookies?.get("csrf_token")?.value || req.headers.get("cookie")?.match(/csrf_token=([^;]+)/)?.[1];
+  const csrfHeader = req.headers.get("x-csrf-token");
+  
+  if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
+    return false;
+  }
+
+  return true;
+}
 
 export interface HandlerContext {
   decoded: JwtPayload;
@@ -20,6 +59,15 @@ export type ApiHandler = (
 export function withAuth(handler: ApiHandler, allowedRoles?: string[]) {
   return async (req: NextRequest, context?: { params: unknown }) => {
     try {
+      // CSRF check on state-changing requests
+      if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+        if (!verifyCsrf(req)) {
+          return NextResponse.json(
+            { error: "CSRF check failed: Invalid or untrusted Origin" },
+            { status: 403 }
+          );
+        }
+      }
       const params = context?.params;
       let token = "";
       const authHeader = req.headers.get("Authorization");
@@ -39,6 +87,11 @@ export function withAuth(handler: ApiHandler, allowedRoles?: string[]) {
 
       if (!token) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const isBlacklisted = await isTokenBlacklisted(token);
+      if (isBlacklisted) {
+        return NextResponse.json({ error: "Unauthorized: Session invalidated" }, { status: 401 });
       }
 
       const decoded = verifyToken(token);
@@ -97,6 +150,8 @@ export async function getCurrentUser(): Promise<JwtPayload | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get("incident_token")?.value;
   if (!token) return null;
+  const isBlacklisted = await isTokenBlacklisted(token);
+  if (isBlacklisted) return null;
   const decoded = verifyToken(token);
   if (!decoded) return null;
   const user = await getActiveSessionUser(decoded);

@@ -19,6 +19,8 @@ const BASE_DELAY_MS = 2_000;
 
 let activeCount = 0;
 let lastCallTime = 0;
+let totalSuccessCount = 0;
+let totalFailureCount = 0;
 
 interface QueueItem<T> {
   task: () => Promise<T>;
@@ -55,6 +57,7 @@ async function processQueue(): Promise<void> {
 
   try {
     const result = await item.task();
+    totalSuccessCount++;
     item.resolve(result);
   } catch (error: unknown) {
     const isRateLimit = error instanceof Error && (
@@ -82,6 +85,7 @@ async function processQueue(): Promise<void> {
       return; // Don't process next yet
     }
 
+    totalFailureCount++;
     item.reject(error);
   } finally {
     if (activeCount > 0) activeCount--;
@@ -111,10 +115,15 @@ export function enqueueAITask<T>(task: () => Promise<T>): Promise<T> {
  * Returns current queue stats for monitoring/logging.
  */
 export function getQueueStats() {
+  const totalProcessed = totalSuccessCount + totalFailureCount;
+  const successRate = totalProcessed > 0 ? (totalSuccessCount / totalProcessed) * 100 : 100;
   return {
     activeCount,
     queueLength: queue.length,
     maxConcurrent: MAX_CONCURRENT,
     maxQueueSize: MAX_QUEUE_SIZE,
+    totalSuccessCount,
+    totalFailureCount,
+    successRate: parseFloat(successRate.toFixed(2)),
   };
 }

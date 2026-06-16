@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Loader2, Send, Clock, MessageSquare, ShieldAlert, Globe, BarChart2, Timer, Github, Sparkles, Lightbulb, Activity, ChevronRight, ExternalLink, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isAllowedUrl } from "@/lib/sanitize";
 import { Issue } from "./RecentIssues";
 import { useToast } from "@/components/ui/ToastProvider";
 
@@ -323,9 +324,9 @@ export function IssueDetailModal({
                 </div>
               ))}
               
-              {issue?.source === 'GITHUB' && (
+              {issue?.source === 'GITHUB' && isAllowedUrl((issue.logs as { html_url?: string })?.html_url) && (
                 <a 
-                  href={(issue.logs as { html_url?: string })?.html_url || "#"} 
+                  href={(issue.logs as { html_url?: string })?.html_url || ""} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center justify-between px-3 py-2 bg-white/[0.02] border border-white/[0.04] rounded-lg text-xs text-zinc-400 hover:bg-white/[0.04] transition-all"

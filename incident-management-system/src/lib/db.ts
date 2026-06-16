@@ -2,14 +2,20 @@ import { PrismaClient } from '@devnexus/prisma-client';
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
+const databaseUrl = process.env.DATABASE_URL;
+const urlWithTimeout = databaseUrl
+  ? (databaseUrl.includes("statement_timeout=")
+    ? databaseUrl
+    : databaseUrl + (databaseUrl.includes("?") ? "&" : "?") + "statement_timeout=10000")
+  : undefined;
+
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
-    // Connection pool tuned for 100 concurrent users on Neon PostgreSQL.
-    // Neon free-tier allows ~20 direct connections; using their pooler endpoint
-    // (configured in DATABASE_URL) lets us push higher.
-    // pool_timeout: time (seconds) a request waits for a free connection before P2024.
+    datasources: urlWithTimeout
+      ? { db: { url: urlWithTimeout } }
+      : undefined,
   });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

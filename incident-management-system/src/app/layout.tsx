@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 // Removed next/font/google imports due to network fetch errors during build
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import { CsrfInit } from "@/components/dashboard/shared/CsrfInit";
+import { NetworkStatus } from "@/components/ui/NetworkStatus";
 
 export const metadata: Metadata = {
   title: {
@@ -36,6 +38,8 @@ export default function RootLayout({
       className={`font-sans h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <CsrfInit />
+        <NetworkStatus />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

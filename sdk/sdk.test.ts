@@ -96,4 +96,49 @@ describe("DevNexus SDK Logic", () => {
 
     expect(attempts).toBe(2);
   });
+
+  test("Offline queue validation filters out malformed entries and keeps valid ones", async () => {
+    let store: Record<string, string> = {};
+    const mockLocalStorage = {
+      getItem: (key: string) => store[key] || null,
+      setItem: (key: string, value: string) => { store[key] = value; },
+      removeItem: (key: string) => { delete store[key]; },
+      clear: () => { store = {}; }
+    };
+    (global as any).window = { 
+      localStorage: mockLocalStorage,
+      addEventListener: () => {}
+    } as any;
+    (global as any).localStorage = mockLocalStorage;
+    
+    const key = "devnexus_offline_queue:test-key-12";
+    const now = Date.now();
+    
+    // Set up local storage with mixed valid and invalid entries
+    const entries = [
+      { message: "Valid error", timestamp: now, _persistedAt: now },
+      { message: 12345, timestamp: now, _persistedAt: now }, // Invalid: message must be string
+      { message: "Valid 2", tags: { env: "prod" }, timestamp: now, _persistedAt: now },
+      { message: "Invalid tags", tags: { value: 123 }, timestamp: now, _persistedAt: now }, // Invalid: tags must contain only strings
+      null,
+      "string-instead-of-object",
+    ];
+    store[key] = JSON.stringify(entries);
+    
+    const client = DevNexus.init({
+      apiKey: "test-key-12",
+      persistOffline: true,
+      autoCapture: false,
+    });
+    
+    // DevNexusClient loads from storage on init. Access private queue to check.
+    const loadedQueue = (client as any).queue;
+    expect(loadedQueue).toHaveLength(2);
+    expect(loadedQueue[0].message).toBe("Valid error");
+    expect(loadedQueue[1].message).toBe("Valid 2");
+    
+    // Clean up window/localStorage mock
+    delete (global as any).window;
+    delete (global as any).localStorage;
+  });
 });

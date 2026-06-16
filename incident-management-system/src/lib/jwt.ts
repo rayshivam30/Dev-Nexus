@@ -22,12 +22,12 @@ export interface JwtPayload {
 }
 
 export const signToken = (payload: JwtPayload, expiresIn: SignOptions['expiresIn'] = '1h'): string => {
-  return jwt.sign(payload as object, getJwtSecret(), { expiresIn });
+  return jwt.sign(payload as object, getJwtSecret(), { expiresIn, algorithm: 'HS256' });
 };
 
 export const verifyToken = (token: string): JwtPayload | null => {
   try {
-    return jwt.verify(token, getJwtSecret()) as JwtPayload;
+    return jwt.verify(token, getJwtSecret(), { algorithms: ['HS256'] }) as JwtPayload;
   } catch {
     return null;
   }

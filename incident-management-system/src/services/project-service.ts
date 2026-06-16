@@ -38,10 +38,12 @@ export async function createProject(
     },
   });
 
-  // Return the plainTextKey so the UI can show it once
+  // Return flag, not the actual key
   return {
     ...project,
-    sdkApiKey: plainTextKey
+    sdkApiKey: plainTextKey,
+    hasSdkKey: !!hashedKey,
+    keyCreated: plainTextKey  // Only on initial creation
   };
 }
 
@@ -53,8 +55,9 @@ export async function getProjectsByOrg(orgId: string) {
       _count: {
         select: { issues: true }
       }
-}
+    }
   });
+  
   return projects.map(({ sdkApiKey, ...project }) => ({
     ...project,
     hasSdkKey: Boolean(sdkApiKey),

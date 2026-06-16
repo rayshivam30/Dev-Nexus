@@ -7,17 +7,35 @@ import { motion, AnimatePresence } from "framer-motion";
 
 /* ── Password strength calculator ── */
 function getPasswordStrength(password: string): { score: number; label: string; color: string } {
-  let score = 0;
-  if (password.length >= 6) score++;
-  if (password.length >= 10) score++;
-  if (/[A-Z]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[^A-Za-z0-9]/.test(password)) score++;
+  const fullRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{12,128}$/;
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumbers = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password);
 
-  if (score <= 1) return { score, label: "Weak", color: "bg-white/20" };
-  if (score <= 2) return { score, label: "Fair", color: "bg-white/40" };
-  if (score <= 3) return { score, label: "Good", color: "bg-white/60" };
-  return { score, label: "Strong", color: "bg-white" };
+  if (password.length < 12) {
+    return { score: 0, label: "Too Short", color: "bg-red-500" };
+  }
+
+  let score = 1;
+  let charTypeCount = 0;
+  if (hasUpperCase) charTypeCount++;
+  if (hasLowerCase) charTypeCount++;
+  if (hasNumbers) charTypeCount++;
+  if (hasSpecialChar) charTypeCount++;
+
+  if (charTypeCount === 4 && password.length >= 12) score = 2;
+  if (password.length >= 16) score = 3;
+  if (password.length >= 20 && /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]{2,}/.test(password)) score = 4;
+
+  if (!fullRegex.test(password)) {
+    return { score: 1, label: "Weak/Invalid", color: "bg-orange-500" };
+  }
+
+  if (score === 1) return { score, label: "Fair", color: "bg-yellow-500" };
+  if (score === 2) return { score, label: "Good", color: "bg-lime-500" };
+  if (score === 3) return { score, label: "Strong", color: "bg-green-500" };
+  return { score: 4, label: "Very Strong", color: "bg-emerald-500" };
 }
 
 
@@ -240,13 +258,13 @@ export default function RegisterPage() {
               type={showPassword ? "text" : "password"}
               name="password"
               required
-              minLength={6}
+              minLength={12}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onFocus={() => setFocusedField("password")}
               onBlur={() => setFocusedField(null)}
               className="w-full pl-16 pr-14 py-4 bg-white/[0.03] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] focus:shadow-[0_0_0_4px_rgba(255,255,255,0.03)] transition-all duration-300 text-sm placeholder:text-white/20 font-medium"
-              placeholder="Min. 6 characters"
+              placeholder="Min. 12 characters"
             />
             <button
               type="button"
@@ -268,7 +286,7 @@ export default function RegisterPage() {
               >
                 <div className="flex items-center gap-3 mt-2 px-1">
                   <div className="flex-1 flex gap-1">
-                    {[1, 2, 3, 4, 5].map((level) => (
+                    {[1, 2, 3, 4].map((level) => (
                       <motion.div
                         key={level}
                         className={`h-1 rounded-full flex-1 ${

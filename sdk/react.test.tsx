@@ -22,7 +22,7 @@ describe("DevNexusErrorBoundary", () => {
     boundary.componentDidCatch(error, errorInfo);
     
     expect(mockCaptureException).toHaveBeenCalled();
-    const lastCall = mockCaptureException.mock.calls[0];
+    const lastCall = (mockCaptureException.mock.calls as any)[0];
     expect(lastCall[0]).toBe(error);
     expect(lastCall[1].metadata.componentStack).toBe("at Component");
     expect(lastCall[1].tags.source).toBe("react-error-boundary");
