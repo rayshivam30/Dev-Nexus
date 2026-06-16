@@ -9,6 +9,10 @@ import {
   Activity,
   Shield,
   Zap,
+  Cpu,
+  Clock,
+  Sparkles,
+  BarChart2
 } from "lucide-react";
 import Link from "next/link";
 import { useRef, useEffect, useState } from "react";
@@ -80,10 +84,270 @@ const fadeUp = {
   }),
 };
 
+/* ── Mock data for Interactive Console ── */
+const incidents = [
+  {
+    id: "INC-9482",
+    title: "Auth Database Pool Exhaustion",
+    severity: "CRITICAL",
+    status: "Active",
+    timeAgo: "2m ago",
+    suggestedFix: "Increase max_connections connection pool limit from 20 to 50 in database adapter configuration.",
+    metrics: { cpu: 89, memory: 94, latency: 1200 }
+  },
+  {
+    id: "INC-9485",
+    title: "ReferenceError: profile is not defined",
+    severity: "HIGH",
+    status: "Investigating",
+    timeAgo: "1m ago",
+    suggestedFix: "Wrap profile reading in null check conditional guard inside ProfileClient.tsx:L522.",
+    metrics: { cpu: 45, memory: 72, latency: 320 }
+  },
+  {
+    id: "INC-9488",
+    title: "Gateway Timeout (504) on payment route",
+    severity: "CRITICAL",
+    status: "Active",
+    timeAgo: "Just now",
+    suggestedFix: "Service payment-auth-api is unresponsive. Triggering auto container reboot.",
+    metrics: { cpu: 98, memory: 88, latency: 5000 }
+  }
+];
+
+const baseLogs = [
+  "[SYSTEM] Bootstrapping telemetry capture listeners...",
+  "[INGEST] Webhook client successfully registered.",
+  "[INFO] Connection pool established (min: 5, max: 20)",
+  "[WARN] DB pool limit approached (85% active connections)",
+  "[ERR] Database query queue threshold reached. Connection pool timeout."
+];
+
+interface TerminalConsoleProps {
+  activeInc: typeof incidents[0];
+}
+
+/* ── Terminal log panel sub-component ── */
+function TerminalConsole({ activeInc }: TerminalConsoleProps) {
+  const [logs, setLogs] = useState<string[]>(baseLogs);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newLog = `[MONITOR] Ingested ${activeInc.id} - Latency: ${activeInc.metrics.latency}ms, CPU: ${activeInc.metrics.cpu}%`;
+      setLogs((prev) => [...prev.slice(-4), newLog]);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [activeInc]);
+
+  return (
+    <div className="bg-[#050507] border border-white/[0.04] p-4 rounded-2xl font-mono text-[11px] text-zinc-500 space-y-1.5 max-h-[140px] overflow-hidden">
+      <div className="flex justify-between items-center mb-1 text-[9px] font-bold text-zinc-600 tracking-wider uppercase">
+        <span>Console Stream</span>
+        <span className="flex items-center gap-1">
+          <Terminal className="w-3 h-3" /> local_agent.log
+        </span>
+      </div>
+      {logs.map((log, index) => {
+        let color = "text-zinc-500";
+        if (log.includes("[ERR]")) color = "text-red-400/80";
+        if (log.includes("[WARN]")) color = "text-amber-400/80";
+        if (log.includes("[MONITOR]")) color = "text-cyan-400/80";
+        return (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className={`truncate ${color}`}
+          >
+            {log}
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Interactive Console Telemetry mock ── */
+function InteractiveConsole() {
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIdx((prev) => (prev + 1) % incidents.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const activeInc = incidents[activeIdx];
+
+  return (
+    <div className="bg-[#0b0b0d]/70 border border-white/[0.08] backdrop-blur-2xl rounded-[32px] p-6 md:p-8 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden relative group">
+      {/* Background glow behind console */}
+      <div className="absolute -top-[10%] -left-[10%] w-[300px] h-[300px] bg-cyan-500/10 rounded-full blur-[80px] pointer-events-none" />
+      <div className="absolute -bottom-[10%] -right-[10%] w-[300px] h-[300px] bg-violet-500/10 rounded-full blur-[80px] pointer-events-none" />
+
+      {/* Header row */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-white/[0.06] mb-6 gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+          <div>
+            <h3 className="text-base font-bold flex items-center gap-2">
+              <BarChart2 className="w-4 h-4 text-zinc-400" /> DevNexus Active Telemetry
+            </h3>
+            <p className="text-xs text-white/30">Monitoring live organization nodes</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {incidents.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setActiveIdx(idx)}
+              className={`w-2 h-2 rounded-full transition-all ${
+                idx === activeIdx ? "bg-white w-6" : "bg-white/20 hover:bg-white/40"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Left Column: Feeds */}
+        <div className="space-y-3 bg-white/[0.01] border border-white/[0.04] p-4 rounded-2xl">
+          <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-2">Live Incidents</h4>
+          <div className="space-y-2">
+            {incidents.map((inc, idx) => {
+              const isActive = idx === activeIdx;
+              return (
+                <div
+                  key={inc.id}
+                  onClick={() => setActiveIdx(idx)}
+                  className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-white/[0.04] border-white/[0.1] shadow-lg"
+                      : "bg-transparent border-transparent opacity-50 hover:opacity-80"
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-bold text-white/40 font-mono">{inc.id}</span>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                      inc.severity === "CRITICAL" ? "bg-red-500/10 text-red-400" : "bg-orange-500/10 text-orange-400"
+                    }`}>{inc.severity}</span>
+                  </div>
+                  <p className="text-xs font-semibold text-white/90 truncate">{inc.title}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Center Column: Live Metrics */}
+        <div className="bg-white/[0.01] border border-white/[0.04] p-4 rounded-2xl space-y-4">
+          <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/30">Node Telemetry</h4>
+          
+          <div className="space-y-3 pt-2">
+            {/* CPU */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs font-medium text-white/60">
+                <span className="flex items-center gap-1.5"><Cpu className="w-3.5 h-3.5" /> CPU Ingestion</span>
+                <span>{activeInc.metrics.cpu}%</span>
+              </div>
+              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                  className="h-full bg-cyan-400" 
+                  animate={{ width: `${activeInc.metrics.cpu}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
+            </div>
+
+            {/* Memory */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs font-medium text-white/60">
+                <span className="flex items-center gap-1.5"><Activity className="w-3.5 h-3.5" /> RAM Utilization</span>
+                <span>{activeInc.metrics.memory}%</span>
+              </div>
+              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                  className="h-full bg-violet-400" 
+                  animate={{ width: `${activeInc.metrics.memory}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
+            </div>
+
+            {/* Latency */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs font-medium text-white/60">
+                <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Response Delay</span>
+                <span>{activeInc.metrics.latency}ms</span>
+              </div>
+              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                  className={`h-full ${activeInc.metrics.latency > 1000 ? "bg-red-400" : "bg-emerald-400"}`} 
+                  animate={{ width: `${Math.min((activeInc.metrics.latency / 5000) * 100, 100)}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: AI Resolution */}
+        <div className="bg-gradient-to-br from-violet-500/5 to-cyan-500/5 border border-white/[0.06] p-4 rounded-2xl space-y-4">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-violet-400">
+            <Sparkles className="w-4 h-4 text-violet-400 animate-pulse" /> Gemini AI Resolution
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <p className="text-[10px] text-white/30">Target Incident</p>
+              <p className="text-xs font-bold text-white">{activeInc.id} · {activeInc.title}</p>
+            </div>
+            
+            <div className="p-3 bg-white/[0.02] border border-white/[0.04] rounded-xl">
+              <p className="text-[10px] text-white/30 mb-1">Recommended Fix</p>
+              <motion.p 
+                key={activeInc.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-xs text-white/80 leading-relaxed font-mono"
+              >
+                {activeInc.suggestedFix}
+              </motion.p>
+            </div>
+            
+            <div className="flex gap-2">
+              <div className="flex-1 py-2 rounded-lg bg-white/10 text-center text-[10px] font-bold text-white/80 border border-white/5">
+                Investigate trace
+              </div>
+              <div className="flex-1 py-2 rounded-lg bg-white text-black text-center text-[10px] font-bold hover:bg-white/90 cursor-pointer">
+                Auto-apply patch
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Terminal log panel */}
+      <TerminalConsole key={activeIdx} activeInc={activeInc} />
+    </div>
+  );
+}
+
+
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-black text-white font-sans antialiased selection:bg-white/20">
+    <div className="min-h-screen bg-black text-white font-sans antialiased selection:bg-white/20 relative overflow-hidden">
       <Spotlight />
+      
+      {/* Subtle premium grid background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_30%,#000_40%,transparent_100%)] pointer-events-none" />
+
+      {/* Background radial glow accents */}
+      <div className="absolute top-[10%] left-[-10%] w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[160px] pointer-events-none" />
+      <div className="absolute top-[35%] right-[-10%] w-[600px] h-[600px] bg-cyan-600/10 rounded-full blur-[160px] pointer-events-none" />
+      <div className="absolute bottom-[10%] left-[20%] w-[600px] h-[600px] bg-emerald-600/5 rounded-full blur-[160px] pointer-events-none" />
 
       {/* ── Nav ── */}
       <div className="fixed top-6 w-full z-[100] flex justify-center px-6">
@@ -143,10 +407,10 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-6xl md:text-8xl font-black tracking-tighter leading-[1.0] mb-8"
+              className="text-6xl md:text-8xl font-black tracking-tighter leading-[1.0] mb-8 text-white"
             >
               Ship fast. <br className="hidden md:block" />
-              <span className="text-white/40">Stay resilient.</span>
+              <span className="bg-gradient-to-r from-violet-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">Stay resilient.</span>
             </motion.h1>
 
             <motion.p
@@ -181,6 +445,17 @@ export default function LandingPage() {
               </Link>
             </motion.div>
           </div>
+        </section>
+
+        {/* ── TELEMETRY CONSOLE DEMO ── */}
+        <section className="py-16 px-6 max-w-5xl mx-auto relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+          >
+            <InteractiveConsole />
+          </motion.div>
         </section>
 
         {/* ── SDK INTEGRATION ── */}
@@ -355,31 +630,43 @@ export default function LandingPage() {
                   title: "AI Root Cause",
                   desc: "Gemini-powered engine analyzes stack traces and deployment history.",
                   icon: Zap,
+                  glow: "hover:border-violet-500/30 hover:shadow-[0_0_30px_rgba(139,92,246,0.1)]",
+                  iconGlow: "text-violet-400"
                 },
                 {
                   title: "SLA Monitoring",
                   desc: "Track response and resolution SLAs with automated escalation.",
                   icon: Shield,
+                  glow: "hover:border-cyan-500/30 hover:shadow-[0_0_30px_rgba(6,182,212,0.1)]",
+                  iconGlow: "text-cyan-400"
                 },
                 {
                   title: "GitHub Sync",
                   desc: "Auto-create issues from incidents. Link commits to resolutions.",
                   icon: Github,
+                  glow: "hover:border-white/20 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)]",
+                  iconGlow: "text-white/80"
                 },
                 {
                   title: "Real-time Alerts",
                   desc: "Push notifications and webhook events for every status change.",
                   icon: Activity,
+                  glow: "hover:border-emerald-500/30 hover:shadow-[0_0_30px_rgba(16,185,129,0.1)]",
+                  iconGlow: "text-emerald-400"
                 },
                 {
                   title: "Role-Based Access",
                   desc: "Admin, Manager, and Developer roles with scoped dashboards.",
                   icon: Shield,
+                  glow: "hover:border-amber-500/30 hover:shadow-[0_0_30px_rgba(245,158,11,0.1)]",
+                  iconGlow: "text-amber-400"
                 },
                 {
                   title: "SDK Ingestion",
                   desc: "Lightweight TypeScript SDK captures errors and custom metadata.",
                   icon: Terminal,
+                  glow: "hover:border-rose-500/30 hover:shadow-[0_0_30px_rgba(244,63,94,0.1)]",
+                  iconGlow: "text-rose-400"
                 },
               ].map((f, i) => (
                 <motion.div
@@ -390,14 +677,14 @@ export default function LandingPage() {
                   viewport={{ once: true }}
                   variants={fadeUp}
                 >
-                  <div className="p-10 bg-white/[0.02] border border-white/[0.06] rounded-3xl hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-300 group h-full shadow-xl">
+                  <div className={`p-10 bg-[#0b0b0d]/40 backdrop-blur-md border border-white/[0.06] rounded-3xl transition-all duration-300 group h-full shadow-xl ${f.glow}`}>
                     <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-white/10 transition-all shadow-inner">
-                      <f.icon className="w-6 h-6 text-white/80" />
+                      <f.icon className={`w-6 h-6 ${f.iconGlow}`} />
                     </div>
-                    <h3 className="text-xl font-bold mb-3 tracking-tight">
+                    <h3 className="text-xl font-bold mb-3 tracking-tight text-white transition-colors">
                       {f.title}
                     </h3>
-                    <p className="text-base text-white/50 leading-relaxed font-medium">
+                    <p className="text-base text-white/50 leading-relaxed font-medium group-hover:text-white/70 transition-colors">
                       {f.desc}
                     </p>
                   </div>
@@ -409,18 +696,21 @@ export default function LandingPage() {
 
         {/* ── CTA ── */}
         <section className="py-40 px-6 text-center relative overflow-hidden mt-20">
+          {/* Neon background glows behind CTA card */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-gradient-to-r from-violet-500/20 to-cyan-500/20 rounded-full blur-[120px] pointer-events-none" />
+          
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={fadeUp}
             custom={0}
-            className="max-w-4xl mx-auto relative z-10 bg-white/[0.02] border border-white/10 rounded-[40px] p-16 backdrop-blur-2xl shadow-2xl"
+            className="max-w-4xl mx-auto relative z-10 bg-gradient-to-b from-white/[0.03] to-transparent border border-white/10 rounded-[40px] p-16 backdrop-blur-2xl shadow-2xl"
           >
             <h2 className="text-6xl md:text-7xl font-black tracking-tighter mb-8 leading-[1.0]">
               Ready to regain
               <br />
-              control?
+              <span className="bg-gradient-to-r from-violet-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">control?</span>
             </h2>
             <p className="text-white/60 text-xl font-medium mb-12 max-w-xl mx-auto">
               Install the SDK in 3 minutes. Let AI identify the root cause in
@@ -429,7 +719,7 @@ export default function LandingPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/auth/register"
-                className="group h-14 px-10 bg-white text-black rounded-full flex items-center justify-center font-bold text-base hover:bg-white/90 transition-all shadow-xl"
+                className="group h-14 px-10 bg-white text-black rounded-full flex items-center justify-center font-bold text-base hover:bg-white/90 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)]"
               >
                 Create Account{" "}
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />

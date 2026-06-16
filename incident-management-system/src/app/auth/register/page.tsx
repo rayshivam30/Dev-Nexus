@@ -147,22 +147,22 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="space-y-3"
+        className="space-y-2"
       >
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] font-semibold text-white/50 mb-2">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] font-semibold text-white/50 mb-1">
           <Sparkles className="w-3 h-3 text-white/50" />
           Free to start
         </div>
-        <h1 className="text-4xl font-black tracking-tighter leading-[1.1]">
+        <h1 className="text-3xl font-black tracking-tighter leading-[1.1]">
           Create your account
         </h1>
-        <p className="text-base text-white/40 font-medium leading-relaxed">
+        <p className="text-sm text-white/40 font-medium leading-relaxed">
           Register your organization to get started.
         </p>
       </motion.div>
@@ -186,159 +186,166 @@ export default function RegisterPage() {
         )}
       </AnimatePresence>
 
-      {/* Form */}
-      <form onSubmit={onSubmit} className="space-y-5">
-        {/* Organization + Email row */}
-        <div className="grid grid-cols-1 gap-5">
-          {/* Org Name */}
-          <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15, duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="space-y-2">
-            <label className="text-[11px] font-semibold text-white/30 uppercase tracking-wider ml-1">Organization</label>
-            <div className="relative group">
-              <div
-                className={`absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                  focusedField === "org"
-                    ? "bg-white/10 shadow-[0_0_12px_rgba(255,255,255,0.08)]"
-                    : "bg-white/[0.04]"
-                }`}
-              >
-                <Building2 className={`w-3.5 h-3.5 transition-colors duration-300 ${focusedField === "org" ? "text-white/80" : "text-white/30"}`} />
+      {/* Form Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="p-6 sm:p-8 bg-white/[0.01] border border-white/[0.05] backdrop-blur-2xl rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.4)] hover:border-white/[0.08] transition-all duration-500"
+      >
+        <form onSubmit={onSubmit} className="space-y-4">
+          {/* Organization + Email row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Org Name */}
+            <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15, duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="space-y-1.5">
+              <label className="text-[10px] font-bold text-white/30 uppercase tracking-wider ml-1">Organization</label>
+              <div className="relative group">
+                <div
+                  className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                    focusedField === "org"
+                      ? "bg-white/10 shadow-[0_0_12px_rgba(255,255,255,0.08)]"
+                      : "bg-white/[0.04]"
+                  }`}
+                >
+                  <Building2 className={`w-3.5 h-3.5 transition-colors duration-300 ${focusedField === "org" ? "text-white/80" : "text-white/30"}`} />
+                </div>
+                <input
+                  name="orgName"
+                  required
+                  onFocus={() => setFocusedField("org")}
+                  onBlur={() => setFocusedField(null)}
+                  className="w-full pl-14 pr-4 py-3 bg-white/[0.03] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] focus:shadow-[0_0_0_4px_rgba(255,255,255,0.03)] transition-all duration-300 text-sm placeholder:text-white/20 font-medium"
+                  placeholder="Acme Corp"
+                />
               </div>
-              <input
-                name="orgName"
-                required
-                onFocus={() => setFocusedField("org")}
-                onBlur={() => setFocusedField(null)}
-                className="w-full pl-16 pr-4 py-4 bg-white/[0.03] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] focus:shadow-[0_0_0_4px_rgba(255,255,255,0.03)] transition-all duration-300 text-sm placeholder:text-white/20 font-medium"
-                placeholder="Acme Corp"
-              />
-            </div>
-          </motion.div>
+            </motion.div>
 
-          {/* Email */}
-          <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.23, duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="space-y-2">
-            <label className="text-[11px] font-semibold text-white/30 uppercase tracking-wider ml-1">Admin Email</label>
-            <div className="relative group">
-              <div
-                className={`absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                  focusedField === "email"
-                    ? "bg-white/10 shadow-[0_0_12px_rgba(255,255,255,0.08)]"
-                    : "bg-white/[0.04]"
-                }`}
-              >
-                <Mail className={`w-3.5 h-3.5 transition-colors duration-300 ${focusedField === "email" ? "text-white/80" : "text-white/30"}`} />
+            {/* Email */}
+            <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.23, duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="space-y-1.5">
+              <label className="text-[10px] font-bold text-white/30 uppercase tracking-wider ml-1">Admin Email</label>
+              <div className="relative group">
+                <div
+                  className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                    focusedField === "email"
+                      ? "bg-white/10 shadow-[0_0_12px_rgba(255,255,255,0.08)]"
+                      : "bg-white/[0.04]"
+                  }`}
+                >
+                  <Mail className={`w-3.5 h-3.5 transition-colors duration-300 ${focusedField === "email" ? "text-white/80" : "text-white/30"}`} />
+                </div>
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  onFocus={() => setFocusedField("email")}
+                  onBlur={() => setFocusedField(null)}
+                  className="w-full pl-14 pr-4 py-3 bg-white/[0.03] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] focus:shadow-[0_0_0_4px_rgba(255,255,255,0.03)] transition-all duration-300 text-sm placeholder:text-white/20 font-medium"
+                  placeholder="admin@company.com"
+                />
               </div>
-              <input
-                type="email"
-                name="email"
-                required
-                onFocus={() => setFocusedField("email")}
-                onBlur={() => setFocusedField(null)}
-                className="w-full pl-16 pr-4 py-4 bg-white/[0.03] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] focus:shadow-[0_0_0_4px_rgba(255,255,255,0.03)] transition-all duration-300 text-sm placeholder:text-white/20 font-medium"
-                placeholder="admin@company.com"
-              />
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Password */}
-        <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.31, duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="space-y-2">
-          <label className="text-[11px] font-semibold text-white/30 uppercase tracking-wider ml-1">Password</label>
-          <div className="relative group">
-            <div
-              className={`absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                focusedField === "password"
-                  ? "bg-white/10 shadow-[0_0_12px_rgba(255,255,255,0.08)]"
-                  : "bg-white/[0.04]"
-              }`}
-            >
-              <Lock className={`w-3.5 h-3.5 transition-colors duration-300 ${focusedField === "password" ? "text-white/80" : "text-white/30"}`} />
-            </div>
-            <input
-              type={showPassword ? "text" : "password"}
-              name="password"
-              required
-              minLength={12}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onFocus={() => setFocusedField("password")}
-              onBlur={() => setFocusedField(null)}
-              className="w-full pl-16 pr-14 py-4 bg-white/[0.03] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] focus:shadow-[0_0_0_4px_rgba(255,255,255,0.03)] transition-all duration-300 text-sm placeholder:text-white/20 font-medium"
-              placeholder="Min. 12 characters"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-all"
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+            </motion.div>
           </div>
 
-          {/* Password strength meter */}
-          <AnimatePresence>
-            {password.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
+          {/* Password */}
+          <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.31, duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="space-y-1.5">
+            <label className="text-[10px] font-bold text-white/30 uppercase tracking-wider ml-1">Password</label>
+            <div className="relative group">
+              <div
+                className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                  focusedField === "password"
+                    ? "bg-white/10 shadow-[0_0_12px_rgba(255,255,255,0.08)]"
+                    : "bg-white/[0.04]"
+                }`}
               >
-                <div className="flex items-center gap-3 mt-2 px-1">
-                  <div className="flex-1 flex gap-1">
-                    {[1, 2, 3, 4].map((level) => (
-                      <motion.div
-                        key={level}
-                        className={`h-1 rounded-full flex-1 ${
-                          level <= passwordStrength.score ? passwordStrength.color : "bg-white/[0.08]"
-                        }`}
-                        initial={{ scaleX: 0 }}
-                        animate={{ scaleX: 1 }}
-                        transition={{ delay: level * 0.05, duration: 0.3 }}
-                      />
-                    ))}
-                  </div>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                    passwordStrength.score <= 1 ? "text-white/30" :
-                    passwordStrength.score <= 2 ? "text-white/50" :
-                    passwordStrength.score <= 3 ? "text-white/70" : "text-white"
-                  }`}>
-                    {passwordStrength.label}
-                  </span>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+                <Lock className={`w-3.5 h-3.5 transition-colors duration-300 ${focusedField === "password" ? "text-white/80" : "text-white/30"}`} />
+              </div>
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                required
+                minLength={12}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setFocusedField("password")}
+                onBlur={() => setFocusedField(null)}
+                className="w-full pl-14 pr-12 py-3 bg-white/[0.03] border border-white/[0.08] rounded-2xl focus:outline-none focus:border-white/20 focus:bg-white/[0.05] focus:shadow-[0_0_0_4px_rgba(255,255,255,0.03)] transition-all duration-300 text-sm placeholder:text-white/20 font-medium"
+                placeholder="Min. 12 characters"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-all"
+              >
+                {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
 
-        {/* Submit button */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45, duration: 0.4 }}
-        >
-          <button
-            type="submit"
-            disabled={loading}
-            className="group w-full flex items-center justify-center h-14 bg-white text-black rounded-2xl font-bold text-sm hover:shadow-[0_0_30px_rgba(255,255,255,0.15)] transition-all duration-300 disabled:opacity-50 mt-4 relative overflow-hidden"
+            {/* Password strength meter */}
+            <AnimatePresence>
+              {password.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex items-center gap-3 mt-1.5 px-1">
+                    <div className="flex-1 flex gap-1">
+                      {[1, 2, 3, 4].map((level) => (
+                        <motion.div
+                          key={level}
+                          className={`h-1 rounded-full flex-1 ${
+                            level <= passwordStrength.score ? passwordStrength.color : "bg-white/[0.08]"
+                          }`}
+                          initial={{ scaleX: 0 }}
+                          animate={{ scaleX: 1 }}
+                          transition={{ delay: level * 0.05, duration: 0.3 }}
+                        />
+                      ))}
+                    </div>
+                    <span className={`text-[9px] font-bold uppercase tracking-wider ${
+                      passwordStrength.score <= 1 ? "text-white/30" :
+                      passwordStrength.score <= 2 ? "text-white/50" :
+                      passwordStrength.score <= 3 ? "text-white/70" : "text-white"
+                    }`}>
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Submit button */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45, duration: 0.4 }}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <span className="flex items-center gap-2 relative z-10">
-                Create organization <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </span>
-            )}
-          </button>
-        </motion.div>
-      </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="group w-full flex items-center justify-center h-12 bg-white text-black rounded-2xl font-bold text-sm hover:shadow-[0_0_30px_rgba(255,255,255,0.15)] transition-all duration-300 disabled:opacity-50 mt-2 relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <span className="flex items-center gap-2 relative z-10">
+                  Create organization <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </span>
+              )}
+            </button>
+          </motion.div>
+        </form>
+      </motion.div>
 
       {/* Footer link */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
-        className="text-center text-sm text-white/30 pt-6 border-t border-white/[0.05] font-medium"
+        className="text-center text-sm text-white/30 pt-4 border-t border-white/[0.05] font-medium"
       >
         Already have an account?{" "}
         <Link
