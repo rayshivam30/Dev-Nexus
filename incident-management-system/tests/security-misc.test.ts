@@ -411,4 +411,23 @@ describe("Phase 3 Security & Enhancements Tests", () => {
       expect(data.error).toContain("CSRF check failed");
     });
   });
+
+  describe("API Validation Error Detail Enhancements", () => {
+    test("register endpoint returns specific password strength errors", async () => {
+      const req = new Request("http://localhost/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "valid@example.com",
+          password: "short", // invalid password
+          orgName: "Valid Org",
+        }),
+      });
+
+      const res = await registerPOST(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBe("Password must be at least 12 characters");
+    });
+  });
 });

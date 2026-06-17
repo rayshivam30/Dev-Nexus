@@ -51,13 +51,48 @@ export default function RegisterPage() {
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
     setError("");
 
     const formData = new FormData(e.currentTarget);
     const orgName = formData.get("orgName");
     const email = formData.get("email");
 
+    if (!orgName || orgName.toString().trim() === "") {
+      setError("Organization name is required.");
+      return;
+    }
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.toString())) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (!password) {
+      setError("Password is required.");
+      return;
+    }
+
+    if (password.length < 12) {
+      setError("Password must be at least 12 characters.");
+      return;
+    }
+
+    if (password.length > 128) {
+      setError("Password cannot exceed 128 characters.");
+      return;
+    }
+
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
+      setError("Password must contain at least one uppercase letter, lowercase letter, number, and special character.");
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",

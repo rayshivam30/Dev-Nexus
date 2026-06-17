@@ -22,9 +22,11 @@ export async function POST(request: Request) {
         ipAddress,
         userAgent,
       });
+      const fieldErrors = result.error.flatten().fieldErrors;
+      const firstError = Object.values(fieldErrors).flat()[0] || "Missing or invalid fields";
       return NextResponse.json(
         {
-          error: "Missing or invalid fields",
+          error: firstError,
           details: result.error.flatten(),
         },
         { status: 400 }

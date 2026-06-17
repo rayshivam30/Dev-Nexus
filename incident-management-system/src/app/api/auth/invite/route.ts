@@ -14,10 +14,12 @@ export const POST = withAuth(async (_request, { decoded, body }) => {
   try {
     const result = inviteSchema.safeParse(body);
     if (!result.success) {
+      const fieldErrors = result.error.flatten().fieldErrors;
+      const firstError = Object.values(fieldErrors).flat()[0] || "Missing or invalid fields";
       return NextResponse.json(
         {
-          error: "Missing or invalid fields",
-          details: result.error.flatten().fieldErrors,
+          error: firstError,
+          details: fieldErrors,
         },
         { status: 400 }
       );
