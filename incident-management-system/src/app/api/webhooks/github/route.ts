@@ -116,6 +116,16 @@ export async function POST(req: Request) {
       });
     }
 
+    if (!project && installationId) {
+      // 4. Last-resort fallback: Match by installationId alone.
+      // Handles the case where a project has a githubRepoUrl set but it doesn't exactly
+      // match the URL in the webhook payload (e.g. URL saved before repo was renamed,
+      // or minor formatting difference). The installation binding takes priority.
+      project = await prisma.project.findFirst({
+        where: { githubInstallationId: installationId }
+      });
+    }
+
     if (!project) {
       return NextResponse.json({ message: "Project not linked or installation unknown" }, { status: 200 });
     }
