@@ -16,6 +16,16 @@ const githubWebhookPayloadSchema = z.object({
     conclusion: z.string().nullable().optional(),
     html_url: z.string().url(),
   }).optional(),
+  check_run: z.object({
+    name: z.string(),
+    conclusion: z.string().nullable().optional(),
+    html_url: z.string().url(),
+  }).optional(),
+  check_suite: z.object({
+    conclusion: z.string().nullable().optional(),
+    html_url: z.string().url().optional(),
+    check_runs_url: z.string().url().optional(),
+  }).optional(),
   pull_request: z.object({
     number: z.number(),
     title: z.string(),
@@ -31,6 +41,37 @@ import { calculateSLADeadlines } from "@/services/issue-service";
 import { EVENTS, emitEvent } from "@/lib/events";
 import { notifyOrgStaff } from "@/services/notification-service";
 import { sanitizeJsonValue } from "@/lib/sanitize";
+
+const failedCiConclusions = new Set([
+  "failure",
+  "timed_out",
+  "cancelled",
+  "action_required",
+]);
+
+function isFailedCiConclusion(conclusion?: string | null) {
+  return conclusion ? failedCiConclusions.has(conclusion) : false;
+}
+
+function normalizeGithubRepoUrl(repoUrl?: string | null) {
+  if (!repoUrl) return null;
+
+  try {
+    const parsed = new URL(repoUrl);
+    if (parsed.hostname.toLowerCase() !== "github.com") return repoUrl.trim();
+    const pathParts = parsed.pathname
+      .replace(/\.git$/i, "")
+      .replace(/\/+$/, "")
+      .split("/")
+      .filter(Boolean)
+      .slice(0, 2);
+
+    if (pathParts.length < 2) return repoUrl.trim().replace(/\/+$/, "");
+    return `https://github.com/${pathParts[0].toLowerCase()}/${pathParts[1].toLowerCase()}`;
+  } catch {
+    return repoUrl.trim().replace(/\/+$/, "");
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -84,46 +125,38 @@ export async function POST(req: Request) {
     const event = req.headers.get("x-github-event");
     const installationId = validatedPayload.installation?.id?.toString();
     const repoUrl = validatedPayload.repository?.html_url;
+    const normalizedRepoUrl = normalizeGithubRepoUrl(repoUrl);
     let project = null;
 
-    if (installationId && repoUrl) {
-      // 1. Try to find project matching BOTH installation ID and specific repository URL
-      project = await prisma.project.findFirst({
-        where: { 
-          githubInstallationId: installationId,
-          githubRepoUrl: repoUrl
-        }
+    if (installationId) {
+      const installationProjects = await prisma.project.findMany({
+        where: { githubInstallationId: installationId },
       });
-    }
 
-    if (!project && installationId) {
-      // 2. Fallback: Find a project that has the installation ID but no specific repository URL linked yet
-      project = await prisma.project.findFirst({
-        where: { 
-          githubInstallationId: installationId,
-          OR: [
-            { githubRepoUrl: null },
-            { githubRepoUrl: "" }
-          ]
-        }
-      });
+      project =
+        installationProjects.find(
+          (candidate) =>
+            normalizedRepoUrl &&
+            normalizeGithubRepoUrl(candidate.githubRepoUrl) === normalizedRepoUrl
+        ) ||
+        installationProjects.find((candidate) => !candidate.githubRepoUrl) ||
+        (installationProjects.length === 1 ? installationProjects[0] : null);
     }
 
     if (!project && repoUrl) {
-      // 3. Fallback: Find project matching the repository URL (Manual Flow)
       project = await prisma.project.findFirst({
         where: { githubRepoUrl: repoUrl }
       });
     }
 
-    if (!project && installationId) {
-      // 4. Last-resort fallback: Match by installationId alone.
-      // Handles the case where a project has a githubRepoUrl set but it doesn't exactly
-      // match the URL in the webhook payload (e.g. URL saved before repo was renamed,
-      // or minor formatting difference). The installation binding takes priority.
-      project = await prisma.project.findFirst({
-        where: { githubInstallationId: installationId }
+    if (!project && normalizedRepoUrl) {
+      const repoLinkedProjects = await prisma.project.findMany({
+        where: { githubRepoUrl: { not: null } },
       });
+      project =
+        repoLinkedProjects.find(
+          (candidate) => normalizeGithubRepoUrl(candidate.githubRepoUrl) === normalizedRepoUrl
+        ) || null;
     }
 
     if (!project) {
@@ -213,13 +246,54 @@ export async function POST(req: Request) {
     };
 
     // 1. CI/CD Failures
-    if (event === "workflow_run" && validatedPayload.action === "completed" && validatedPayload.workflow_run?.conclusion === "failure") {
+    const workflowRun = validatedPayload.workflow_run;
+    if (
+      event === "workflow_run" &&
+      validatedPayload.action === "completed" &&
+      workflowRun &&
+      isFailedCiConclusion(workflowRun.conclusion)
+    ) {
       await handleGitHubIncident(
-          validatedPayload.workflow_run, 
-          `CI Failure: ${validatedPayload.workflow_run.name}`, 
-          validatedPayload.workflow_run.html_url
+          workflowRun,
+          `CI Failure: ${workflowRun.name}`,
+          workflowRun.html_url
       );
       return NextResponse.json({ created: true, type: "workflow_run_failure" });
+    }
+
+    const checkRun = validatedPayload.check_run;
+    if (
+      event === "check_run" &&
+      validatedPayload.action === "completed" &&
+      checkRun &&
+      isFailedCiConclusion(checkRun.conclusion)
+    ) {
+      await handleGitHubIncident(
+          checkRun,
+          `CI Failure: ${checkRun.name}`,
+          checkRun.html_url
+      );
+      return NextResponse.json({ created: true, type: "check_run_failure" });
+    }
+
+    const checkSuite = validatedPayload.check_suite;
+    if (
+      event === "check_suite" &&
+      validatedPayload.action === "completed" &&
+      checkSuite &&
+      isFailedCiConclusion(checkSuite.conclusion)
+    ) {
+      const checkSuiteUrl =
+        checkSuite.html_url ||
+        checkSuite.check_runs_url ||
+        repoUrl ||
+        "https://github.com";
+      await handleGitHubIncident(
+          checkSuite,
+          "CI Failure: Check suite failed",
+          checkSuiteUrl
+      );
+      return NextResponse.json({ created: true, type: "check_suite_failure" });
     }
 
     // 2. PR Conflicts & Auto-detection
@@ -254,3 +328,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+

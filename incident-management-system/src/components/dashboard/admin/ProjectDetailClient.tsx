@@ -9,6 +9,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { startGithubAppInstall } from "@/lib/github-install";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
 
 interface Manager {
@@ -324,24 +325,7 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
                 onClick={async () => {
                   setRepoSaveError("");
                   try {
-                    const response = await fetch(
-                      `/api/projects/${project.id}/github-link`,
-                      {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ createInstallationState: true }),
-                      }
-                    );
-                    const data = await response.json();
-                    if (!response.ok) {
-                      throw new Error(data.error || "Failed to start GitHub connection");
-                    }
-                    const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG;
-                    window.open(
-                      `https://github.com/apps/${appSlug}/installations/new?state=${encodeURIComponent(data.state)}`,
-                      "_blank",
-                      "noopener,noreferrer"
-                    );
+                    await startGithubAppInstall(project.id);
                   } catch (error) {
                     setRepoSaveError(
                       error instanceof Error
@@ -723,3 +707,4 @@ DevNexus.init({
     </div>
   );
 }
+

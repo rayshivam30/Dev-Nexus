@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Loader2, Layout, Mail, Info, Layers, X, Github, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { startGithubAppInstall } from "@/lib/github-install";
 
 interface ProjectCreateModalProps {
   onClose: () => void;
@@ -57,19 +58,12 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
 
   const handleConnectGitHub = async () => {
       if (!createdProjectId) return;
-      const response = await fetch(`/api/projects/${createdProjectId}/github-link`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ createInstallationState: true }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        alert(data.error || "Failed to start GitHub connection");
+      try {
+        await startGithubAppInstall(createdProjectId);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : "Failed to start GitHub connection");
         return;
       }
-      const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG;
-      const githubAppUrl = `https://github.com/apps/${appSlug}/installations/new?state=${encodeURIComponent(data.state)}`;
-      window.open(githubAppUrl, "_blank", "noopener,noreferrer");
       onSuccess(createdSdkKey || undefined, createdProjectId || undefined);
   };
 
@@ -204,3 +198,4 @@ export function ProjectCreateModal({ onClose, onSuccess }: ProjectCreateModalPro
     </div>
   );
 }
+
