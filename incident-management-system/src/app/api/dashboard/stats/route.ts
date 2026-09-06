@@ -29,7 +29,6 @@ export const GET = withAuth(async (req, { decoded }) => {
     baseWhere.assignedToId = decoded.userId;
     recentIssuesWhere.assignedToId = decoded.userId;
   } else {
-    recentIssuesWhere.assignedToId = null;
     if (decoded.role === 'MANAGER' && decoded.projectId) {
       cacheKey = `dashboard:stats:${orgId}:manager:${decoded.projectId}`;
       baseWhere.projectId = decoded.projectId;
@@ -82,7 +81,7 @@ export const GET = withAuth(async (req, { decoded }) => {
   const recentIssues = recentIssuesRaw.map((issue) => ({
     id: issue.id,
     title: issue.title,
-    rootCause: issue.description.substring(0, 100) + '...',
+    descriptionPreview: issue.description.substring(0, 100) + (issue.description.length > 100 ? '...' : ''),
     description: issue.description,
     status: issue.status,
     severity: issue.severity,

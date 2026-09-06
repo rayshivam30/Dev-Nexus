@@ -4,8 +4,8 @@ import { getNotifications, getUnreadNotificationCount, markAllAsRead } from "@/s
 export const GET = withAuth(async (req, { decoded }) => {
   try {
     const url = new URL(req.url);
-    const skip = parseInt(url.searchParams.get("skip") || "0", 10) || 0;
-    const take = parseInt(url.searchParams.get("take") || "50", 10) || 50;
+    const skip = Math.max(0, parseInt(url.searchParams.get("skip") || "0", 10) || 0);
+    const take = Math.min(100, Math.max(1, parseInt(url.searchParams.get("take") || "50", 10) || 50));
 
     const userId = decoded.userId as string;
     const [notifications, unreadCount] = await Promise.all([

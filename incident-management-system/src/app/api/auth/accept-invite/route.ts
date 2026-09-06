@@ -6,6 +6,7 @@ import { signToken } from "@/lib/jwt";
 import { acceptInviteSchema } from "@/lib/validations";
 import { checkInviteAcceptAttempts, recordInviteAcceptSuccess } from "@/lib/brute-force";
 import { logAuditEvent } from "@/lib/audit-logger";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   const userAgent = request.headers.get("user-agent") || undefined;
@@ -216,7 +217,7 @@ export async function POST(request: Request) {
       ipAddress,
       userAgent,
     });
-    console.error("Accept invite error:", error);
+    logger.error({ err: error }, "Accept invite error");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

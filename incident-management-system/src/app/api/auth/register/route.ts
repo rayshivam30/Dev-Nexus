@@ -3,6 +3,7 @@ import { registerAdmin } from '@/services/auth-service';
 import { registerSchema } from '@/lib/validations';
 import { sendMail } from '@/lib/mailer';
 import { getBaseUrl } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -39,11 +40,15 @@ export async function POST(request: Request) {
           </div>
         `,
       });
-      if (mailResult) {
+
+      // mailResult is non-null and not a dropped result when delivery was attempted
+      if (mailResult && !('dropped' in mailResult && mailResult.dropped)) {
         emailSent = true;
+      } else if (mailResult && 'dropped' in mailResult && mailResult.dropped) {
+        logger.warn({ to: email, reason: mailResult.reason }, "Verification email dropped due to queue being full");
       }
     } catch (emailError) {
-      console.error("Failed to send verification email:", emailError);
+      logger.error({ err: emailError }, "Failed to send verification email");
     }
 
     if (!emailSent) {
@@ -64,8 +69,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
 
-    console.error('Registration error:', error);
+    logger.error({ err: error }, 'Registration error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-

@@ -2,6 +2,7 @@ import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { getQueueStats } from "@/lib/ai-queue";
 import { getEmailQueueStats } from "@/lib/mailer";
 import { getCacheStats } from "@/lib/authorization";
+import { logger } from "@/lib/logger";
 
 export const GET = withAuth(async () => {
   try {
@@ -29,7 +30,7 @@ export const GET = withAuth(async () => {
       },
     });
   } catch (error) {
-    console.error("Telemetry fetch error:", error);
+    logger.error({ err: error }, "Telemetry fetch error");
     return apiError("Failed to fetch telemetry data", 500);
   }
 }, ["ADMIN"]);

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyEmail } from '@/services/auth-service';
 import { getBaseUrl } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${baseUrl}/auth/login?verified=true`);
 
   } catch (error) {
-    console.error('Verification error:', error);
+    logger.error({ err: error }, "Verification error");
     const baseUrl = getBaseUrl();
     return NextResponse.redirect(`${baseUrl}/auth/login?error=verification_failed`);
   }

@@ -2,6 +2,7 @@ import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { createProject, deleteProject, getProjectsByOrg } from "@/services/project-service";
 import { PlanType } from "@devnexus/prisma-client";
 import { logAuditEvent } from "@/lib/audit-logger";
+import { logger } from "@/lib/logger";
 
 export const GET = withAuth(async (_req, { decoded }) => {
   if (!decoded.orgId) return apiError("Organization ID is missing in token", 401);
@@ -9,7 +10,7 @@ export const GET = withAuth(async (_req, { decoded }) => {
     const projects = await getProjectsByOrg(decoded.orgId);
     return apiResponse("Projects fetched successfully", { projects });
   } catch (error) {
-    console.error("Fetch projects error:", error);
+    logger.error({ err: error }, "Fetch projects error");
     return apiError("Failed to fetch projects", 500);
   }
 });
@@ -51,7 +52,7 @@ export const POST = withAuth(async (req, { decoded, body }) => {
       ipAddress,
       userAgent,
     });
-    console.error("Project creation error:", error);
+    logger.error({ err: error }, "Project creation error");
     return apiError("Failed to create project", 500);
   }
 }, ["ADMIN"]);
@@ -101,7 +102,7 @@ export const DELETE = withAuth(async (req, { decoded }) => {
       ipAddress,
       userAgent,
     });
-    console.error("Project deletion error:", error);
+    logger.error({ err: error }, "Project deletion error");
     return apiError("Failed to delete project", 500);
   }
 }, ["ADMIN"]);

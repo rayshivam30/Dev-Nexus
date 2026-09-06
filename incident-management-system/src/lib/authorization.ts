@@ -145,9 +145,11 @@ export async function canAccessIssue(
   
   if (user.role === "DEVELOPER") {
     if (issue.assignedToId !== user.id) return false;
-    if (!issue.teamId) return false; // Issue must be team-assigned
-    
-    // Verify developer belongs to issue's team
+
+    // If the issue has no team, direct assignment is sufficient for access
+    if (!issue.teamId) return true;
+
+    // Verify developer belongs to the issue's team
     const teamMember = await prisma.user.findFirst({
       where: {
         id: user.id,

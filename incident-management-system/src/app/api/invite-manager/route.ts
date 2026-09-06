@@ -1,14 +1,24 @@
 import crypto from "crypto";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { sendMail } from "@/lib/mailer";
 import { escapeHtml, getBaseUrl } from "@/lib/utils";
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
+import { logger } from "@/lib/logger";
+
+const inviteManagerSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  projectId: z.string().min(1, "Project ID is required"),
+});
 
 export const POST = withAuth(async (_req, { decoded, body }) => {
-  const { email, projectId } =
-    (body as { email?: string; projectId?: string }) || {};
-
-  if (!email || !projectId) return apiError("Missing data");
+  const parsed = inviteManagerSchema.safeParse(body);
+  if (!parsed.success) {
+    return apiError(parsed.error.flatten().fieldErrors
+      ? (Object.values(parsed.error.flatten().fieldErrors).flat()[0] ?? "Invalid input")
+      : "Invalid input");
+  }
+  const { email, projectId } = parsed.data;
   if (!decoded.orgId) return apiError("Organization is required", 403);
 
   const project = await prisma.project.findFirst({
@@ -67,7 +77,7 @@ export const POST = withAuth(async (_req, { decoded, body }) => {
       `,
     });
   } catch (emailError) {
-    console.error("Failed to send invite email:", emailError);
+    logger.error({ err: emailError }, "Failed to send invite email");
   }
 
   return apiResponse("Invite created", { inviteLink });

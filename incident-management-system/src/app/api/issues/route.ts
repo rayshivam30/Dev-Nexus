@@ -3,6 +3,7 @@ import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { createIssue } from "@/services/issue-service";
 import { createIssueSchema } from "@/lib/validations";
 import { createNotification } from "@/services/notification-service";
+import { logger } from "@/lib/logger";
 
 export const POST = withAuth(async (req, { decoded, body }) => {
   const result = createIssueSchema.safeParse(body);
@@ -102,7 +103,7 @@ export const POST = withAuth(async (req, { decoded, body }) => {
 
     return apiResponse("Issue created successfully", { issue }, 201);
   } catch (error) {
-    console.error("Issue creation error:", error);
+    logger.error({ err: error }, "Issue creation error");
     return apiError("Failed to create issue", 500);
   }
 });

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { signToken } from "@/lib/jwt";
+import { logger } from "@/lib/logger";
 
 export const POST = withAuth(async (_req, { decoded, body, params }) => {
   const { id } = await (params as { id: string });
@@ -56,7 +57,7 @@ export const POST = withAuth(async (_req, { decoded, body, params }) => {
 
     return apiResponse("GitHub settings updated successfully", { project: updatedProject });
   } catch (error) {
-    console.error("GitHub link error:", error);
+    logger.error({ err: error }, "GitHub link error");
     return apiError("Failed to link GitHub", 500);
   }
 }, ["ADMIN"]);

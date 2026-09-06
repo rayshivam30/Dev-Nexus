@@ -2,6 +2,7 @@ import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { addComment } from "@/services/issue-service";
 import { EVENTS, emitEvent } from "@/lib/events";
 import { getActiveSessionUser, getAuthorizedIssue } from "@/lib/authorization";
+import { logger } from "@/lib/logger";
 
 export const POST = withAuth(async (_req, { decoded, body, params }) => {
   const { id } = await (params as { id: string });
@@ -31,7 +32,7 @@ export const POST = withAuth(async (_req, { decoded, body, params }) => {
 
     return apiResponse("Comment added successfully", { comment }, 201);
   } catch (error) {
-    console.error("Comment creation error:", error);
+    logger.error({ err: error }, "Comment creation error");
     return apiError("Failed to add comment", 500);
   }
 });

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { EnvironmentType, IssueStatus, IssueSeverity, PlanType, Prisma, IssuePriority } from "@devnexus/prisma-client";
+import { sanitizeText } from "@/lib/input-sanitizer";
 
 export async function createIssue(data: {
   title: string;
@@ -128,9 +129,12 @@ export async function logActivity(issueId: string, userId: string | null, action
 }
 
 export async function addComment(issueId: string, userId: string, text: string) {
+  // Sanitize before storing to prevent stored XSS
+  const sanitizedText = sanitizeText(text, { maxLength: 5000, allowHtml: false });
+
   return await prisma.$transaction(async (tx) => {
     const comment = await tx.issueComment.create({
-      data: { issueId, userId, text },
+      data: { issueId, userId, text: sanitizedText },
       include: { user: { select: { name: true, email: true } } }
     });
     await tx.issueActivity.create({

@@ -197,7 +197,7 @@ export async function sendMail({ to, subject, html }: SendMailOptions) {
       { queueSize: emailQueue.length, to },
       "Email queue full, dropping email"
     );
-    return null;
+    return { queued: false, dropped: true, reason: "queue_full" };
   }
 
   emailQueue.push({

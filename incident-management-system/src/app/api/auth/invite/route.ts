@@ -5,6 +5,7 @@ import { inviteSchema } from "@/lib/validations";
 import { escapeHtml, getBaseUrl } from "@/lib/utils";
 import { withAuth } from "@/lib/api-utils";
 import { sendMail } from "@/lib/mailer";
+import { logger } from "@/lib/logger";
 
 function hashInviteToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -113,7 +114,7 @@ export const POST = withAuth(async (_request, { decoded, body }) => {
         emailSent = true;
       }
     } catch (emailError) {
-      console.error("Failed to send invite email:", emailError);
+      logger.error({ err: emailError }, "Failed to send invite email");
     }
 
     if (!emailSent) {
@@ -135,7 +136,7 @@ export const POST = withAuth(async (_request, { decoded, body }) => {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Invite error:", error);
+    logger.error({ err: error }, "Invite error");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

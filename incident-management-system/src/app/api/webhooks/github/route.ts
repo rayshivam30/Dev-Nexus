@@ -2,6 +2,7 @@ import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const githubWebhookPayloadSchema = z.object({
   action: z.string().optional(),
@@ -84,7 +85,7 @@ export async function POST(req: Request) {
 
     if (!isMock) {
       if (!webhookSecret) {
-        console.error("GITHUB_WEBHOOK_SECRET is not configured");
+        logger.error("GITHUB_WEBHOOK_SECRET is not configured");
         return NextResponse.json(
           { error: "Webhook verification is unavailable" },
           { status: 503 }
@@ -238,7 +239,7 @@ export async function POST(req: Request) {
                     status: updated.status
                 });
             } catch (e) {
-                console.error("GitHub AI analysis background error:", e);
+                logger.error({ err: e }, "GitHub AI analysis background error");
             }
           });
 
@@ -296,35 +297,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ created: true, type: "check_suite_failure" });
     }
 
-    // 2. PR Conflicts & Auto-detection
+    // 2. PR Conflicts only — don't create an incident for every new PR
     if (event === "pull_request") {
       const pr = validatedPayload.pull_request;
       if (pr) {
         const isConflict = pr.mergeable_state === "dirty";
-        
-        if (isConflict) {
-            await handleGitHubIncident(
-                pr, 
-                `MERGE CONFLICT: PR #${pr.number}`, 
-                pr.html_url
-            );
-            return NextResponse.json({ created: true, type: "pr_conflict" });
-        }
 
-        if (validatedPayload.action === "opened") {
-            await handleGitHubIncident(
-                pr, 
-                `New PR: ${pr.title}`, 
-                pr.html_url
-            );
-            return NextResponse.json({ created: true, type: "pr_opened" });
+        if (isConflict) {
+          await handleGitHubIncident(
+            pr,
+            `MERGE CONFLICT: PR #${pr.number}`,
+            pr.html_url
+          );
+          return NextResponse.json({ created: true, type: "pr_conflict" });
         }
       }
     }
 
     return NextResponse.json({ success: true, message: "Event ignored" });
   } catch (error) {
-    console.error("GitHub Webhook Error:", error);
+    logger.error({ err: error }, "GitHub Webhook Error");
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

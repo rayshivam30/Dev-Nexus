@@ -4,6 +4,16 @@ const prismaMock = createPrismaMock();
 mock.module("@/lib/db", () => ({ prisma: prismaMock }));
 mock.module("../src/lib/db", () => ({ prisma: prismaMock }));
 
+// Mock Redis so the blacklist check doesn't hit a real Upstash URL
+const redisStore = new Map<string, string>();
+const mockRedis = {
+  get: mock(async (key: string) => redisStore.get(key) || null),
+  set: mock(async (key: string, value: string) => { redisStore.set(key, value); }),
+  del: mock(async (key: string) => { redisStore.delete(key); }),
+};
+mock.module("@/lib/redis", () => ({ redis: mockRedis }));
+mock.module("../src/lib/redis", () => ({ redis: mockRedis }));
+
 import { expect, test, describe, beforeEach } from "bun:test";
 import { POST } from "../src/app/api/teams/route";
 import { verifyToken } from "../src/lib/jwt";
@@ -28,6 +38,7 @@ mock.module("next/server", () => ({
 
 describe("API Teams Route", () => {
   beforeEach(() => {
+    redisStore.clear();
     prismaMock.user.findUnique.mockResolvedValue({
       id: "user-1",
       email: "admin@example.com",

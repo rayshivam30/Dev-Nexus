@@ -6,6 +6,7 @@ import { updateIssueSchema } from "@/lib/validations";
 import { EVENTS, emitEvent } from "@/lib/events";
 import { createNotification } from "@/services/notification-service";
 import { getActiveSessionUser, getAuthorizedIssue } from "@/lib/authorization";
+import { logger } from "@/lib/logger";
 
 export const GET = withAuth(async (_req, { decoded, params }) => {
   const { id } = await (params as { id: string });
@@ -121,7 +122,7 @@ export const PATCH = withAuth(async (_req, { decoded, body, params }) => {
 
     return apiResponse("Issue updated successfully", { issue });
   } catch (error) {
-    console.error("Issue update error:", error);
+    logger.error({ err: error }, "Issue update error");
     const message = error instanceof Error ? error.message : "Failed to update issue";
     return apiError(message, 500);
   }

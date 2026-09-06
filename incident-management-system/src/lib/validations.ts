@@ -66,9 +66,9 @@ export const createIssueSchema = z.object({
 
 export const updateIssueSchema = z.object({
   status: z.nativeEnum(IssueStatus).optional(),
-  teamId: z.string().optional(),
-  assignedToId: z.string().optional(),
-  rootCause: z.string().max(1000).optional(),
+  teamId: z.string().min(1, "Team ID must not be empty").optional(),
+  assignedToId: z.string().min(1, "Assignee ID must not be empty").optional(),
+  rootCause: z.string().max(2000).optional(),
 });
 
 // AI Service Schema
@@ -98,12 +98,13 @@ export const profileUpdateSchema = z.object({
           "www.github.com",
           "avatars.githubusercontent.com",
           "raw.githubusercontent.com",
-          "cdn.example.com"
+          "cdn.example.com",
+          "res.cloudinary.com",
         ].includes(parsed.hostname);
       } catch {
         return false;
       }
-    }, "Image URL must be from a trusted source (GitHub or cdn.example.com)")
+    }, "Image URL must be from a trusted source (GitHub, Cloudinary, or cdn.example.com)")
     .optional(),
   phoneNumber: z
     .string()

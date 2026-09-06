@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/api-utils";
 import { verifyToken } from "@/lib/jwt";
 import { getBaseUrl } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -14,11 +15,11 @@ export async function GET(req: NextRequest) {
   try {
     const parsed = new URL(baseUrl);
     if (process.env.NODE_ENV === "production" && parsed.protocol !== "https:") {
-      console.error("GitHub callback: baseUrl must use HTTPS in production:", baseUrl);
+      logger.error({ baseUrl }, "GitHub callback: baseUrl must use HTTPS in production");
       return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }
   } catch {
-    console.error("GitHub callback: invalid baseUrl:", baseUrl);
+    logger.error({ baseUrl }, "GitHub callback: invalid baseUrl");
     return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
   }
 
@@ -105,7 +106,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("GitHub Callback Error:", error);
+    logger.error({ err: error }, "GitHub Callback Error");
     return NextResponse.redirect(
       `${baseUrl}/dashboard/admin?error=github_callback_failed`
     );

@@ -5,6 +5,7 @@ import { signToken } from '@/lib/jwt';
 import { loginSchema } from '@/lib/validations';
 import { checkLoginAttempts, recordLoginSuccess } from '@/lib/brute-force';
 import { logAuditEvent } from '@/lib/audit-logger';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
   const userAgent = request.headers.get("user-agent") || undefined;
@@ -154,7 +155,7 @@ export async function POST(request: Request) {
       ipAddress,
       userAgent,
     });
-    console.error('Login error:', error);
+    logger.error({ err: error }, 'Login error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

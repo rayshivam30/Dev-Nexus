@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 export const POST = withAuth(async (request, { decoded, body }) => {
   try {
@@ -34,7 +35,7 @@ export const POST = withAuth(async (request, { decoded, body }) => {
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Team creation error:', error);
+    logger.error({ err: error }, 'Team creation error');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }, ['ADMIN', 'MANAGER']);
