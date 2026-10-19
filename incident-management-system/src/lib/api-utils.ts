@@ -6,6 +6,7 @@ import {
   getActiveSessionUser,
   sessionUserToPayload,
 } from "@/lib/authorization";
+import { getRequestId, withRequestContext, generateRequestId } from "@/lib/request-id";
 
 export function verifyCsrf(req: NextRequest): boolean {
   if (process.env.NODE_ENV === "test") return true;
@@ -100,91 +101,103 @@ export type ApiHandler = (
 
 export function withAuth(handler: ApiHandler, allowedRoles?: string[]) {
   return async (req: NextRequest, context?: { params: unknown }) => {
-    try {
-      // CSRF check on state-changing requests
-      if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
-        if (!verifyCsrf(req)) {
+    const requestId = req.headers.get("x-request-id") || generateRequestId();
+
+    return withRequestContext(requestId, async () => {
+      try {
+        // CSRF check on state-changing requests
+        if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+          if (!verifyCsrf(req)) {
+            return NextResponse.json(
+              { error: "CSRF check failed: Invalid or untrusted Origin" },
+              { status: 403, headers: { "X-Request-Id": requestId } }
+            );
+          }
+        }
+        const params = context?.params;
+        let token = "";
+        const authHeader = req.headers.get("Authorization");
+        if (authHeader?.startsWith("Bearer ")) {
+          const extracted = authHeader.split(" ")[1];
+          if (extracted && extracted.trim() !== "" && extracted !== "null") {
+            token = extracted;
+          }
+        }
+
+        if (!token) {
+          const cookieToken = req.cookies?.get("incident_token")?.value;
+          if (cookieToken) {
+            token = cookieToken;
+          }
+        }
+
+        if (!token) {
           return NextResponse.json(
-            { error: "CSRF check failed: Invalid or untrusted Origin" },
-            { status: 403 }
+            { error: "Unauthorized" },
+            { status: 401, headers: { "X-Request-Id": requestId } }
           );
         }
-      }
-      const params = context?.params;
-      let token = "";
-      const authHeader = req.headers.get("Authorization");
-      if (authHeader?.startsWith("Bearer ")) {
-        const extracted = authHeader.split(" ")[1];
-        if (extracted && extracted.trim() !== "" && extracted !== "null") {
-          token = extracted;
+
+        const isBlacklisted = await isTokenBlacklisted(token);
+        if (isBlacklisted) {
+          return NextResponse.json(
+            { error: "Unauthorized: Session invalidated" },
+            { status: 401, headers: { "X-Request-Id": requestId } }
+          );
         }
-      }
 
-      if (!token) {
-        const cookieToken = req.cookies?.get("incident_token")?.value;
-        if (cookieToken) {
-          token = cookieToken;
+        const decoded = verifyToken(token);
+
+        if (!decoded) {
+          return NextResponse.json(
+            { error: "Invalid or expired token" },
+            { status: 401, headers: { "X-Request-Id": requestId } }
+          );
         }
-      }
 
-      if (!token) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-
-      const isBlacklisted = await isTokenBlacklisted(token);
-      if (isBlacklisted) {
-        return NextResponse.json(
-          { error: "Unauthorized: Session invalidated" },
-          { status: 401 }
-        );
-      }
-
-      const decoded = verifyToken(token);
-
-      if (!decoded) {
-        return NextResponse.json(
-          { error: "Invalid or expired token" },
-          { status: 401 }
-        );
-      }
-
-      const user = await getActiveSessionUser(decoded);
-      if (!user) {
-        return NextResponse.json(
-          { error: "User session is inactive or no longer exists" },
-          { status: 401 }
-        );
-      }
-
-      const currentPayload = sessionUserToPayload(user);
-
-      if (allowedRoles && !allowedRoles.includes(currentPayload.role)) {
-        return NextResponse.json(
-          {
-            error: `Forbidden: This action requires one of the following roles: ${allowedRoles.join(", ")}`,
-          },
-          { status: 403 }
-        );
-      }
-
-      let body;
-      if (["POST", "PUT", "PATCH"].includes(req.method)) {
-        try {
-          body = await req.json();
-        } catch {
-          // Body might be empty or invalid JSON
+        const user = await getActiveSessionUser(decoded);
+        if (!user) {
+          return NextResponse.json(
+            { error: "User session is inactive or no longer exists" },
+            { status: 401, headers: { "X-Request-Id": requestId } }
+          );
         }
-      }
 
-      return await handler(req, {
-        decoded: currentPayload,
-        body,
-        params: params || {},
-      });
-    } catch (error) {
-      logger.error({ err: error }, "API Error");
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-    }
+        const currentPayload = sessionUserToPayload(user);
+
+        if (allowedRoles && !allowedRoles.includes(currentPayload.role)) {
+          return NextResponse.json(
+            {
+              error: `Forbidden: This action requires one of the following roles: ${allowedRoles.join(", ")}`,
+            },
+            { status: 403, headers: { "X-Request-Id": requestId } }
+          );
+        }
+
+        let body;
+        if (["POST", "PUT", "PATCH"].includes(req.method)) {
+          try {
+            body = await req.json();
+          } catch {
+            // Body might be empty or invalid JSON
+          }
+        }
+
+        const response = await handler(req, {
+          decoded: currentPayload,
+          body,
+          params: params || {},
+        });
+        response.headers.set("X-Request-Id", requestId);
+        return response;
+      } catch (error) {
+        logger.error({ err: error }, "API Error");
+        return NextResponse.json(
+          { error: "Internal server error" },
+          { status: 500, headers: { "X-Request-Id": requestId } }
+        );
+      }
+    });
   };
 }
 
@@ -193,11 +206,17 @@ export function apiResponse(
   data?: Record<string, unknown>,
   status = 200
 ) {
-  return NextResponse.json({ message, ...data }, { status });
+  const reqId = getRequestId();
+  const headers: Record<string, string> = {};
+  if (reqId && reqId !== "unknown") headers["X-Request-Id"] = reqId;
+  return NextResponse.json({ message, ...data }, { status, headers });
 }
 
 export function apiError(error: string, status = 400) {
-  return NextResponse.json({ error }, { status });
+  const reqId = getRequestId();
+  const headers: Record<string, string> = {};
+  if (reqId && reqId !== "unknown") headers["X-Request-Id"] = reqId;
+  return NextResponse.json({ error }, { status, headers });
 }
 
 export async function getCurrentUser(): Promise<JwtPayload | null> {

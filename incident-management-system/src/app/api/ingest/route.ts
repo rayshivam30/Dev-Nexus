@@ -10,6 +10,7 @@ import crypto from "crypto";
 import { EVENTS, emitEvent } from "@/lib/events";
 import { notifyOrgStaff } from "@/services/notification-service";
 import { sanitizeJsonValue } from "@/lib/sanitize";
+import { withRequestContext, generateRequestId } from "@/lib/request-id";
 
 /**
  * Hashes an API key for comparison.
@@ -324,87 +325,110 @@ export async function OPTIONS(req: Request) {
 }
 
 export async function POST(req: Request) {
-  try {
-    const contentLength = Number(req.headers.get("content-length") || 0);
-    if (contentLength > MAX_PAYLOAD_BYTES) {
-      return NextResponse.json({ error: "Payload Too Large" }, { status: 413, headers: getFallbackCorsHeaders(req) });
-    }
+  const requestId = req.headers.get("x-request-id") || generateRequestId();
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: getFallbackCorsHeaders(req) });
-    }
-    const apiKey = authHeader.split(" ")[1];
-    if (!apiKey || apiKey.length > 256) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: getFallbackCorsHeaders(req) });
-    }
-
-    const hashedKey = apiKey.startsWith("devnexus_sk_") ? hashApiKey(apiKey) : apiKey;
-    const project = await prisma.project.findUnique({ where: { sdkApiKey: hashedKey } });
-    if (!project) {
-      return NextResponse.json({ error: "Invalid API Key" }, { status: 401, headers: getFallbackCorsHeaders(req) });
-    }
-    const projectCorsHeaders = getProjectCorsHeaders(req, project.allowedOrigins);
-    if (!projectCorsHeaders) {
-      return NextResponse.json(
-        { error: "Origin is not allowed for this project" },
-        { status: 403 }
-      );
-    }
-
-    const rateCheck = await checkRateLimit(project.id);
-    const rlHeaders = {
-      "X-RateLimit-Limit": String(rateCheck.limit),
-      "X-RateLimit-Remaining": String(rateCheck.remaining),
-      "X-RateLimit-Reset": String(rateCheck.reset),
-    };
-
-    if (!rateCheck.allowed) {
-      return NextResponse.json({ error: "Rate Limit Exceeded" }, { status: 429, headers: { ...projectCorsHeaders, ...rlHeaders } });
-    }
-
-    const rawBody = await req.text();
-    if (Buffer.byteLength(rawBody, "utf8") > MAX_PAYLOAD_BYTES) {
-      return NextResponse.json({ error: "Payload Too Large" }, { status: 413, headers: projectCorsHeaders });
-    }
-
-    let payload: Record<string, unknown>;
+  return withRequestContext(requestId, async () => {
     try {
-      payload = JSON.parse(rawBody) as Record<string, unknown>;
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: projectCorsHeaders });
-    }
-    
-    if (payload.isBatch && Array.isArray(payload.reports)) {
-      if (
-        payload.reports.length === 0 ||
-        payload.reports.length > MAX_BATCH_REPORTS
-      ) {
+      const contentLength = Number(req.headers.get("content-length") || 0);
+      if (contentLength > MAX_PAYLOAD_BYTES) {
+        return NextResponse.json({ error: "Payload Too Large" }, { status: 413, headers: { ...getFallbackCorsHeaders(req), "X-Request-Id": requestId } });
+      }
+
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { ...getFallbackCorsHeaders(req), "X-Request-Id": requestId } });
+      }
+      const apiKey = authHeader.split(" ")[1];
+      if (!apiKey || apiKey.length > 256) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { ...getFallbackCorsHeaders(req), "X-Request-Id": requestId } });
+      }
+
+      const hashedKey = apiKey.startsWith("devnexus_sk_") ? hashApiKey(apiKey) : apiKey;
+      const project = await prisma.project.findUnique({ where: { sdkApiKey: hashedKey } });
+      if (!project) {
+        return NextResponse.json({ error: "Invalid API Key" }, { status: 401, headers: { ...getFallbackCorsHeaders(req), "X-Request-Id": requestId } });
+      }
+      const projectCorsHeaders = getProjectCorsHeaders(req, project.allowedOrigins);
+      if (!projectCorsHeaders) {
         return NextResponse.json(
-          { error: `Batch must contain between 1 and ${MAX_BATCH_REPORTS} reports` },
-          { status: 400, headers: { ...projectCorsHeaders, ...rlHeaders } }
+          { error: "Origin is not allowed for this project" },
+          { status: 403, headers: { "X-Request-Id": requestId } }
         );
       }
-      const issueIds = [];
-      for (const report of payload.reports) {
-        try {
-          const id = await processReport(report, project);
-          issueIds.push(id);
-        } catch (e) {
-          logger.error({ err: e }, "Failed to process report in batch");
-        }
+
+      const rateCheck = await checkRateLimit(project.id);
+      const rlHeaders = {
+        "X-RateLimit-Limit": String(rateCheck.limit),
+        "X-RateLimit-Remaining": String(rateCheck.remaining),
+        "X-RateLimit-Reset": String(rateCheck.reset),
+        "X-Request-Id": requestId,
+      };
+
+      if (!rateCheck.allowed) {
+        return NextResponse.json({ error: "Rate Limit Exceeded" }, { status: 429, headers: { ...projectCorsHeaders, ...rlHeaders } });
       }
-      return NextResponse.json({ success: true, issueIds }, { status: 201, headers: { ...projectCorsHeaders, ...rlHeaders } });
+
+      const rawBody = await req.text();
+      if (Buffer.byteLength(rawBody, "utf8") > MAX_PAYLOAD_BYTES) {
+        return NextResponse.json({ error: "Payload Too Large" }, { status: 413, headers: { ...projectCorsHeaders, ...rlHeaders } });
+      }
+
+      let payload: Record<string, unknown>;
+      try {
+        payload = JSON.parse(rawBody) as Record<string, unknown>;
+      } catch {
+        return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: { ...projectCorsHeaders, ...rlHeaders } });
+      }
+      
+      if (payload.isBatch && Array.isArray(payload.reports)) {
+        if (
+          payload.reports.length === 0 ||
+          payload.reports.length > MAX_BATCH_REPORTS
+        ) {
+          return NextResponse.json(
+            { error: `Batch must contain between 1 and ${MAX_BATCH_REPORTS} reports` },
+            { status: 400, headers: { ...projectCorsHeaders, ...rlHeaders } }
+          );
+        }
+
+        // Process batch reports concurrently to avoid N+1 sequential execution
+        const settled = await Promise.allSettled(
+          payload.reports.map((report) => processReport(report, project))
+        );
+
+        const issueIds: string[] = [];
+        let failedCount = 0;
+
+        for (const res of settled) {
+          if (res.status === "fulfilled") {
+            issueIds.push(res.value);
+          } else {
+            failedCount++;
+            logger.error({ err: res.reason }, "Failed to process report in batch");
+          }
+        }
+
+        return NextResponse.json(
+          { 
+            success: true, 
+            issueIds, 
+            total: payload.reports.length, 
+            processed: issueIds.length,
+            failed: failedCount 
+          }, 
+          { status: 201, headers: { ...projectCorsHeaders, ...rlHeaders } }
+        );
+      }
+
+      const issueId = await processReport(
+        payload as unknown as IngestReportPayload,
+        project
+      );
+      return NextResponse.json({ success: true, issueId }, { status: 201, headers: { ...projectCorsHeaders, ...rlHeaders } });
+
+    } catch (error) {
+      logger.error({ err: error }, "SDK Ingest API Error");
+      return NextResponse.json({ error: "Internal Server Error" }, { status: 500, headers: { ...getFallbackCorsHeaders(req), "X-Request-Id": requestId } });
     }
-
-    const issueId = await processReport(
-      payload as unknown as IngestReportPayload,
-      project
-    );
-    return NextResponse.json({ success: true, issueId }, { status: 201, headers: { ...projectCorsHeaders, ...rlHeaders } });
-
-  } catch (error) {
-    logger.error({ err: error }, "SDK Ingest API Error");
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500, headers: getFallbackCorsHeaders(req) });
-  }
+  });
 }

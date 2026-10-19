@@ -165,12 +165,29 @@ export async function getIssueDetails(id: string) {
   });
 }
 
+export async function softDeleteIssue(id: string, userId: string) {
+  return await prisma.$transaction(async (tx) => {
+    const issue = await tx.issue.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    });
+    await tx.issueActivity.create({
+      data: {
+        issueId: id,
+        userId,
+        action: "Issue soft deleted"
+      }
+    });
+    return issue;
+  });
+}
+
 export async function getIssuesByProject(projectId: string, page = 1, limit = 50) {
   const skip = (page - 1) * limit;
   
   const [issues, totalCount] = await Promise.all([
     prisma.issue.findMany({
-      where: { projectId },
+      where: { projectId, deletedAt: null },
       include: {
         assignedTo: { select: { id: true, email: true } },
         team: { select: { id: true, name: true } }
@@ -179,7 +196,7 @@ export async function getIssuesByProject(projectId: string, page = 1, limit = 50
       skip,
       take: limit
     }),
-    prisma.issue.count({ where: { projectId } })
+    prisma.issue.count({ where: { projectId, deletedAt: null } })
   ]);
 
   return {

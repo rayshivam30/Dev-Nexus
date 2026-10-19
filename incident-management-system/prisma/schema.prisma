@@ -69,6 +69,7 @@ model Organization {
   plan      PlanType  @default(BASIC)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Soft delete
 
   users     User[]
   projects  Project[]
@@ -96,6 +97,7 @@ model User {
   team           Team?         @relation("TeamMembers", fields: [teamId], references: [id])
   
   emailVerifiedAt DateTime?
+  deletedAt       DateTime?    // Soft delete
   
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -105,6 +107,9 @@ model User {
   comments       IssueComment[]
   createdProjects Project[]   @relation("CreatedProjects")
   notifications  Notification[]
+
+  @@index([orgId])
+  @@index([teamId])
 }
 
 model VerificationToken {
@@ -129,6 +134,7 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model Project {
@@ -142,6 +148,7 @@ model Project {
   creator              User?        @relation("CreatedProjects", fields: [createdBy], references: [id])
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
+  deletedAt            DateTime?    // Soft delete
 
   plan                 PlanType     @default(BASIC)
   githubRepoUrl        String?
@@ -152,18 +159,23 @@ model Project {
   teams                Team[]
   issues               Issue[]
   managers             User[]       @relation("ManagedBy")
+
+  @@index([orgId])
 }
 
 model Team {
   id        String   @id @default(cuid())
   name      String
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime? // Soft delete
 
   issues    Issue[]
   members   User[]   @relation("TeamMembers")
+
+  @@index([projectId])
 }
 
 model Issue {
@@ -176,7 +188,7 @@ model Issue {
   status              IssueStatus   @default(OPEN)
  
   projectId           String
-  project             Project       @relation(fields: [projectId], references: [id])
+  project             Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   
   assignedToId        String?
   assignedTo          User?         @relation("AssignedTo", fields: [assignedToId], references: [id])
@@ -190,6 +202,7 @@ model Issue {
   updatedAt           DateTime      @updatedAt
   acceptedAt          DateTime?
   resolvedAt          DateTime?
+  deletedAt           DateTime?     // Soft delete
   
   responseSlaDeadline DateTime?
   resolutionSlaDeadline DateTime?
@@ -206,6 +219,8 @@ model Issue {
 
   @@index([projectId, status])
   @@index([projectId, severity])
+  @@index([assignedToId])
+  @@index([teamId])
   @@index([createdAt(sort: Desc)])
 }
 
@@ -217,6 +232,8 @@ model IssueActivity {
   user      User?    @relation(fields: [userId], references: [id])
   action    String
   createdAt DateTime @default(now())
+
+  @@index([issueId, createdAt(sort: Desc)])
 }
 
 model IssueComment {
@@ -228,6 +245,8 @@ model IssueComment {
   text      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([issueId, createdAt])
 }
 
 model Invite {
@@ -242,5 +261,6 @@ model Invite {
   acceptedAt DateTime?
   createdAt DateTime @default(now())
 
+  @@unique([email, projectId])
   @@index([email, projectId])
 }

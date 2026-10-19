@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifyPassword } from '@/lib/hash';
-import { signToken } from '@/lib/jwt';
+import { signToken, signRefreshToken } from '@/lib/jwt';
 import { loginSchema } from '@/lib/validations';
 import { checkLoginAttempts, recordLoginSuccess } from '@/lib/brute-force';
 import { logAuditEvent } from '@/lib/audit-logger';
@@ -119,13 +119,16 @@ export async function POST(request: Request) {
       userAgent,
     });
 
-    const token = signToken({
+    const tokenPayload = {
       userId: user.id,
       role: user.role,
       orgId: user.orgId || undefined,
-    }, '1h');
+    };
 
-    // Do NOT return the token in the JSON response body
+    const accessToken = signToken(tokenPayload, '1h');
+    const refreshToken = signRefreshToken(tokenPayload);
+
+    // Do NOT return the tokens in the JSON response body
     const response = NextResponse.json({
       message: 'Login successful',
       user: {
@@ -136,11 +139,21 @@ export async function POST(request: Request) {
       }
     }, { status: 200 });
 
-    response.cookies.set('incident_token', token, {
+    // Access token — short-lived (1 hour)
+    response.cookies.set('incident_token', accessToken, {
       httpOnly: true,
-      secure: true, // Always secure
+      secure: true,
       sameSite: 'lax',
       maxAge: 60 * 60, // 1 hour
+      path: '/',
+    });
+
+    // Refresh token — long-lived (7 days), used to rotate access tokens
+    response.cookies.set('incident_refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     });
 

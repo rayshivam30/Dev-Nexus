@@ -19,10 +19,20 @@ export interface JwtPayload {
   projectId?: string;
   teamId?: string;
   invitedBy?: string;
+  /** Token type: 'access' (default) or 'refresh' */
+  type?: 'access' | 'refresh';
 }
 
 export const signToken = (payload: JwtPayload, expiresIn: SignOptions['expiresIn'] = '1h'): string => {
-  return jwt.sign(payload as object, getJwtSecret(), { expiresIn, algorithm: 'HS256' });
+  return jwt.sign({ ...payload, type: 'access' } as object, getJwtSecret(), { expiresIn, algorithm: 'HS256' });
+};
+
+/**
+ * Sign a refresh token with a longer expiry (7 days).
+ * Refresh tokens are used to obtain new access tokens without re-authenticating.
+ */
+export const signRefreshToken = (payload: JwtPayload, expiresIn: SignOptions['expiresIn'] = '7d'): string => {
+  return jwt.sign({ ...payload, type: 'refresh' } as object, getJwtSecret(), { expiresIn, algorithm: 'HS256' });
 };
 
 export const verifyToken = (token: string): JwtPayload | null => {

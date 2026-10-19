@@ -14,15 +14,28 @@ export async function POST(req?: NextRequest) {
   }
 
   const cookieStore = await cookies();
-  const token = cookieStore.get("incident_token")?.value;
+  const accessToken = cookieStore.get("incident_token")?.value;
+  const refreshToken = cookieStore.get("incident_refresh_token")?.value;
 
-  if (token) {
-    await blacklistToken(token);
+  // Blacklist both access and refresh tokens
+  if (accessToken) {
+    await blacklistToken(accessToken);
+  }
+  if (refreshToken) {
+    await blacklistToken(refreshToken);
   }
 
-  // Clear the incident_token cookie — use the same `secure` flag as login
-  // so the browser actually clears the cookie in all environments
+  // Clear the incident_token cookie
   cookieStore.set("incident_token", "", {
+    path: "/",
+    expires: new Date(0),
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
+  });
+
+  // Clear the refresh token cookie
+  cookieStore.set("incident_refresh_token", "", {
     path: "/",
     expires: new Date(0),
     httpOnly: true,

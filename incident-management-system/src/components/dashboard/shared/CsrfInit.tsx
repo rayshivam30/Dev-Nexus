@@ -7,6 +7,35 @@ interface PatchedFetch {
   patched?: boolean;
 }
 
+let isRefreshing = false;
+let refreshQueue: Array<(success: boolean) => void> = [];
+
+async function triggerSilentRefresh(originalFetch: typeof window.fetch): Promise<boolean> {
+  if (isRefreshing) {
+    return new Promise((resolve) => {
+      refreshQueue.push(resolve);
+    });
+  }
+
+  isRefreshing = true;
+  try {
+    const res = await originalFetch("/api/auth/refresh", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+    const success = res.ok;
+    refreshQueue.forEach((resolve) => resolve(success));
+    refreshQueue = [];
+    return success;
+  } catch {
+    refreshQueue.forEach((resolve) => resolve(false));
+    refreshQueue = [];
+    return false;
+  } finally {
+    isRefreshing = false;
+  }
+}
+
 export function CsrfInit() {
   useEffect(() => {
     // 1. Initial CSRF token fetch
@@ -24,7 +53,7 @@ export function CsrfInit() {
 
     loadToken();
 
-    // 2. Intercept global window.fetch to inject X-CSRF-Token
+    // 2. Intercept global window.fetch to inject X-CSRF-Token and handle 401 token refresh
     if (typeof window !== "undefined") {
       const winFetch = window.fetch as typeof window.fetch & PatchedFetch;
       if (!winFetch.patched) {
@@ -59,7 +88,25 @@ export function CsrfInit() {
               init.headers = headersObj;
             }
           }
-          return originalFetch(input, init);
+
+          const response = await originalFetch(input, init);
+
+          // Handle 401 with silent token refresh
+          if (
+            response.status === 401 &&
+            !url.includes("/api/auth/login") &&
+            !url.includes("/api/auth/refresh") &&
+            !url.includes("/api/auth/register") &&
+            !url.includes("/api/csrf-token")
+          ) {
+            const refreshed = await triggerSilentRefresh(originalFetch);
+            if (refreshed) {
+              // Retry the original request with rotated session cookie
+              return originalFetch(input, init);
+            }
+          }
+
+          return response;
         };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (newFetch as any).patched = true;
