@@ -16,13 +16,6 @@ import { incidentsIngestedTotal } from "@/lib/metrics";
 import { resolveStackTrace } from "@/services/sourcemap-service";
 
 /**
- * Hashes an API key for comparison.
- */
-function hashApiKey(key: string): string {
-  return crypto.createHash("sha256").update(key).digest("hex");
-}
-
-/**
  * Generates a fingerprint for deduplication and historical analysis.
  */
 function generateFingerprint(message: string, stack?: string): string {

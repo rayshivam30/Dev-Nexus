@@ -27,7 +27,7 @@ describe("API Key Service (Multi-Key Rotation)", () => {
 
   it("createProjectApiKey generates a secure key with devnexus_sk_live_ prefix", async () => {
     prismaMock.project.findUnique.mockResolvedValue({ id: projectId, name: "Test Project" });
-    prismaMock.projectApiKey.create.mockImplementation((args: any) =>
+    prismaMock.projectApiKey.create.mockImplementation((args: { data: { name: string; keyPrefix: string } }) =>
       Promise.resolve({
         id: "key-1",
         name: args.data.name,
@@ -63,7 +63,7 @@ describe("API Key Service (Multi-Key Rotation)", () => {
   it("revokeProjectApiKey marks revokedAt timestamp", async () => {
     prismaMock.projectApiKey.updateMany.mockResolvedValue({ count: 1 });
 
-    const res = await revokeProjectApiKey("key-1", projectId);
+    await revokeProjectApiKey("key-1", projectId);
     expect(prismaMock.projectApiKey.updateMany).toHaveBeenCalledWith({
       where: { id: "key-1", projectId },
       data: { revokedAt: expect.any(Date) },
@@ -72,7 +72,6 @@ describe("API Key Service (Multi-Key Rotation)", () => {
 
   it("validateApiKey successfully authenticates valid multi-key", async () => {
     const rawKey = "devnexus_sk_live_abcdef1234567890";
-    const hashed = hashApiKey(rawKey);
 
     prismaMock.projectApiKey.findUnique.mockResolvedValue({
       id: "key-1",

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getPrometheusMetrics, register, aiQueueDepth, emailQueueDepth } from "@/lib/metrics";
 import { getQueueStats } from "@/lib/ai-queue";
 import { getEmailQueueStats } from "@/lib/mailer";
