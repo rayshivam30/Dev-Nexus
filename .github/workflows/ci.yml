@@ -50,7 +50,11 @@ jobs:
         run: bun run lint
 
       - name: 🧪 Unit Tests
-        run: bun test tests/
+        # These tests replace shared modules and mutate process.env. Keep test
+        # files in one worker so their mocks and environment changes cannot race.
+        run: bun test --parallel=1 tests/
+        env:
+          NODE_ENV: test
 
       - name: 🏗️ Build (Type Check)
         run: bun run build
@@ -128,4 +132,3 @@ jobs:
             NEXT_PUBLIC_GITHUB_APP_SLUG=${{ vars.NEXT_PUBLIC_GITHUB_APP_SLUG || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
