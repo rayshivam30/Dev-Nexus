@@ -84,7 +84,7 @@ export async function analyzeIncident(
     Respond ONLY with a JSON object that matches the schema.
   `;
 
-  // Single attempt here — retries with exponential backoff are handled by ai-queue.ts
+  // Single attempt here — the durable worker persists retries and backoff state.
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;

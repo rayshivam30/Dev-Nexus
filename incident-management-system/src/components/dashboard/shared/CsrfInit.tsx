@@ -19,9 +19,11 @@ async function triggerSilentRefresh(originalFetch: typeof window.fetch): Promise
 
   isRefreshing = true;
   try {
+    const csrfToken = getCsrfToken();
     const res = await originalFetch("/api/auth/refresh", {
       method: "POST",
       credentials: "same-origin",
+      headers: csrfToken ? { "X-CSRF-Token": csrfToken } : undefined,
     });
     const success = res.ok;
     refreshQueue.forEach((resolve) => resolve(success));

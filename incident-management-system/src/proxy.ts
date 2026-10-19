@@ -22,7 +22,7 @@ async function verifyTokenEdge(token: string): Promise<Record<string, unknown> |
   }
 }
 
-export default async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const token = request.cookies.get('incident_token')?.value;
 
   // Protect /dashboard routes — verify the JWT, not just its existence

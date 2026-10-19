@@ -30,11 +30,14 @@ function maskEmail(email?: string): string {
   return `${local[0]}***${local[local.length - 1]}@${domain}`;
 }
 
-// Verify transporter at startup and log any auth/connection issues early
-transporter
-  .verify()
-  .then(() => logger.info({ user: maskEmail(process.env.GMAIL_USER) }, "SMTP transporter ready"))
-  .catch((err) => logger.warn({ err }, "SMTP transporter verification failed"));
+// Network checks must never run while Next is importing routes to build pages.
+// Opt into a startup probe on the deployed Node server with this env flag.
+if (process.env.SMTP_VERIFY_ON_STARTUP === "true") {
+  void transporter
+    .verify()
+    .then(() => logger.info({ user: maskEmail(process.env.GMAIL_USER) }, "SMTP transporter ready"))
+    .catch((err) => logger.warn({ err }, "SMTP transporter verification failed"));
+}
 
 interface SendMailOptions {
   to: string;

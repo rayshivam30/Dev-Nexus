@@ -49,6 +49,9 @@ jobs:
       - name: 🧹 Lint
         run: bun run lint
 
+      - name: 🧪 Unit Tests
+        run: bun test tests/
+
       - name: 🏗️ Build (Type Check)
         run: bun run build
         env:
@@ -125,5 +128,4 @@ jobs:
             NEXT_PUBLIC_GITHUB_APP_SLUG=${{ vars.NEXT_PUBLIC_GITHUB_APP_SLUG || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
 

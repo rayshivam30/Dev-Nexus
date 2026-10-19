@@ -1,4 +1,4 @@
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { z } from "zod";
@@ -36,9 +36,6 @@ const githubWebhookPayloadSchema = z.object({
 }).passthrough();
 
 import { IssueSource, Prisma, IssueSeverity } from "@devnexus/prisma-client";
-import { analyzeIncident } from "@/lib/ai-service";
-import { enqueueAITask } from "@/lib/ai-queue";
-import { calculateSLADeadlines } from "@/services/issue-service";
 import { EVENTS, emitEvent } from "@/lib/events";
 import { notifyOrgStaff } from "@/services/notification-service";
 import { sanitizeJsonValue } from "@/lib/sanitize";
@@ -107,6 +104,12 @@ export async function POST(req: Request) {
       }
     }
 
+    const deliveryId = req.headers.get("x-github-delivery") ||
+      (isMock ? crypto.createHash("sha256").update(rawBody).digest("hex") : null);
+    if (!deliveryId) {
+      return NextResponse.json({ error: "Missing delivery identifier" }, { status: 400 });
+    }
+
     let payload: unknown;
     try {
       payload = JSON.parse(rawBody);
@@ -164,12 +167,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Project not linked or installation unknown" }, { status: 200 });
     }
 
-    const techStack = project.techStack || [];
-
-    // Helper function to create initial issue and trigger AI analysis
+    // The unique delivery id makes GitHub redeliveries idempotent. The issue's
+    // persisted AI job fields are picked up by the background worker.
     const handleGitHubIncident = async (data: Record<string, unknown>, title: string, description: string) => {
-        const issue = await prisma.issue.create({
+        let issue;
+        try {
+          issue = await prisma.issue.create({
             data: {
+              githubDeliveryId: deliveryId,
               title,
               description: "AI Analysis Pending...",
               projectId: project.id,
@@ -177,9 +182,18 @@ export async function POST(req: Request) {
               severity: IssueSeverity.MEDIUM,
               logs: {
                 github_raw: sanitizeJsonValue(data) as unknown as Prisma.InputJsonValue,
+                githubRef: description,
+                aiJobStatus: "PENDING",
+                aiAttempts: 0,
               } as Prisma.InputJsonValue,
             }
           });
+        } catch (error) {
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+            return null;
+          }
+          throw error;
+        }
 
           // ── Persistent Notification ──────────────────────────────────────────
           await notifyOrgStaff(project.orgId, {
@@ -203,46 +217,6 @@ export async function POST(req: Request) {
             severity: issue.severity
           });
 
-          // Background AI Analysis — routed through the concurrency-limited queue
-          after(async () => {
-            try {
-                const aiAnalysis = await enqueueAITask(() =>
-                  analyzeIncident(data, IssueSource.GITHUB, techStack)
-                );
-                const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(project.id, aiAnalysis.severity, project.plan);
-
-                const updated = await prisma.issue.update({
-                    where: { id: issue.id },
-                    data: {
-                        title: aiAnalysis.title,
-                        description: `${aiAnalysis.description}\n\n[GitHub Ref](${description})`,
-                        rootCause: aiAnalysis.rootCause,
-                        suggestedFixes: aiAnalysis.suggestedFixes,
-                        priority: aiAnalysis.priority,
-                        environment: aiAnalysis.environment,
-                        severity: aiAnalysis.severity,
-                        responseSlaDeadline,
-                        resolutionSlaDeadline,
-                        logs: {
-                            github_raw: sanitizeJsonValue(data) as unknown as Prisma.InputJsonValue,
-                            aiFullAnalysis: aiAnalysis as unknown as Prisma.InputJsonValue,
-                        } as Prisma.InputJsonValue
-                    }
-                });
-
-                await emitEvent(EVENTS.INCIDENT_UPDATED, { 
-                    issueId: updated.id, 
-                    orgId: project.orgId,
-                    projectId: project.id,
-                    title: updated.title,
-                    severity: updated.severity,
-                    status: updated.status
-                });
-            } catch (e) {
-                logger.error({ err: e }, "GitHub AI analysis background error");
-            }
-          });
-
           return issue;
     };
 
@@ -254,12 +228,12 @@ export async function POST(req: Request) {
       workflowRun &&
       isFailedCiConclusion(workflowRun.conclusion)
     ) {
-      await handleGitHubIncident(
+      const createdIssue = await handleGitHubIncident(
           workflowRun,
           `CI Failure: ${workflowRun.name}`,
           workflowRun.html_url
       );
-      return NextResponse.json({ created: true, type: "workflow_run_failure" });
+      return NextResponse.json({ created: !!createdIssue, duplicate: !createdIssue, type: "workflow_run_failure" });
     }
 
     const checkRun = validatedPayload.check_run;
@@ -269,12 +243,12 @@ export async function POST(req: Request) {
       checkRun &&
       isFailedCiConclusion(checkRun.conclusion)
     ) {
-      await handleGitHubIncident(
+      const createdIssue = await handleGitHubIncident(
           checkRun,
           `CI Failure: ${checkRun.name}`,
           checkRun.html_url
       );
-      return NextResponse.json({ created: true, type: "check_run_failure" });
+      return NextResponse.json({ created: !!createdIssue, duplicate: !createdIssue, type: "check_run_failure" });
     }
 
     const checkSuite = validatedPayload.check_suite;
@@ -289,12 +263,12 @@ export async function POST(req: Request) {
         checkSuite.check_runs_url ||
         repoUrl ||
         "https://github.com";
-      await handleGitHubIncident(
+      const createdIssue = await handleGitHubIncident(
           checkSuite,
           "CI Failure: Check suite failed",
           checkSuiteUrl
       );
-      return NextResponse.json({ created: true, type: "check_suite_failure" });
+      return NextResponse.json({ created: !!createdIssue, duplicate: !createdIssue, type: "check_suite_failure" });
     }
 
     // 2. PR Conflicts only — don't create an incident for every new PR
@@ -304,12 +278,12 @@ export async function POST(req: Request) {
         const isConflict = pr.mergeable_state === "dirty";
 
         if (isConflict) {
-          await handleGitHubIncident(
+          const createdIssue = await handleGitHubIncident(
             pr,
             `MERGE CONFLICT: PR #${pr.number}`,
             pr.html_url
           );
-          return NextResponse.json({ created: true, type: "pr_conflict" });
+          return NextResponse.json({ created: !!createdIssue, duplicate: !createdIssue, type: "pr_conflict" });
         }
       }
     }
@@ -320,5 +294,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
-
 

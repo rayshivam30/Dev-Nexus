@@ -182,6 +182,7 @@ model Team {
 
 model Issue {
   id                  String        @id @default(cuid())
+  githubDeliveryId    String?       @unique
   title               String
   description         String
   source              IssueSource   @default(MANUAL)

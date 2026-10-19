@@ -19,7 +19,7 @@ export const DELETE = withAuth(async (req, { decoded, params }) => {
     select: { orgId: true },
   });
 
-  if (!project || project.orgId !== decoded.orgId) {
+  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && decoded.projectId !== id)) {
     return apiError("Project not found", 404);
   }
 

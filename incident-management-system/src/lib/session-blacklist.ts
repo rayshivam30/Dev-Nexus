@@ -66,3 +66,32 @@ export async function blacklistToken(token: string): Promise<void> {
     logger.error({ err }, "Failed to blacklist JWT token in Redis — local map used as fallback");
   }
 }
+
+/** Atomically consumes a one-time token, preventing concurrent refresh reuse. */
+export async function consumeTokenOnce(token: string): Promise<boolean> {
+  pruneLocalBlacklist();
+  if (localBlacklist.has(token)) return false;
+
+  const decoded = jwt.decode(token) as { exp?: number } | null;
+  const remainingSeconds = (decoded?.exp ?? 0) - Math.floor(Date.now() / 1000);
+  if (remainingSeconds <= 0) return false;
+
+  if (redis) {
+    try {
+      const result = await redis.set(`jwt:blacklist:${token}`, "1", {
+        ex: remainingSeconds,
+        nx: true,
+      });
+      if (result !== "OK") return false;
+      localBlacklist.set(token, Date.now() + remainingSeconds * 1000);
+      return true;
+    } catch (err) {
+      logger.error({ err }, "Could not atomically consume refresh token");
+      return false;
+    }
+  }
+
+  if (process.env.NODE_ENV === "production") return false;
+  localBlacklist.set(token, Date.now() + remainingSeconds * 1000);
+  return true;
+}

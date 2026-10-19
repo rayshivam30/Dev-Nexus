@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
+import { prisma } from "@/lib/db";
 import { getPrometheusMetrics, register, aiQueueDepth, emailQueueDepth } from "@/lib/metrics";
-import { getQueueStats } from "@/lib/ai-queue";
 import { getEmailQueueStats } from "@/lib/mailer";
 
 /**
@@ -12,6 +12,9 @@ import { getEmailQueueStats } from "@/lib/mailer";
 export async function GET(req: NextRequest) {
   // Optional security: If METRICS_BEARER_TOKEN is configured in production, require it
   const requiredToken = process.env.METRICS_BEARER_TOKEN;
+  if (process.env.NODE_ENV === "production" && !requiredToken) {
+    return new Response("Metrics authentication is not configured", { status: 503 });
+  }
   if (requiredToken) {
     const authHeader = req.headers.get("authorization");
     if (authHeader !== `Bearer ${requiredToken}`) {
@@ -21,13 +24,20 @@ export async function GET(req: NextRequest) {
 
   // Update dynamic queue gauges before output
   try {
-    const aiStats = getQueueStats();
-    aiQueueDepth.set(aiStats.queueLength);
+    const aiJobs = await prisma.issue.count({
+      where: {
+        OR: [
+          { logs: { path: ["aiJobStatus"], equals: "PENDING" } },
+          { logs: { path: ["aiJobStatus"], equals: "PROCESSING" } },
+        ],
+      },
+    });
+    aiQueueDepth.set(aiJobs);
 
     const emailStats = getEmailQueueStats();
     emailQueueDepth.set(emailStats.queueLength);
   } catch {
-    // Queues might not be initialized in certain environments
+    // Keep serving metrics when the database is temporarily unavailable.
   }
 
   const metrics = await getPrometheusMetrics();

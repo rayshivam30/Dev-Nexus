@@ -16,7 +16,7 @@ export const GET = withAuth(async (req, { decoded, params }) => {
     select: { orgId: true, sdkApiKey: true }
   });
 
-  if (!project || project.orgId !== decoded.orgId) {
+  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && decoded.projectId !== id)) {
     return apiError("Project not found", 404);
   }
 

@@ -13,8 +13,8 @@ Built with **Next.js (App Router)**, **TypeScript**, **Prisma**, **Upstash Redis
 
 ## 🚀 Key Features
 
-*   **⚡ High-Concurrency Architecture:** Hardened with Redis-backed event bridges, database connection multiplexing, and in-memory rate limiting to smoothly handle 100+ concurrent users and massive error spikes.
-*   **🤖 AI-Powered Analysis:** Integrates `gemini-2.0-flash` with a custom throttled queue system (15 RPM limit) to automatically analyze errors, suggest fixes, and determine root causes without dropping requests.
+*   **⚡ High-Concurrency Architecture:** Uses Redis-backed event delivery and rate limits, database connection pooling, and database-backed AI job recovery.
+*   **🤖 AI-Powered Analysis:** Integrates Gemini with durable incident-backed analysis jobs, retry scheduling, and recovery after process restarts.
 *   **📡 Real-Time Notifications:** Uses optimized Server-Sent Events (SSE) with connection capping and automatic memory cleanup to deliver instant alerts to developer dashboards.
 *   **🏢 Multi-Tenant RBAC:** Complete Role-Based Access Control isolating environments for **Admins** (organization oversight), **Managers** (project management), and **Developers** (issue resolution).
 *   **📧 Throttled Email Queue:** Batches automated assignment and alert emails (via SMTP) to prevent spam blocks and ensure deliverability during major outages.
@@ -31,6 +31,22 @@ Built with **Next.js (App Router)**, **TypeScript**, **Prisma**, **Upstash Redis
 ---
 
 ## 🛠️ Getting Started
+
+### Docker Compose
+
+The Compose stack is intended for local use and binds the app and PostgreSQL
+ports to `127.0.0.1`. It requires `POSTGRES_PASSWORD`, `JWT_SECRET`,
+`GITHUB_WEBHOOK_SECRET`, `UPSTASH_REDIS_REST_URL`,
+`UPSTASH_REDIS_REST_TOKEN`, and `METRICS_BEARER_TOKEN` in the environment.
+Redis is accessed through Upstash REST; the app does not connect to a native
+Redis container. Copy the root `.env.example` to `.env`, fill in required
+secrets, and run `docker compose up --build`. Compose applies pending Prisma
+migrations with `prisma migrate deploy` before starting the app. Production
+deployments outside Compose must run the same migration command against their
+production database before starting the new app version. Configure a valid
+Gmail App Password in `GMAIL_APP_PASSWORD` if email verification and invitations
+must be delivered. The durable AI worker runs in the long-lived Node.js server
+process and uses PostgreSQL for recovery.
 
 ### Prerequisites
 - [Bun](https://bun.sh/) (recommended) or Node.js
@@ -60,12 +76,12 @@ UPSTASH_REDIS_REST_TOKEN="your_upstash_token"
 # AI Integration
 GEMINI_API_KEY="your_gemini_api_key"
 
-# Email Configuration (SMTP)
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT=587
-SMTP_USER="your_email@gmail.com"
-SMTP_PASS="your_app_password"
-SMTP_FROM="your_email@gmail.com"
+# Email Configuration (Gmail SMTP)
+# Use a Google App Password, not the account password.
+GMAIL_USER="your_email@gmail.com"
+GMAIL_APP_PASSWORD="your_16_character_app_password"
+# Optional startup connectivity probe; defaults off so builds never contact SMTP.
+SMTP_VERIFY_ON_STARTUP="false"
 
 # Application URL
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
@@ -75,7 +91,7 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 Initialize the Prisma client and push the schema to your database:
 ```bash
 bun x prisma generate
-bun x prisma db push
+bun x prisma migrate deploy
 ```
 
 ### 4. Run the Development Server

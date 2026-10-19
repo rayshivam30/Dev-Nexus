@@ -68,7 +68,21 @@ export async function checkGenericAttempts(
       };
     } catch (e) {
       logger.error({ err: e }, `Redis rate check error for prefix ${prefix}, falling back to memory`);
+      if (process.env.NODE_ENV === "production") {
+        return {
+          allowed: false,
+          attemptsLeft: 0,
+          lockedUntil: new Date(now + 60_000),
+        };
+      }
     }
+  } else if (process.env.NODE_ENV === "production") {
+    logger.error(`Redis is required for production ${prefix} throttling`);
+    return {
+      allowed: false,
+      attemptsLeft: 0,
+      lockedUntil: new Date(now + 60_000),
+    };
   }
 
   // In-memory fallback (useful for tests & local dev when Redis is down/not configured)

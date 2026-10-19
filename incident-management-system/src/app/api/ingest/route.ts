@@ -1,10 +1,7 @@
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { IssueSource, IssueSeverity, Prisma, Project } from "@devnexus/prisma-client";
-import { calculateSLADeadlines } from "@/services/issue-service";
-import { analyzeIncident } from "@/lib/ai-service";
-import { enqueueAITask, getQueueStats } from "@/lib/ai-queue";
 import { redis } from "@/lib/redis";
 import crypto from "crypto";
 import { EVENTS, emitEvent } from "@/lib/events";
@@ -229,6 +226,9 @@ async function processReport(payload: IngestReportPayload, project: Project) {
           tags: sanitizeJsonValue(tags ?? {}) as Prisma.InputJsonValue,
           metadata: sanitizeJsonValue(metadata ?? {}) as Prisma.InputJsonValue,
           breadcrumbs: sanitizeJsonValue(breadcrumbs ?? []) as Prisma.InputJsonValue,
+          severityOverride: severityOverride || null,
+          aiJobStatus: "PENDING",
+          aiAttempts: 0,
         },
       },
     });
@@ -260,82 +260,24 @@ async function processReport(payload: IngestReportPayload, project: Project) {
       severity: issue.severity
     });
 
-    // AI Analysis — routed through the concurrency-limited queue
-    after(async () => {
-      try {
-        const stats = getQueueStats();
-        logger.info({ issueId: issue.id, ...stats }, "Enqueuing AI analysis");
-
-        const aiAnalysis = await enqueueAITask(() =>
-          analyzeIncident(
-            { message, stack: resolvedStack, browserInfo, osInfo, tags, metadata, breadcrumbs, history: { last24hCount: similarIncidentsCount + 1, isFirstOccurrence: similarIncidentsCount === 0 } },
-            (customSource as IssueSource) || IssueSource.SDK,
-            project.techStack || []
-          )
-        );
-
-        let finalSeverity = aiAnalysis.severity;
-        if (severityOverride && Object.values(IssueSeverity).includes(severityOverride as IssueSeverity)) {
-          finalSeverity = severityOverride as IssueSeverity;
-        }
-
-        const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(
-          project.id, finalSeverity, project.plan
-        );
-
-        const updatedIssue = await prisma.issue.update({
-          where: { id: issue.id },
-          data: {
-            title: aiAnalysis.title,
-            description: aiAnalysis.description,
-            rootCause: aiAnalysis.rootCause,
-            suggestedFixes: aiAnalysis.suggestedFixes,
-            priority: aiAnalysis.priority,
-            environment: aiAnalysis.environment,
-            severity: finalSeverity,
-            responseSlaDeadline,
-            resolutionSlaDeadline,
-            logs: {
-              ...(issue.logs as Record<string, unknown>),
-              aiAnalysisFailed: !!aiAnalysis._failed,
-              aiFullAnalysis: aiAnalysis as unknown as Prisma.InputJsonValue,
-            }
-          }
-        });
-
-        await emitEvent(EVENTS.INCIDENT_UPDATED, { 
-          issueId: updatedIssue.id, 
-          orgId: project.orgId,
-          projectId: project.id,
-          title: updatedIssue.title,
-          severity: updatedIssue.severity,
-          status: updatedIssue.status
-        });
-      } catch (e) {
-        logger.error({ err: e }, "Background AI Analysis error");
-      }
-    });
-
     return issue.id;
 }
 
 export async function OPTIONS(req: Request) {
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return new NextResponse(null, { status: 401 });
+  // Browsers do not include Authorization values in preflight requests. Check
+  // the requested headers and origin here; POST performs API-key validation.
+  const origin = req.headers.get("origin");
+  const requestedHeaders = (req.headers.get("access-control-request-headers") || "")
+    .split(",")
+    .map((header) => header.trim().toLowerCase())
+    .filter(Boolean);
+  if (requestedHeaders.some((header) => !["content-type", "authorization"].includes(header))) {
+    return new NextResponse(null, { status: 403 });
   }
 
-  const apiKey = authHeader.split(" ")[1];
-  if (!apiKey || apiKey.length > 256) {
-    return new NextResponse(null, { status: 401 });
-  }
-
-  const project = await validateApiKey(apiKey);
-  if (!project) {
-    return new NextResponse(null, { status: 401 });
-  }
-
-  const projectCorsHeaders = getProjectCorsHeaders(req, project.allowedOrigins, true);
+  const projectCorsHeaders = origin
+    ? getProjectCorsHeaders(req, [], true)
+    : { "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization" };
   if (!projectCorsHeaders) {
     return new NextResponse(null, { status: 403 });
   }

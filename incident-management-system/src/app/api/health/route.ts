@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { redis } from "@/lib/redis";
-import { getQueueStats } from "@/lib/ai-queue";
 import { getEmailQueueStats } from "@/lib/mailer";
 
 /**
@@ -19,11 +18,11 @@ export async function GET() {
   try {
     await prisma.$queryRaw`SELECT 1`;
     checks.database = { status: "ok", latencyMs: Date.now() - dbStart };
-  } catch (err) {
+  } catch {
     checks.database = {
       status: "down",
       latencyMs: Date.now() - dbStart,
-      detail: err instanceof Error ? err.message : "Unknown DB error",
+      detail: "Database query failed",
     };
   }
 
@@ -33,11 +32,11 @@ export async function GET() {
     try {
       await redis.ping();
       checks.redis = { status: "ok", latencyMs: Date.now() - redisStart };
-    } catch (err) {
+    } catch {
       checks.redis = {
         status: "degraded",
         latencyMs: Date.now() - redisStart,
-        detail: err instanceof Error ? err.message : "Unknown Redis error",
+        detail: "Redis health check failed",
       };
     }
   } else {
@@ -45,8 +44,20 @@ export async function GET() {
   }
 
   // ── Queue Stats ─────────────────────────────────────────────────────────
-  const aiQueue = getQueueStats();
   const emailQueue = getEmailQueueStats();
+  let pendingAiJobs = 0;
+  try {
+    pendingAiJobs = await prisma.issue.count({
+      where: {
+        OR: [
+          { logs: { path: ["aiJobStatus"], equals: "PENDING" } },
+          { logs: { path: ["aiJobStatus"], equals: "PROCESSING" } },
+        ],
+      },
+    });
+  } catch {
+    // The database check above already determines health status.
+  }
 
   const overallStatus = Object.values(checks).some((c) => c.status === "down")
     ? "down"
@@ -56,8 +67,9 @@ export async function GET() {
 
   const statusCode = overallStatus === "down" ? 503 : 200;
 
-  return NextResponse.json(
-    {
+  const response = process.env.NODE_ENV === "production"
+    ? { status: overallStatus, timestamp: new Date().toISOString() }
+    : {
       status: overallStatus,
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
@@ -65,9 +77,7 @@ export async function GET() {
       checks,
       queues: {
         ai: {
-          active: aiQueue.activeCount,
-          pending: aiQueue.queueLength,
-          successRate: aiQueue.successRate,
+          pending: pendingAiJobs,
         },
         email: {
           pending: emailQueue.queueLength,
@@ -75,7 +85,6 @@ export async function GET() {
           dailyRemaining: emailQueue.dailyRemaining,
         },
       },
-    },
-    { status: statusCode }
-  );
+    };
+  return NextResponse.json(response, { status: statusCode });
 }

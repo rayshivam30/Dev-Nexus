@@ -8,7 +8,10 @@ export const GET = withAuth(async (_req, { decoded }) => {
   if (!decoded.orgId) return apiError("Organization ID is missing in token", 401);
   try {
     const projects = await getProjectsByOrg(decoded.orgId);
-    return apiResponse("Projects fetched successfully", { projects });
+    const visibleProjects = decoded.role === "ADMIN"
+      ? projects
+      : projects.filter((project) => project.id === decoded.projectId);
+    return apiResponse("Projects fetched successfully", { projects: visibleProjects });
   } catch (error) {
     logger.error({ err: error }, "Fetch projects error");
     return apiError("Failed to fetch projects", 500);
@@ -106,4 +109,3 @@ export const DELETE = withAuth(async (req, { decoded }) => {
     return apiError("Failed to delete project", 500);
   }
 }, ["ADMIN"]);
-

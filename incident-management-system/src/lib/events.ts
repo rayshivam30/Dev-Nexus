@@ -43,24 +43,24 @@ interface StoredEvent {
  * Falls back to local-only when Redis is unavailable.
  */
 export async function emitEvent(event: string, data: Record<string, unknown> & { orgId: string }) {
-  // 1. Always emit locally for instant same-instance delivery
-  eventEmitter.emit(event, data);
-
-  // 2. Persist to Redis for cross-instance + reconnection catch-up
-  if (!redis) return;
-
   const orgId = data.orgId;
   const redisKey = `events:${orgId}`;
   const timestamp = Date.now();
+  const id = `${timestamp}-${Math.random().toString(36).slice(2, 10)}`;
+  const eventData = { ...data, eventId: id };
 
   const storedEvent: StoredEvent = {
-    id: `${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
+    id,
     event,
-    data,
+    data: eventData,
     timestamp,
   };
 
-  try {
+  // Local consumers and Redis consumers share an ID so SSE can deduplicate the
+  // fast local delivery against its cross-instance polling path.
+  eventEmitter.emit(event, eventData);
+
+  if (redis) try {
     // ZADD with timestamp as score, JSON as member
     await redis.zadd(redisKey, { score: timestamp, member: JSON.stringify(storedEvent) });
 

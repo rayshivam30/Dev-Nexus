@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, signToken, signRefreshToken, JwtPayload } from "@/lib/jwt";
-import { isTokenBlacklisted, blacklistToken } from "@/lib/session-blacklist";
+import { isTokenBlacklisted, consumeTokenOnce } from "@/lib/session-blacklist";
 import { getActiveSessionUser, sessionUserToPayload } from "@/lib/authorization";
 import { logger } from "@/lib/logger";
 
@@ -34,11 +34,18 @@ export async function POST(req: NextRequest) {
 
     // Verify the refresh token
     const decoded = verifyToken(refreshToken);
-    if (!decoded) {
+    if (!decoded || decoded.type !== "refresh") {
       return NextResponse.json(
         { error: "Invalid or expired refresh token" },
         { status: 401 }
       );
+    }
+
+    // Refresh tokens are cookies, so require the same origin + double-submit
+    // CSRF proof as other cookie-authenticated state changes.
+    const { verifyCsrf } = await import("@/lib/api-utils");
+    if (!verifyCsrf(req)) {
+      return NextResponse.json({ error: "CSRF check failed" }, { status: 403 });
     }
 
     // Verify the user still exists and is active
@@ -52,8 +59,10 @@ export async function POST(req: NextRequest) {
 
     const payload: JwtPayload = sessionUserToPayload(user);
 
-    // Rotate: blacklist old refresh token, issue new pair
-    await blacklistToken(refreshToken);
+    // Consume once atomically so concurrent requests cannot rotate the same token.
+    if (!(await consumeTokenOnce(refreshToken))) {
+      return NextResponse.json({ error: "Refresh token has already been used" }, { status: 401 });
+    }
 
     const newAccessToken = signToken(payload, "1h");
     const newRefreshToken = signRefreshToken(payload);
