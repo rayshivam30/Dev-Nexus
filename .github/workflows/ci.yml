@@ -55,6 +55,7 @@ jobs:
         run: bun test --parallel=1 tests/
         env:
           NODE_ENV: test
+          JWT_SECRET: ci-test-secret-at-least-thirty-two-characters-long
 
       - name: 🏗️ Build (Type Check)
         run: bun run build
