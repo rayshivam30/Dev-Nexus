@@ -54,6 +54,20 @@ export interface PrismaMock {
     findUnique: ReturnType<typeof mock>;
     update: ReturnType<typeof mock>;
   };
+  projectApiKey: {
+    create: ReturnType<typeof mock>;
+    findUnique: ReturnType<typeof mock>;
+    findMany: ReturnType<typeof mock>;
+    update: ReturnType<typeof mock>;
+    updateMany: ReturnType<typeof mock>;
+  };
+  sourceMap: {
+    create: ReturnType<typeof mock>;
+    upsert: ReturnType<typeof mock>;
+    findUnique: ReturnType<typeof mock>;
+    findMany: ReturnType<typeof mock>;
+    deleteMany: ReturnType<typeof mock>;
+  };
   $transaction: ReturnType<typeof mock>;
 }
 
@@ -115,6 +129,20 @@ export const createPrismaMock = (): PrismaMock => {
       findFirst: mock(() => Promise.resolve(null)),
       findUnique: mock(() => Promise.resolve(null)),
       update: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "invite-1", ...args.data })),
+    },
+    projectApiKey: {
+      create: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "key-1", ...args.data })),
+      findUnique: mock(() => Promise.resolve(null)),
+      findMany: mock(() => Promise.resolve([])),
+      update: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "key-1", ...args.data })),
+      updateMany: mock(() => Promise.resolve({ count: 1 })),
+    },
+    sourceMap: {
+      create: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "map-1", ...args.data })),
+      upsert: mock((args: { create?: Record<string, unknown> }) => Promise.resolve({ id: "map-1", ...args.create })),
+      findUnique: mock(() => Promise.resolve(null)),
+      findMany: mock(() => Promise.resolve([])),
+      deleteMany: mock(() => Promise.resolve({ count: 1 })),
     },
     $transaction: mock(async (cb: (tx: PrismaMock) => Promise<unknown>) => {
       return cb(prismaMock);

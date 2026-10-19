@@ -11,6 +11,9 @@ import { EVENTS, emitEvent } from "@/lib/events";
 import { notifyOrgStaff } from "@/services/notification-service";
 import { sanitizeJsonValue } from "@/lib/sanitize";
 import { withRequestContext, generateRequestId } from "@/lib/request-id";
+import { validateApiKey } from "@/services/api-key-service";
+import { incidentsIngestedTotal } from "@/lib/metrics";
+import { resolveStackTrace } from "@/services/sourcemap-service";
 
 /**
  * Hashes an API key for comparison.
@@ -104,6 +107,7 @@ interface IngestReportPayload {
   source?: IssueSource;
   metadata?: Prisma.InputJsonValue;
   breadcrumbs?: Prisma.InputJsonValue;
+  release?: string;
 }
 
 async function checkRateLimit(key: string): Promise<RateLimitInfo> {
@@ -184,6 +188,23 @@ async function processReport(payload: IngestReportPayload, project: Project) {
     const truncatedStack = stack ? String(stack).substring(0, MAX_STACK_CHARS) : undefined;
     const fingerprint = generateFingerprint(message, truncatedStack);
 
+    // Source map de-minification
+    const release = payload.release || (tags && typeof tags === "object" ? (tags as Record<string, string>).release : undefined);
+    let resolvedStack = truncatedStack;
+    let deminified = false;
+
+    if (release && truncatedStack) {
+      try {
+        const res = await resolveStackTrace(project.id, release, truncatedStack);
+        if (res.resolved) {
+          resolvedStack = res.stackTrace;
+          deminified = true;
+        }
+      } catch (err) {
+        logger.warn({ err }, "Source map resolution failed for incident report");
+      }
+    }
+
     // Historical context
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const similarIncidentsCount = await prisma.issue.count({
@@ -208,12 +229,21 @@ async function processReport(payload: IngestReportPayload, project: Project) {
           browser: (browserInfo ?? null) as Prisma.InputJsonValue,
           os: (osInfo ?? null) as Prisma.InputJsonValue,
           rawMessage: message,
-          stackTrace: truncatedStack,
+          stackTrace: resolvedStack,
+          originalStackTrace: deminified ? truncatedStack : undefined,
+          deminifiedWithSourceMap: deminified,
+          release: release || null,
           tags: sanitizeJsonValue(tags ?? {}) as Prisma.InputJsonValue,
           metadata: sanitizeJsonValue(metadata ?? {}) as Prisma.InputJsonValue,
           breadcrumbs: sanitizeJsonValue(breadcrumbs ?? []) as Prisma.InputJsonValue,
         },
       },
+    });
+
+    incidentsIngestedTotal.inc({
+      project_id: project.id,
+      severity: issue.severity,
+      source: issue.source,
     });
 
     // ── Persistent Notification ──────────────────────────────────────────
@@ -245,7 +275,7 @@ async function processReport(payload: IngestReportPayload, project: Project) {
 
         const aiAnalysis = await enqueueAITask(() =>
           analyzeIncident(
-            { message, stack: truncatedStack, browserInfo, osInfo, tags, metadata, breadcrumbs, history: { last24hCount: similarIncidentsCount + 1, isFirstOccurrence: similarIncidentsCount === 0 } },
+            { message, stack: resolvedStack, browserInfo, osInfo, tags, metadata, breadcrumbs, history: { last24hCount: similarIncidentsCount + 1, isFirstOccurrence: similarIncidentsCount === 0 } },
             (customSource as IssueSource) || IssueSource.SDK,
             project.techStack || []
           )
@@ -307,8 +337,7 @@ export async function OPTIONS(req: Request) {
     return new NextResponse(null, { status: 401 });
   }
 
-  const hashedKey = apiKey.startsWith("devnexus_sk_") ? hashApiKey(apiKey) : apiKey;
-  const project = await prisma.project.findUnique({ where: { sdkApiKey: hashedKey } });
+  const project = await validateApiKey(apiKey);
   if (!project) {
     return new NextResponse(null, { status: 401 });
   }
@@ -343,8 +372,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { ...getFallbackCorsHeaders(req), "X-Request-Id": requestId } });
       }
 
-      const hashedKey = apiKey.startsWith("devnexus_sk_") ? hashApiKey(apiKey) : apiKey;
-      const project = await prisma.project.findUnique({ where: { sdkApiKey: hashedKey } });
+      const project = await validateApiKey(apiKey);
       if (!project) {
         return NextResponse.json({ error: "Invalid API Key" }, { status: 401, headers: { ...getFallbackCorsHeaders(req), "X-Request-Id": requestId } });
       }
