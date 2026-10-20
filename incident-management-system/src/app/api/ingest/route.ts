@@ -294,7 +294,9 @@ async function processReport(payload: IngestReportPayload, project: Project) {
       release: release || null,
     };
     const { issue, isNew } = await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${project.id}), hashtext(${fingerprint}))`;
+      // The lock function returns PostgreSQL `void`; use executeRaw so Prisma
+      // does not try to deserialize that unsupported result column.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${project.id}), hashtext(${fingerprint}))`;
       const existing = await tx.issue.findFirst({ where: { projectId: project.id, fingerprint, deletedAt: null } });
       if (existing) {
         const priorLogs = existing.logs && typeof existing.logs === "object" && !Array.isArray(existing.logs)

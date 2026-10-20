@@ -1,8 +1,21 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
+type IssueRecord = {
+  id: string;
+  status: string;
+  resolvedAt: Date | null;
+  timesSeen: number;
+  [key: string]: unknown;
+};
+
+type IssueUpdateData = Record<string, unknown> & {
+  status?: string;
+  timesSeen?: { increment: number };
+};
+
 const state: {
-  issue: Record<string, any> | null;
-  createCalls: Array<Record<string, any>>;
+  issue: IssueRecord | null;
+  createCalls: Array<Record<string, unknown>>;
   activityActions: string[];
 } = { issue: null, createCalls: [], activityActions: [] };
 
@@ -17,8 +30,8 @@ const testProject = {
 const prisma = {
   projectDailyUsage: { upsert: mock(() => Promise.resolve({ eventCount: 1 })) },
   issue: {
-    findFirst: mock(async (): Promise<Record<string, any> | null> => null),
-    create: mock((args: { data: Record<string, any> }) => {
+    findFirst: mock(async (): Promise<IssueRecord | null> => null),
+    create: mock((args: { data: Record<string, unknown> }) => {
       state.createCalls.push(args.data);
       state.issue = {
         id: "grouped-issue",
@@ -30,9 +43,9 @@ const prisma = {
       };
       return Promise.resolve(state.issue);
     }),
-    update: mock((args: { data: Record<string, any> }) => {
+    update: mock((args: { data: IssueUpdateData }) => {
       if (!state.issue) throw new Error("Expected a grouped issue to exist");
-      const increment = args.data.timesSeen?.increment || 0;
+      const increment = args.data.timesSeen?.increment ?? 0;
       state.issue = {
         ...state.issue,
         ...args.data,
@@ -52,7 +65,7 @@ const prisma = {
   job: { create: mock(() => Promise.resolve({ id: "analysis-job" })) },
   alertPolicy: { findMany: mock(() => Promise.resolve([])) },
   alertTrigger: { createMany: mock(() => Promise.resolve({ count: 0 })) },
-  $queryRaw: mock(() => Promise.resolve([])),
+  $executeRaw: mock(() => Promise.resolve(1)),
   $transaction: mock((callback: (transaction: typeof prisma) => Promise<unknown>) => callback(prisma)),
 };
 
@@ -109,7 +122,7 @@ describe("ingest issue grouping", () => {
   });
 
   test("20 identical reports produce one issue with 20 occurrences, then reopen after resolution", async () => {
-    const responses = [];
+    const responses: Response[] = [];
     for (let i = 0; i < 20; i++) responses.push(await ingest());
 
     expect(responses.every((response) => response.status === 201)).toBe(true);

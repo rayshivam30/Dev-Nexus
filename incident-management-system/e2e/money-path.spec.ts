@@ -69,10 +69,12 @@ test('login → project → ingest → grouped issue → assign → resolve', as
   const ingestHeaders = { Authorization: `Bearer ${project.sdkApiKey}`, Origin: origin };
   const firstIngest = await page.request.post('/api/ingest', { headers: ingestHeaders, data: report });
   const secondIngest = await page.request.post('/api/ingest', { headers: ingestHeaders, data: report });
-  expect(firstIngest.status()).toBe(201);
-  expect(secondIngest.status()).toBe(201);
-  const firstResult = await firstIngest.json();
-  const secondResult = await secondIngest.json();
+  const firstIngestBody = await firstIngest.text();
+  const secondIngestBody = await secondIngest.text();
+  expect(firstIngest.status(), firstIngestBody).toBe(201);
+  expect(secondIngest.status(), secondIngestBody).toBe(201);
+  const firstResult = JSON.parse(firstIngestBody) as { issueId: string };
+  const secondResult = JSON.parse(secondIngestBody) as { issueId: string };
   expect(secondResult.issueId).toBe(firstResult.issueId);
   const groupedIssue = await prisma.issue.findUnique({ where: { id: firstResult.issueId } });
   expect(groupedIssue?.timesSeen).toBe(2);

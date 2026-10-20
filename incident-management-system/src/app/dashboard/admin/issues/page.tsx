@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/api-utils";
 import { AdminIssuesClient } from "@/components/dashboard/admin/AdminIssuesClient";
@@ -77,7 +78,7 @@ export default async function AdminIssuesPage({ searchParams }: { searchParams: 
           {availableReleases.filter((row) => row.release).map((row) => <option key={row.release} value={row.release!}>{row.release}</option>)}
         </select>
         <button className="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-black">Filter</button>
-        {release && <a href="/dashboard/admin/issues" className="px-2 py-2 text-xs text-zinc-500 hover:text-white">Clear</a>}
+        {release && <Link href="/dashboard/admin/issues" className="px-2 py-2 text-xs text-zinc-500 hover:text-white">Clear</Link>}
       </form>
 
       {issuesRaw.length === 0 ? (
