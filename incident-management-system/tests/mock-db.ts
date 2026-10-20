@@ -46,6 +46,7 @@ export interface PrismaMock {
   alertPolicy: { findMany: ReturnType<typeof mock> };
   alertTrigger: { createMany: ReturnType<typeof mock> };
   $queryRaw: ReturnType<typeof mock>;
+  $executeRaw: ReturnType<typeof mock>;
   issueComment: {
     create: ReturnType<typeof mock>;
   };
@@ -143,6 +144,7 @@ export const createPrismaMock = (): PrismaMock => {
     alertPolicy: { findMany: mock(() => Promise.resolve([])) },
     alertTrigger: { createMany: mock(() => Promise.resolve({ count: 0 })) },
     $queryRaw: mock(() => Promise.resolve([])),
+    $executeRaw: mock(() => Promise.resolve(1)),
     issueComment: {
       create: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "comment-1", ...args.data, user: { name: "User 1", email: "user1@example.com" } })),
     },
