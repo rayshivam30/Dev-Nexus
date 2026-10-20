@@ -57,7 +57,7 @@ export const PATCH = withAuth(async (_req, { decoded, body, params }) => {
           status: "ACTIVE",
           orgId: existingIssue.project.orgId,
           ...(targetTeamId
-            ? { team: { id: targetTeamId, projectId: existingIssue.projectId, memberships: { some: { userId: targetAssigneeId, role: "DEVELOPER" } } } }
+            ? { teamMemberships: { some: { teamId: targetTeamId, role: "DEVELOPER", team: { projectId: existingIssue.projectId } } } }
             : { projectMemberships: { some: { projectId: existingIssue.projectId, role: "DEVELOPER" } } }),
         },
         select: { id: true },

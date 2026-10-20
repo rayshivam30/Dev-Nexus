@@ -134,8 +134,9 @@ test('login → project → ingest → grouped issue → assign → resolve', as
     headers,
     data: { teamId: team.id, assignedToId: developerId },
   });
-  expect(assign.ok()).toBeTruthy();
-  expect((await assign.json()).issue.assignedToId).toBe(developerId);
+  const assignBody = await assign.text();
+  expect(assign.ok(), assignBody).toBeTruthy();
+  expect((JSON.parse(assignBody) as { issue: { assignedToId: string } }).issue.assignedToId).toBe(developerId);
 
   const resolve = await page.request.patch(`/api/issues/${firstResult.issueId}`, {
     headers,
