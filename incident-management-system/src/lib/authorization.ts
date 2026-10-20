@@ -9,8 +9,6 @@ export interface SessionUser {
   role: Role;
   status: UserStatus;
   orgId: string | null;
-  projectId: string | null;
-  teamId: string | null;
 }
 
 export interface IssueAccessTarget {
@@ -93,8 +91,6 @@ export async function getActiveSessionUser(
       role: true,
       status: true,
       orgId: true,
-      projectId: true,
-      teamId: true,
     },
   });
 
@@ -130,8 +126,6 @@ export function sessionUserToPayload(user: SessionUser): JwtPayload {
     email: user.email,
     role: user.role,
     orgId: user.orgId || undefined,
-    projectId: user.projectId || undefined,
-    teamId: user.teamId || undefined,
   };
 }
 
@@ -141,7 +135,12 @@ export async function canAccessIssue(
 ): Promise<boolean> {
   if (!user.orgId || issue.project.orgId !== user.orgId) return false;
   if (user.role === "ADMIN") return true;
-  if (user.role === "MANAGER") return user.projectId === issue.projectId;
+  if (user.role === "MANAGER") {
+    return !!(await prisma.projectMembership.findFirst({
+      where: { userId: user.id, projectId: issue.projectId, role: "MANAGER" },
+      select: { id: true },
+    }));
+  }
   
   if (user.role === "DEVELOPER") {
     if (issue.assignedToId !== user.id) return false;
@@ -150,12 +149,11 @@ export async function canAccessIssue(
     if (!issue.teamId) return true;
 
     // Verify developer belongs to the issue's team
-    const teamMember = await prisma.user.findFirst({
+    const teamMember = await prisma.teamMembership.findFirst({
       where: {
-        id: user.id,
+        userId: user.id,
         teamId: issue.teamId,
         role: "DEVELOPER",
-        status: "ACTIVE"
       },
       select: { id: true }
     });

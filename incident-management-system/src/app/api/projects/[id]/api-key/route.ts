@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import crypto from "crypto";
 import { logAuditEvent } from "@/lib/audit-logger";
+import { hasProjectMembership } from "@/services/membership-service";
 
 function hashApiKey(key: string): string {
   return crypto.createHash("sha256").update(key).digest("hex");
@@ -16,7 +17,7 @@ export const GET = withAuth(async (req, { decoded, params }) => {
     select: { orgId: true, sdkApiKey: true }
   });
 
-  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && decoded.projectId !== id)) {
+  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && !(await hasProjectMembership(decoded.userId as string, id, ["MANAGER"])))) {
     return apiError("Project not found", 404);
   }
 

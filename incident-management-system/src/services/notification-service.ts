@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 
-export type NotificationType = 'INCIDENT_CREATED' | 'ASSIGNMENT' | 'COMMENT' | 'SLA' | 'GITHUB_CONFLICT';
+export type NotificationType = 'INCIDENT_CREATED' | 'ASSIGNMENT' | 'COMMENT' | 'SLA' | 'GITHUB_CONFLICT' | 'ALERT_POLICY' | 'USAGE_LIMIT';
 type StaffRole = 'ADMIN' | 'MANAGER';
 
 export async function createNotification(data: {
@@ -37,12 +37,12 @@ export async function notifyOrgStaff(orgId: string, data: {
       orgId,
       role: { in: ['ADMIN', 'MANAGER'] }
     },
-    select: { id: true, role: true, projectId: true }
+    select: { id: true, role: true, projectMemberships: { select: { projectId: true } } }
   });
 
   const notifications = staff
     .filter(user => {
-      if (user.role === 'MANAGER' && data.projectId && user.projectId !== data.projectId) {
+      if (user.role === 'MANAGER' && data.projectId && !user.projectMemberships.some((membership) => membership.projectId === data.projectId)) {
         return false;
       }
       return true;

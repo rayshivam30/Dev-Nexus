@@ -13,9 +13,11 @@ export default async function DeveloperDashboardPage() {
 
   const user = await prisma.user.findUnique({ 
     where: { id: currentUser.userId, status: "ACTIVE" },
-    include: { team: true }
+    include: { teamMemberships: { where: { role: "DEVELOPER" }, include: { team: true }, orderBy: { createdAt: "asc" } } }
   });
   if (!user) redirect("/auth/login");
+  const teamIds = user.teamMemberships.map((membership) => membership.teamId);
+  const primaryTeam = user.teamMemberships[0]?.team;
 
   // Get all issues assigned to this developer
   const [openCount, inProgressCount, resolvedCount, assignedIssuesRaw, allDevelopersRaw] = await Promise.all([
@@ -37,10 +39,10 @@ export default async function DeveloperDashboardPage() {
       take: 3,
       include: { team: true },
     }),
-    prisma.user.findMany({
-      select: { id: true, email: true, teamId: true, name: true },
-      where: { teamId: user.team?.id, role: "DEVELOPER" }
-    })
+    prisma.teamMembership.findMany({
+      where: { teamId: { in: teamIds }, role: "DEVELOPER" },
+      select: { teamId: true, user: { select: { id: true, email: true, name: true } } },
+    }).then((memberships) => memberships.map(({ teamId, user }) => ({ ...user, teamId })))
   ]);
 
   const recentIssues: Issue[] = assignedIssuesRaw.map((issue) => {
@@ -61,9 +63,9 @@ export default async function DeveloperDashboardPage() {
     };
   });
 
-  const teamName = user.team?.name ?? "";
-  const teamId = user.team?.id;
-  const projectId = user.projectId || user.team?.projectId; // user.projectId for managers, user.team?.projectId for developers
+  const teamName = primaryTeam?.name ?? "";
+  const teamId = primaryTeam?.id;
+  const projectId = primaryTeam?.projectId;
 
 
   return (

@@ -172,8 +172,9 @@ export async function POST(req: Request) {
     const handleGitHubIncident = async (data: Record<string, unknown>, title: string, description: string) => {
         let issue;
         try {
-          issue = await prisma.issue.create({
-            data: {
+          issue = await prisma.$transaction(async (tx) => {
+            const createdIssue = await tx.issue.create({
+              data: {
               githubDeliveryId: deliveryId,
               title,
               description: "AI Analysis Pending...",
@@ -186,7 +187,10 @@ export async function POST(req: Request) {
                 aiJobStatus: "PENDING",
                 aiAttempts: 0,
               } as Prisma.InputJsonValue,
-            }
+              }
+            });
+            await tx.job.create({ data: { type: "AI_ANALYZE", payload: { issueId: createdIssue.id } } });
+            return createdIssue;
           });
         } catch (error) {
           if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

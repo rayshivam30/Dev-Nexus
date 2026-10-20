@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { withAuth } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { hasProjectMembership } from '@/services/membership-service';
 
 export const POST = withAuth(async (request, { decoded, body }) => {
   try {
@@ -18,7 +19,8 @@ export const POST = withAuth(async (request, { decoded, body }) => {
     }
 
     // Managers can only create teams in their own project
-    if (decoded.role === 'MANAGER' && decoded.projectId !== projectId) {
+    const userId = typeof decoded.userId === 'string' ? decoded.userId : '';
+    if (decoded.role === 'MANAGER' && !(await hasProjectMembership(userId, projectId, ['MANAGER']))) {
       return NextResponse.json({ error: 'Managers can only create teams in their assigned project' }, { status: 403 });
     }
 

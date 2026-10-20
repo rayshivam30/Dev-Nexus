@@ -35,14 +35,16 @@ export default async function ProjectDetailsPage({
           },
         },
       },
-      managers: {
-        select: { id: true, email: true, status: true },
+      memberships: {
+        where: { role: "MANAGER" },
+        include: { user: { select: { id: true, email: true, status: true } } },
       },
       teams: {
         include: {
           _count: { select: { issues: true } },
-          members: {
-            select: { id: true, email: true, status: true },
+          memberships: {
+            where: { role: "DEVELOPER" },
+            include: { user: { select: { id: true, email: true, status: true } } },
           },
         },
       },
@@ -61,13 +63,13 @@ export default async function ProjectDetailsPage({
   if (!projectRaw) return notFound();
 
   // 🔥 SAFE SDK CHECK (project already filtered)
-  const hasSdkIssues = await prisma.issue.findFirst({
-    where: {
-      projectId: id,
-      source: "SDK",
-    },
-    select: { id: true },
-  });
+  const today = new Date();
+  const usageDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+  const [hasSdkIssues, dailyUsage] = await Promise.all([
+    prisma.issue.findFirst({ where: { projectId: id, source: "SDK" }, select: { id: true } }),
+    prisma.projectDailyUsage.findUnique({ where: { projectId_day: { projectId: id, day: usageDay } }, select: { eventCount: true } }),
+  ]);
+  const dailyEventLimit = ({ BASIC: 1_000, ADVANCED: 10_000, PRO: 100_000, ENTERPRISE: 1_000_000 } as const)[projectRaw.plan];
 
   // 🔥 FORMAT ISSUES
   const issues: Issue[] = projectRaw.issues.map((issue) => ({
@@ -88,9 +90,16 @@ export default async function ProjectDetailsPage({
 
   const project = {
     ...projectRaw,
+    managers: projectRaw.memberships.map(({ user }) => user),
+    teams: projectRaw.teams.map((team) => ({
+      ...team,
+      members: team.memberships.map(({ user }) => user),
+    })),
     sdkApiKey: null,
     hasSdkKey: Boolean(projectRaw.sdkApiKey),
     isSdkConnected: !!hasSdkIssues,
+    dailyEventCount: dailyUsage?.eventCount || 0,
+    dailyEventLimit,
     issues,
   };
 

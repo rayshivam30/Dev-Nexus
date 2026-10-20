@@ -1,24 +1,35 @@
 <div align="center">
   <h1>🚨 DevNexus Incident Management System</h1>
-  <p>An enterprise-grade, high-concurrency platform for real-time error tracking, AI-powered root cause analysis, and automated developer workflows.</p>
+  <p>An incident inbox for small engineering teams, with grouped reports, triage, and optional AI-assisted analysis.</p>
 </div>
 
 ---
 
 ## 🌟 Overview
 
-DevNexus is a state-of-the-art incident management platform designed to handle massive concurrency without breaking a sweat. It ingests errors from client SDKs and GitHub webhooks, analyzes them instantly using Google's Gemini AI, and routes them to the appropriate developer teams in real-time via Server-Sent Events (SSE).
+DevNexus ingests reports from client SDKs and GitHub webhooks, groups matching SDK reports, and provides issue triage. New issue groups are queued for Gemini analysis when a valid API key is configured. Notifications and live updates are available through the application APIs.
 
-Built with **Next.js (App Router)**, **TypeScript**, **Prisma**, **Upstash Redis**, and **Gemini AI**, the platform uses robust event-driven architecture, internal task queues, and intelligent connection pooling to reliably support high-throughput production loads.
+Built with **Next.js (App Router)**, **TypeScript**, **Prisma**, **PostgreSQL**, and optional **Upstash Redis** and **Gemini AI** integrations. Production capacity depends on the deployment configuration.
 
 ## 🚀 Key Features
 
-*   **⚡ High-Concurrency Architecture:** Uses Redis-backed event delivery and rate limits, database connection pooling, and database-backed AI job recovery.
-*   **🤖 AI-Powered Analysis:** Integrates Gemini with durable incident-backed analysis jobs, retry scheduling, and recovery after process restarts.
-*   **📡 Real-Time Notifications:** Uses optimized Server-Sent Events (SSE) with connection capping and automatic memory cleanup to deliver instant alerts to developer dashboards.
+*   **⚡ Ingestion Controls:** Uses payload limits, rate limiting, and Redis-backed event delivery when configured.
+*   **🤖 AI-Assisted Analysis:** Stores analysis status and retry state on issues so pending analysis can be recovered after a process restart.
+*   **📡 Live Notifications:** Provides Server-Sent Events (SSE) for dashboard updates.
 *   **🏢 Multi-Tenant RBAC:** Complete Role-Based Access Control isolating environments for **Admins** (organization oversight), **Managers** (project management), and **Developers** (issue resolution).
-*   **📧 Throttled Email Queue:** Batches automated assignment and alert emails (via SMTP) to prevent spam blocks and ensure deliverability during major outages.
+*   **📧 Email Notifications:** SMTP settings and notification email paths are available; delivery depends on runtime configuration.
 *   **🔗 GitHub Integration:** Seamlessly connects with GitHub repositories via webhooks to track CI/CD deployments and automatically generate issues from pipeline failures.
+
+## Background Worker and Routing
+
+Run the app and worker as separate processes in a self-hosted deployment:
+
+```bash
+bun run start
+bun run worker
+```
+
+The worker claims AI analysis, SLA sweep, and email jobs from PostgreSQL. Docker Compose starts the worker as its own service. Project admins and managers can list, create, and remove routing rules through `/api/projects/{projectId}/routing-rules`; the project settings page provides the same controls. Rules match severity, a `key=value` tag, a path prefix, or message text, and apply to newly created issue groups.
 
 ## 🏗️ Architecture
 
@@ -45,8 +56,9 @@ migrations with `prisma migrate deploy` before starting the app. Production
 deployments outside Compose must run the same migration command against their
 production database before starting the new app version. Configure a valid
 Gmail App Password in `GMAIL_APP_PASSWORD` if email verification and invitations
-must be delivered. The durable AI worker runs in the long-lived Node.js server
-process and uses PostgreSQL for recovery.
+must be delivered. The dedicated worker runs as a separate process and uses
+PostgreSQL for AI, SLA, and email job recovery. Configure `SMTP_HOST` only for a
+local or test SMTP server; otherwise Gmail SMTP remains the mail transport.
 
 ### Prerequisites
 - [Bun](https://bun.sh/) (recommended) or Node.js

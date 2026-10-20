@@ -23,7 +23,7 @@ export default async function TeamDetailsPage({ params }: { params: Promise<{ id
     },
     include: {
       project: { select: { name: true, id: true } },
-      members: { select: { id: true, email: true, status: true, role: true } },
+      memberships: { include: { user: { select: { id: true, email: true, status: true, role: true } } } },
       issues: {
         include: {
           assignedTo: { select: { email: true } }
@@ -53,6 +53,7 @@ export default async function TeamDetailsPage({ params }: { params: Promise<{ id
 
   const team = {
     ...teamRaw,
+    members: teamRaw.memberships.map(({ user: member }) => member),
     issues
   };
 

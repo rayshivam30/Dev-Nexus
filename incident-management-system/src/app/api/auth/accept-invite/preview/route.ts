@@ -13,12 +13,7 @@ export async function GET(request: Request) {
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
   const invite = await prisma.invite.findUnique({
     where: { token: tokenHash },
-    select: {
-      email: true,
-      role: true,
-      acceptedAt: true,
-      expiresAt: true,
-    },
+    select: { email: true, role: true, acceptedAt: true, expiresAt: true },
   });
 
   if (
@@ -33,8 +28,14 @@ export async function GET(request: Request) {
     );
   }
 
+  const existingUser = await prisma.user.findUnique({
+    where: { email: invite.email },
+    select: { role: true, status: true },
+  });
+
   return NextResponse.json({
     email: invite.email,
     role: invite.role,
+    existingAccount: existingUser?.role === invite.role && existingUser.status === "ACTIVE",
   });
 }

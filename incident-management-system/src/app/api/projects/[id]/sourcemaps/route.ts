@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { uploadSourceMap, listSourceMaps, deleteSourceMap } from "@/services/sourcemap-service";
 import { logAuditEvent } from "@/lib/audit-logger";
+import { hasProjectMembership } from "@/services/membership-service";
 
 /**
  * GET /api/projects/[id]/sourcemaps
@@ -16,7 +17,7 @@ export const GET = withAuth(async (req, { decoded, params }) => {
     select: { orgId: true },
   });
 
-  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && decoded.projectId !== id)) {
+  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && !(await hasProjectMembership(decoded.userId as string, id, [decoded.role === "MANAGER" ? "MANAGER" : "DEVELOPER"])))) {
     return apiError("Project not found", 404);
   }
 
@@ -43,7 +44,7 @@ export const POST = withAuth(async (req, { decoded, body, params }) => {
     select: { orgId: true },
   });
 
-  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && decoded.projectId !== id)) {
+  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && !(await hasProjectMembership(decoded.userId as string, id, [decoded.role === "MANAGER" ? "MANAGER" : "DEVELOPER"])))) {
     return apiError("Project not found", 404);
   }
 
@@ -102,7 +103,7 @@ export const DELETE = withAuth(async (req, { decoded, params }) => {
     select: { orgId: true },
   });
 
-  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && decoded.projectId !== id)) {
+  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && !(await hasProjectMembership(decoded.userId as string, id, [decoded.role === "MANAGER" ? "MANAGER" : "DEVELOPER"])))) {
     return apiError("Project not found", 404);
   }
 

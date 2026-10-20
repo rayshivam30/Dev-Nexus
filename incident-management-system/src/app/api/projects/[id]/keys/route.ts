@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { createProjectApiKey, listProjectApiKeys } from "@/services/api-key-service";
 import { logAuditEvent } from "@/lib/audit-logger";
+import { hasProjectMembership } from "@/services/membership-service";
 
 /**
  * GET /api/projects/[id]/keys
@@ -16,7 +17,7 @@ export const GET = withAuth(async (req, { decoded, params }) => {
     select: { orgId: true },
   });
 
-  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && decoded.projectId !== id)) {
+  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && !(await hasProjectMembership(decoded.userId as string, id, ["MANAGER"])))) {
     return apiError("Project not found", 404);
   }
 
@@ -41,7 +42,7 @@ export const POST = withAuth(async (req, { decoded, body, params }) => {
     select: { orgId: true },
   });
 
-  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && decoded.projectId !== id)) {
+  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && !(await hasProjectMembership(decoded.userId as string, id, ["MANAGER"])))) {
     return apiError("Project not found", 404);
   }
 

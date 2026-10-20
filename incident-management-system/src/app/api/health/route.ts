@@ -44,7 +44,12 @@ export async function GET() {
   }
 
   // ── Queue Stats ─────────────────────────────────────────────────────────
-  const emailQueue = getEmailQueueStats();
+  let emailQueue = { queueLength: 0, dailySentCount: 0, dailyLimit: 450, dailyRemaining: 450 };
+  try {
+    emailQueue = await getEmailQueueStats();
+  } catch {
+    // Database health above already reports queue storage failure.
+  }
   let pendingAiJobs = 0;
   try {
     pendingAiJobs = await prisma.issue.count({

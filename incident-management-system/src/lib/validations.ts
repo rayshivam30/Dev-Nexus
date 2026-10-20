@@ -7,7 +7,7 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-const passwordSchema = z
+export const passwordSchema = z
   .string()
   .min(12, "Password must be at least 12 characters")
   .max(128, "Password must not exceed 128 characters")
@@ -49,7 +49,7 @@ export const inviteSchema = z.object({
 
 export const acceptInviteSchema = z.object({
   token: z.string().min(1, "Token is required"),
-  password: passwordSchema,
+  password: passwordSchema.optional(),
 });
 
 // Issues Schemas

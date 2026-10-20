@@ -64,7 +64,7 @@ describe("Session Blacklist Tests", () => {
       email: "test@example.com",
       role: "DEVELOPER" as const,
     };
-    const token = signToken(payload, "1h");
+    const token = await signToken(payload, "1h");
 
     expect(await isTokenBlacklisted(token)).toBe(false);
 
@@ -80,7 +80,7 @@ describe("Session Blacklist Tests", () => {
       email: "test@example.com",
       role: "DEVELOPER" as const,
     };
-    const token = signToken(payload, "1h");
+    const token = await signToken(payload, "1h");
     mockCookieToken = token;
 
     const res = await logoutPOST();
@@ -100,7 +100,7 @@ describe("Session Blacklist Tests", () => {
       email: "test@example.com",
       role: "DEVELOPER" as const,
     };
-    const token = signToken(payload, "1h");
+    const token = await signToken(payload, "1h");
 
     // Add token to blacklist
     await blacklistToken(token);

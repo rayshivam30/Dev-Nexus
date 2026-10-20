@@ -1,25 +1,38 @@
 import nodemailer from "nodemailer";
 import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/db";
+import { redis } from "@/lib/redis";
 
 /**
  * Shared Nodemailer transporter using Gmail SMTP.
  *
- * Required env vars:
+ * Gmail env vars (when SMTP_HOST is not configured):
  *   GMAIL_USER          – your Gmail address (e.g. you@gmail.com)
  *   GMAIL_APP_PASSWORD  – a 16-char App Password generated from
  *                         https://myaccount.google.com/apppasswords
  */
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, ""),
-  },
-  // Connection pooling — reuse SMTP connections for better throughput
-  pool: true,
-  maxConnections: 3,
-  maxMessages: 50,
-});
+const smtpHost = process.env.SMTP_HOST;
+const gmailUser = process.env.GMAIL_USER;
+const gmailAppPassword = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, "");
+const transporter = nodemailer.createTransport(smtpHost
+  ? {
+      host: smtpHost,
+      port: Number(process.env.SMTP_PORT || 25),
+      secure: process.env.SMTP_SECURE === "true",
+      ...(process.env.SMTP_USER && process.env.SMTP_PASSWORD
+        ? { auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD } }
+        : {}),
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 50,
+    }
+  : {
+      service: "gmail",
+      auth: { user: gmailUser, pass: gmailAppPassword },
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 50,
+    });
 
 function maskEmail(email?: string): string {
   if (!email) return "undefined";
@@ -45,147 +58,126 @@ interface SendMailOptions {
   html: string;
 }
 
-// ── Email Queue & Throttling ─────────────────────────────────────────────────
-// Gmail limits: ~500 recipients/day, ~20 emails/minute.
-// This queue processes at most MAX_EMAILS_PER_BATCH every BATCH_INTERVAL_MS
-// to stay safely under the limits.
+// ── Durable email worker ──────────────────────────────────────────────────────
+// Gmail limits: ~500 recipients/day. Jobs are claimed from Postgres so a restart
+// cannot discard queued messages.
 
 const MAX_EMAILS_PER_BATCH = 5;
-const BATCH_INTERVAL_MS = 20_000; // 5 emails every 20 seconds = ~15/min
-const MAX_QUEUE_SIZE = 200;
-
-interface QueuedEmail {
-  options: SendMailOptions;
-  retries: number;
-  addedAt: number;
-}
-
-const emailQueue: QueuedEmail[] = [];
-let isProcessing = false;
-let dailySentCount = 0;
-let dailyResetAt = getNextMidnight();
-
-function getNextMidnight(): number {
-  const now = new Date();
-  const midnight = new Date(now);
-  midnight.setHours(24, 0, 0, 0);
-  return midnight.getTime();
-}
-
-function resetDailyCountIfNeeded() {
-  if (Date.now() >= dailyResetAt) {
-    dailySentCount = 0;
-    dailyResetAt = getNextMidnight();
-  }
-}
+const BATCH_INTERVAL_MS = process.env.NODE_ENV === "test" ? 250 : 20_000;
 
 const DAILY_LIMIT = 450; // Stay under Gmail's 500/day with buffer
 
-export function pruneStaleEmails() {
-  const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
-  const originalLength = emailQueue.length;
-  let i = 0;
-  while (i < emailQueue.length) {
-    if (emailQueue[i].addedAt < twoHoursAgo) {
-      emailQueue.splice(i, 1);
-    } else {
-      i++;
-    }
-  }
-  if (emailQueue.length < originalLength) {
-    logger.info(
-      { pruned: originalLength - emailQueue.length, currentLength: emailQueue.length },
-      "Pruned stale emails from queue"
-    );
-  }
+let durableEmailTimer: ReturnType<typeof setInterval> | undefined;
+let durableEmailWorkerRunning = false;
+const EMAIL_CLAIM_TIMEOUT_MS = 5 * 60_000;
+
+function asEmailOptions(value: unknown): SendMailOptions | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Record<string, unknown>;
+  if (typeof item.to !== "string" || typeof item.subject !== "string" || typeof item.html !== "string") return null;
+  return { to: item.to, subject: item.subject, html: item.html };
 }
 
-async function processEmailQueue() {
-  pruneStaleEmails();
-  if (isProcessing || emailQueue.length === 0) return;
-  isProcessing = true;
+async function processDurableEmailJobs() {
+  if (durableEmailWorkerRunning) return;
+  durableEmailWorkerRunning = true;
+  try {
+    const now = new Date();
+    const staleBefore = new Date(now.getTime() - EMAIL_CLAIM_TIMEOUT_MS);
+    const jobs = await prisma.job.findMany({
+      where: {
+        type: "EMAIL",
+        runAfter: { lte: now },
+        OR: [
+          { status: "PENDING" },
+          { status: "PROCESSING", lockedAt: { lt: staleBefore } },
+        ],
+      },
+      orderBy: { createdAt: "asc" },
+      take: MAX_EMAILS_PER_BATCH,
+    });
 
-  resetDailyCountIfNeeded();
-
-  const batch = emailQueue.splice(0, MAX_EMAILS_PER_BATCH);
-  
-  for (const item of batch) {
-    if (dailySentCount >= DAILY_LIMIT) {
-      logger.warn(
-        { dailySentCount, limit: DAILY_LIMIT, queueLength: emailQueue.length },
-        "Daily email limit reached, requeueing remaining emails"
-      );
-      // Put remaining items back
-      emailQueue.unshift(item);
-      break;
-    }
-
-    try {
-      await transporter.sendMail({
-        from: `DevNexus <${process.env.GMAIL_USER}>`,
-        to: item.options.to,
-        subject: item.options.subject,
-        html: item.options.html,
+    for (const job of jobs) {
+      const claim = await prisma.job.updateMany({
+        where: { id: job.id, status: job.status, updatedAt: job.updatedAt },
+        data: { status: "PROCESSING", lockedAt: now, lockedBy: String(process.pid), attempts: { increment: 1 } },
       });
-      dailySentCount++;
-      logger.info(
-        { to: item.options.to, subject: item.options.subject, dailySent: dailySentCount },
-        "Email sent successfully"
-      );
-    } catch (error) {
-      if (item.retries < 2) {
-        item.retries++;
-        emailQueue.push(item); // Retry at end of queue
-        logger.warn(
-          { to: item.options.to, attempt: item.retries, err: error },
-          "Email send failed, will retry"
-        );
-      } else {
-        logger.error(
-          { to: item.options.to, err: error },
-          "Email send failed after max retries, dropping"
-        );
+      if (claim.count !== 1) continue;
+
+      const options = asEmailOptions(job.payload);
+      if (!options) {
+        await prisma.job.update({ where: { id: job.id }, data: { status: "FAILED", lockedAt: null, lockedBy: null, lastError: "Invalid email job payload" } });
+        continue;
+      }
+
+      if (redis) {
+        const day = new Date().toISOString().slice(0, 10);
+        const limitKey = `email:daily:${day}`;
+        const sentOrReserved = await redis.incr(limitKey);
+        if (sentOrReserved === 1) await redis.expire(limitKey, 48 * 60 * 60);
+        if (sentOrReserved > DAILY_LIMIT) {
+          const nextDay = new Date(`${day}T00:00:00.000Z`);
+          nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+          await prisma.job.update({ where: { id: job.id }, data: { status: "PENDING", runAfter: nextDay, lockedAt: null, lockedBy: null } });
+          continue;
+        }
+      } else if (process.env.NODE_ENV === "production") {
+        await prisma.job.update({ where: { id: job.id }, data: { status: "PENDING", runAfter: new Date(Date.now() + 60_000), lockedAt: null, lockedBy: null, lastError: "Redis required for email rate limiting" } });
+        continue;
+      }
+
+      try {
+        await transporter.sendMail({ from: `DevNexus <${gmailUser || "no-reply@devnexus.io"}>`, ...options });
+        await prisma.job.update({ where: { id: job.id }, data: { status: "COMPLETE", lockedAt: null, lockedBy: null, lastError: null } });
+      } catch (error) {
+        const attempts = job.attempts + 1;
+        const failed = attempts >= 5;
+        const backoffMs = Math.min(60_000 * 2 ** (attempts - 1), 15 * 60_000);
+        await prisma.job.update({
+          where: { id: job.id },
+          data: {
+            status: failed ? "FAILED" : "PENDING",
+            runAfter: failed ? job.runAfter : new Date(Date.now() + backoffMs),
+            lockedAt: null,
+            lockedBy: null,
+            lastError: error instanceof Error ? error.message.slice(0, 500) : "Email delivery failed",
+          },
+        });
       }
     }
+  } catch (error) {
+    logger.error({ err: error }, "Durable email queue poll failed");
+  } finally {
+    durableEmailWorkerRunning = false;
   }
-
-  isProcessing = false;
 }
 
-// Process queue periodically
-const queueTimer = setInterval(processEmailQueue, BATCH_INTERVAL_MS);
-queueTimer.unref(); // Don't keep process alive
+export function startEmailWorker() {
+  if (durableEmailTimer || process.env.NEXT_RUNTIME === "edge") return;
+  durableEmailTimer = setInterval(() => void processDurableEmailJobs(), BATCH_INTERVAL_MS);
+  durableEmailTimer.unref();
+  void processDurableEmailJobs();
+  logger.info("Durable email worker started");
+}
 
 /**
- * Queue an email for throttled delivery via Gmail SMTP.
- * Returns immediately — the email is sent asynchronously.
- * Silently skips if Gmail credentials are not configured.
+ * Persist email for delivery by the dedicated worker. Gmail SMTP remains the
+ * default transport; SMTP_HOST is useful for local development and test sinks.
  */
 export async function sendMail({ to, subject, html }: SendMailOptions) {
-  // Allow pasting the 16-char Gmail App Password with or without spaces
-  const gmailUser = process.env.GMAIL_USER;
-  const gmailAppPassword = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, "");
-
-  if (!gmailUser || !gmailAppPassword) {
+  const configured = Boolean(process.env.SMTP_HOST || (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD));
+  if (!configured) {
     console.warn(
-      "⚠️  GMAIL_USER or GMAIL_APP_PASSWORD not set or invalid — skipping email send."
+      "⚠️  SMTP_HOST or both GMAIL_USER and GMAIL_APP_PASSWORD must be configured — skipping email send."
     );
     return null;
   }
 
-  const mailOptions = {
-    from: `DevNexus <${gmailUser}>`,
-    to,
-    subject,
-    html,
-  };
-
-  // In production (or when explicitly requested) send synchronously so serverful
-  // hosts perform the send during the request and we immediately surface errors.
-  if (process.env.NODE_ENV === "production" || process.env.EMAIL_SYNC === "true") {
+  const mailOptions = { from: `DevNexus <${process.env.GMAIL_USER || "no-reply@devnexus.io"}>`, to, subject, html };
+  if (process.env.NODE_ENV !== "production" && process.env.EMAIL_SYNC === "true") {
     try {
       await transporter.sendMail(mailOptions);
-      logger.info({ to, subject }, "Email sent synchronously (production)");
+      logger.info({ to, subject }, "Email sent synchronously");
       return { sent: true };
     } catch (err) {
       logger.error({ to, err }, "Synchronous email send failed");
@@ -193,37 +185,22 @@ export async function sendMail({ to, subject, html }: SendMailOptions) {
     }
   }
 
-  pruneStaleEmails();
-
-  if (emailQueue.length >= MAX_QUEUE_SIZE) {
-    logger.warn(
-      { queueSize: emailQueue.length, to },
-      "Email queue full, dropping email"
-    );
-    return { queued: false, dropped: true, reason: "queue_full" };
-  }
-
-  emailQueue.push({
-    options: { to, subject, html },
-    retries: 0,
-    addedAt: Date.now(),
-  });
-
-  // Attempt immediate processing if not already running
-  if (!isProcessing) {
-    processEmailQueue();
-  }
-
-  return { queued: true, queueLength: emailQueue.length };
+  await prisma.job.create({ data: { type: "EMAIL", payload: { to, subject, html } } });
+  return { queued: true };
 }
 
 /**
  * Returns current email queue stats for monitoring.
  */
-export function getEmailQueueStats() {
-  resetDailyCountIfNeeded();
+export async function getEmailQueueStats() {
+  const now = new Date();
+  const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const [queueLength, dailySentCount] = await Promise.all([
+    prisma.job.count({ where: { type: "EMAIL", status: "PENDING" } }),
+    prisma.job.count({ where: { type: "EMAIL", status: "COMPLETE", updatedAt: { gte: dayStart } } }),
+  ]);
   return {
-    queueLength: emailQueue.length,
+    queueLength,
     dailySentCount,
     dailyLimit: DAILY_LIMIT,
     dailyRemaining: Math.max(0, DAILY_LIMIT - dailySentCount),

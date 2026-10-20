@@ -1,6 +1,9 @@
 import { mock } from "bun:test";
 
 export interface PrismaMock {
+  projectMembership: { findFirst: ReturnType<typeof mock>; findMany: ReturnType<typeof mock>; upsert: ReturnType<typeof mock> };
+  teamMembership: { findFirst: ReturnType<typeof mock>; findMany: ReturnType<typeof mock>; upsert: ReturnType<typeof mock> };
+  auditLog: { create: ReturnType<typeof mock> };
   user: {
     findUnique: ReturnType<typeof mock>;
     findFirst: ReturnType<typeof mock>;
@@ -23,12 +26,26 @@ export interface PrismaMock {
     create: ReturnType<typeof mock>;
     update: ReturnType<typeof mock>;
     findUnique: ReturnType<typeof mock>;
+    findFirst: ReturnType<typeof mock>;
     findMany: ReturnType<typeof mock>;
     count: ReturnType<typeof mock>;
   };
   issueActivity: {
     create: ReturnType<typeof mock>;
+    count: ReturnType<typeof mock>;
   };
+  projectDailyUsage: { upsert: ReturnType<typeof mock> };
+  job: {
+    create: ReturnType<typeof mock>;
+    findMany: ReturnType<typeof mock>;
+    findFirst: ReturnType<typeof mock>;
+    count: ReturnType<typeof mock>;
+    update: ReturnType<typeof mock>;
+    updateMany: ReturnType<typeof mock>;
+  };
+  alertPolicy: { findMany: ReturnType<typeof mock> };
+  alertTrigger: { createMany: ReturnType<typeof mock> };
+  $queryRaw: ReturnType<typeof mock>;
   issueComment: {
     create: ReturnType<typeof mock>;
   };
@@ -73,6 +90,17 @@ export interface PrismaMock {
 
 export const createPrismaMock = (): PrismaMock => {
   const prismaMock: PrismaMock = {
+    projectMembership: {
+      findFirst: mock(() => Promise.resolve(null)),
+      findMany: mock(() => Promise.resolve([])),
+      upsert: mock((args: { create?: Record<string, unknown> }) => Promise.resolve({ id: "project-membership-1", ...args.create })),
+    },
+    teamMembership: {
+      findFirst: mock(() => Promise.resolve(null)),
+      findMany: mock(() => Promise.resolve([])),
+      upsert: mock((args: { create?: Record<string, unknown> }) => Promise.resolve({ id: "team-membership-1", ...args.create })),
+    },
+    auditLog: { create: mock(() => Promise.resolve({ id: "audit-1" })) },
     user: {
       findUnique: mock(() => Promise.resolve(null)),
       findFirst: mock(() => Promise.resolve(null)),
@@ -95,12 +123,26 @@ export const createPrismaMock = (): PrismaMock => {
       create: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "issue-1", ...args.data })),
       update: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "issue-1", ...args.data })),
       findUnique: mock(() => Promise.resolve({ id: "issue-1", status: "OPEN" })),
+      findFirst: mock(() => Promise.resolve(null)),
       findMany: mock(() => Promise.resolve([{ id: "issue-1", title: "I1" }, { id: "issue-2", title: "I2" }])),
       count: mock(() => Promise.resolve(2)),
     },
     issueActivity: {
       create: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "activity-1", ...args.data })),
+      count: mock(() => Promise.resolve(0)),
     },
+    projectDailyUsage: { upsert: mock(() => Promise.resolve({ eventCount: 1 })) },
+    job: {
+      create: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "job-1", status: "PENDING", attempts: 0, updatedAt: new Date(), ...args.data })),
+      findMany: mock(() => Promise.resolve([])),
+      findFirst: mock(() => Promise.resolve(null)),
+      count: mock(() => Promise.resolve(0)),
+      update: mock((args: { where?: { id?: string }; data?: Record<string, unknown> }) => Promise.resolve({ id: args.where?.id || "job-1", ...args.data })),
+      updateMany: mock(() => Promise.resolve({ count: 1 })),
+    },
+    alertPolicy: { findMany: mock(() => Promise.resolve([])) },
+    alertTrigger: { createMany: mock(() => Promise.resolve({ count: 0 })) },
+    $queryRaw: mock(() => Promise.resolve([])),
     issueComment: {
       create: mock((args: { data?: Record<string, unknown> }) => Promise.resolve({ id: "comment-1", ...args.data, user: { name: "User 1", email: "user1@example.com" } })),
     },

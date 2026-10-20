@@ -1,13 +1,14 @@
 "use client";
 
 import { Sidebar, NavItem } from "@/components/dashboard/shared/Sidebar";
-import { LayoutDashboard, FolderKanban, AlertCircle, Bell } from "lucide-react";
+import { LayoutDashboard, FolderKanban, AlertCircle, Bell, ScrollText } from "lucide-react";
 
 const adminNavItems: NavItem[] = [
   { href: "/dashboard/admin", icon: LayoutDashboard, label: "Overview" },
   { href: "/dashboard/admin/notifications", icon: Bell, label: "Notifications" },
   { href: "/dashboard/admin/issues", icon: AlertCircle, label: "Issues" },
   { href: "/dashboard/admin/projects", icon: FolderKanban, label: "Projects" },
+  { href: "/dashboard/admin/audit-logs", icon: ScrollText, label: "Audit log" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

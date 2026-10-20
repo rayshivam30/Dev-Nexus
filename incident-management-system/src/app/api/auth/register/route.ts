@@ -41,12 +41,7 @@ export async function POST(request: Request) {
         `,
       });
 
-      // mailResult is non-null and not a dropped result when delivery was attempted
-      if (mailResult && !('dropped' in mailResult && mailResult.dropped)) {
-        emailSent = true;
-      } else if (mailResult && 'dropped' in mailResult && mailResult.dropped) {
-        logger.warn({ to: email, reason: mailResult.reason }, "Verification email dropped due to queue being full");
-      }
+      emailSent = Boolean(mailResult);
     } catch (emailError) {
       logger.error({ err: emailError }, "Failed to send verification email");
     }

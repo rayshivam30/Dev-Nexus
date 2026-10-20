@@ -37,7 +37,7 @@ export interface Breadcrumb {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const DEFAULT_BASE_URL   = "https://devnexus.vercel.app/api/ingest";
+const DEFAULT_BASE_URL   = "https://devnexus.io/api/ingest";
 const DEDUP_WINDOW_MS    = 60_000; // suppress identical errors within 1 min
 const DEDUP_MAX_SIZE     = 100;    // max fingerprints to keep in memory
 const MAX_BREADCRUMBS    = 20;

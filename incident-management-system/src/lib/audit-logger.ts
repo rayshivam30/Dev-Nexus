@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger";
+import { prisma } from "@/lib/db";
 
 export interface AuditLogOptions {
   action: string;
@@ -27,4 +28,17 @@ export function logAuditEvent(options: AuditLogOptions) {
     },
     `Audit Event: ${options.action} - ${options.success ? "SUCCESS" : "FAILURE"}`
   );
+
+  void prisma.auditLog.create({
+    data: {
+      userId: options.userId,
+      action: options.action,
+      resource: options.resource,
+      resourceId: options.resourceId,
+      changes: options.changes as never,
+      ipAddress: options.ipAddress,
+      userAgent: options.userAgent,
+      success: options.success,
+    },
+  }).catch((error) => logger.error({ err: error, action: options.action }, "Failed to persist audit event"));
 }

@@ -30,6 +30,17 @@ export async function analyzeIncident(
   source: IssueSource,
   techStack: string[] = ["React", "Next.js", "TypeScript"]
 ): Promise<AIAnalysisResult> {
+  if (process.env.NODE_ENV === "test" && process.env.DEVNEXUS_E2E_FAKE_AI === "true") {
+    return {
+      title: "E2E analyzed incident",
+      description: "Deterministic analysis from the E2E-only AI fixture.",
+      severity: IssueSeverity.HIGH,
+      priority: "HIGH",
+      environment: EnvironmentType.DEVELOPMENT,
+      rootCause: "E2E fixture",
+      suggestedFixes: "No production change required.",
+    };
+  }
   const history = rawData.history as { last24hCount: number; isFirstOccurrence: boolean } | undefined;
   const breadcrumbs = rawData.breadcrumbs as unknown[] | undefined;
 

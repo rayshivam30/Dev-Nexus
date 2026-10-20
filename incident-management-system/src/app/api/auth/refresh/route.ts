@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify the refresh token
-    const decoded = verifyToken(refreshToken);
+    const decoded = await verifyToken(refreshToken);
     if (!decoded || decoded.type !== "refresh") {
       return NextResponse.json(
         { error: "Invalid or expired refresh token" },
@@ -64,8 +64,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Refresh token has already been used" }, { status: 401 });
     }
 
-    const newAccessToken = signToken(payload, "1h");
-    const newRefreshToken = signRefreshToken(payload);
+    const [newAccessToken, newRefreshToken] = await Promise.all([signToken(payload, "1h"), signRefreshToken(payload)]);
 
     const response = NextResponse.json({
       message: "Token refreshed successfully",

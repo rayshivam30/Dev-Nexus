@@ -4,6 +4,7 @@ import { createIssue } from "@/services/issue-service";
 import { createIssueSchema } from "@/lib/validations";
 import { createNotification } from "@/services/notification-service";
 import { logger } from "@/lib/logger";
+import { hasProjectMembership, hasTeamMembership } from "@/services/membership-service";
 
 export const POST = withAuth(async (req, { decoded, body }) => {
   const result = createIssueSchema.safeParse(body);
@@ -22,7 +23,6 @@ export const POST = withAuth(async (req, { decoded, body }) => {
 
   const user = await prisma.user.findUnique({
     where: { id: decoded.userId },
-    include: { team: true }
   });
 
   if (!user) {
@@ -35,14 +35,15 @@ export const POST = withAuth(async (req, { decoded, body }) => {
   }
 
   if (user.role === "MANAGER") {
-    if (user.projectId !== projectId) {
+    if (!(await hasProjectMembership(user.id, projectId, ["MANAGER"]))) {
       return apiError("Access Denied: Managers can only create issues for their assigned project", 403);
     }
   } else if (user.role === "DEVELOPER") {
-    if (!user.teamId || !user.team) {
-      return apiError("Access Denied: Developers must be assigned to a team to create issues", 403);
-    }
-    if (user.team.projectId !== projectId) {
+    const memberOnProject = await prisma.teamMembership.findFirst({
+      where: { userId: user.id, role: "DEVELOPER", team: { projectId } },
+      select: { id: true },
+    });
+    if (!memberOnProject) {
       return apiError("Access Denied: Developers can only create issues for their assigned team's project", 403);
     }
   }
@@ -53,6 +54,8 @@ export const POST = withAuth(async (req, { decoded, body }) => {
     if (team.projectId !== projectId) {
       return apiError("Team does not belong to the selected project", 400);
     }
+    if (user.role === "MANAGER" && !(await hasProjectMembership(user.id, projectId, ["MANAGER"]))) return apiError("Access denied", 403);
+    if (user.role === "DEVELOPER" && !(await hasTeamMembership(user.id, teamId, ["DEVELOPER"]))) return apiError("Access denied: you are not a member of that team", 403);
   }
 
   if (assignedToId) {
@@ -65,15 +68,18 @@ export const POST = withAuth(async (req, { decoded, body }) => {
         role: "DEVELOPER",
         status: "ACTIVE",
         orgId: user.orgId,
-        team: { projectId },
+        teamMemberships: {
+          some: {
+            role: "DEVELOPER",
+            ...(teamId ? { teamId } : {}),
+            team: { projectId },
+          },
+        },
       },
-      select: { id: true, teamId: true },
+      select: { id: true },
     });
     if (!assignee) {
       return apiError("Assignee does not belong to the selected project", 400);
-    }
-    if (teamId && assignee.teamId !== teamId) {
-      return apiError("Assignee does not belong to the selected team", 400);
     }
   }
 

@@ -316,13 +316,13 @@ export default function DocsPage() {
               },
               {
                 title: "AI Analysis",
-                desc: "Incident payloads trigger an asynchronous Gemini queue for root cause identification. Complex stack traces may take up to 2 seconds to process.",
+                desc: "New issue groups queue asynchronous AI analysis when the server has a valid Gemini API key. Processing time depends on provider availability and queue load.",
                 num: "02",
                 icon: Cpu,
               },
               {
                 title: "Data Integrity",
-                desc: "Payloads exceeding 256KB are truncated to ensure high performance ingestion. Always ensure log rotation for extreme trace lengths.",
+                desc: "Requests larger than 512KB are rejected. Individual stack traces are limited to 10,000 characters and messages to 10,000 characters.",
                 num: "03",
                 icon: LayoutList,
               },

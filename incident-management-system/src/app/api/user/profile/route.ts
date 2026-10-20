@@ -86,17 +86,11 @@ export const GET = withAuth(async (req, { decoded }) => {
         linkedinUrl: true,
         skills: true,
         orgId: true,
-        projectId: true,
         organization: {
           select: { id: true, name: true, plan: true }
         },
-        project: {
-          select: { id: true, name: true, description: true, plan: true }
-        },
-        teamId: true,
-        team: {
-          select: { id: true, name: true, projectId: true }
-        }
+        projectMemberships: { where: { role: "MANAGER" }, select: { projectId: true, project: { select: { id: true, name: true, description: true, plan: true } } } },
+        teamMemberships: { where: { role: "DEVELOPER" }, select: { teamId: true, team: { select: { id: true, name: true, projectId: true } } } },
       }
     });
 
@@ -136,14 +130,15 @@ export const GET = withAuth(async (req, { decoded }) => {
       resolvedCount = resolved;
       breachedCount = breached;
       totalIssuesCount = total;
-    } else if (user.role === "MANAGER" && user.projectId) {
+    } else if (user.role === "MANAGER") {
+      const projectIds = user.projectMemberships.map((membership) => membership.projectId);
       const [resolved, breached, total] = await Promise.all([
         prisma.issue.count({
-          where: { projectId: user.projectId, status: "RESOLVED" },
+          where: { projectId: { in: projectIds }, status: "RESOLVED" },
         }),
         prisma.issue.count({
           where: { 
-            projectId: user.projectId, 
+            projectId: { in: projectIds },
             OR: [
               { responseBreached: true }, 
               { resolutionBreached: true },
@@ -153,7 +148,7 @@ export const GET = withAuth(async (req, { decoded }) => {
           },
         }),
         prisma.issue.count({
-          where: { projectId: user.projectId },
+          where: { projectId: { in: projectIds } },
         })
       ]);
       resolvedCount = resolved;
@@ -238,28 +233,28 @@ export const GET = withAuth(async (req, { decoded }) => {
       };
     } else if (user.role === "MANAGER") {
       const [teamCount, developerCount, openIncidentCount] = await Promise.all([
-        prisma.team.count({ where: { projectId: user.projectId || undefined } }),
-        prisma.user.count({ where: { team: { projectId: user.projectId || undefined }, role: "DEVELOPER" } }),
-        prisma.issue.count({ where: { projectId: user.projectId || undefined, status: { in: ["OPEN", "ASSIGNED", "IN_PROGRESS"] } } }),
+        prisma.team.count({ where: { projectId: { in: user.projectMemberships.map((m) => m.projectId) } } }),
+        prisma.user.count({ where: { teamMemberships: { some: { team: { projectId: { in: user.projectMemberships.map((m) => m.projectId) } } } }, role: "DEVELOPER" } }),
+        prisma.issue.count({ where: { projectId: { in: user.projectMemberships.map((m) => m.projectId) }, status: { in: ["OPEN", "ASSIGNED", "IN_PROGRESS"] } } }),
       ]);
 
       roleContext = {
-        projectName: user.project?.name || "Assigned Project",
-        projectDescription: user.project?.description || "",
-        plan: user.project?.plan || null,
+        projectName: user.projectMemberships[0]?.project.name || "Assigned Project",
+        projectDescription: user.projectMemberships[0]?.project.description || "",
+        plan: user.projectMemberships[0]?.project.plan || null,
         teamCount,
         developerCount,
         openIncidentCount,
       };
     } else {
       const [teamMemberCount, inProgressCount, assignedOpenCount] = await Promise.all([
-        prisma.user.count({ where: { teamId: user.teamId || undefined, role: "DEVELOPER" } }),
+        prisma.user.count({ where: { teamMemberships: { some: { teamId: { in: user.teamMemberships.map((m) => m.teamId) } } }, role: "DEVELOPER" } }),
         prisma.issue.count({ where: { assignedToId: userId, status: "IN_PROGRESS" } }),
         prisma.issue.count({ where: { assignedToId: userId, status: { in: ["OPEN", "ASSIGNED"] } } }),
       ]);
 
       roleContext = {
-        teamName: user.team?.name || "Assigned Team",
+        teamName: user.teamMemberships[0]?.team.name || "Assigned Team",
         teamMemberCount,
         inProgressCount,
         assignedOpenCount,

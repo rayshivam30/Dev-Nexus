@@ -6,7 +6,7 @@ import { EVENTS, emitEvent } from "@/lib/events";
 import { IssueSource, IssueSeverity, Prisma } from "@devnexus/prisma-client";
 import { redis } from "@/lib/redis";
 
-const POLL_INTERVAL_MS = 5_000;
+const POLL_INTERVAL_MS = process.env.NODE_ENV === "test" ? 250 : 5_000;
 const CLAIM_TIMEOUT_MS = 5 * 60_000;
 const MAX_ATTEMPTS = 5;
 const MIN_AI_INTERVAL_MS = 4_500;
@@ -52,45 +52,54 @@ async function processOneJob() {
   if (processing) return;
   processing = true;
   let claimedIssueId: string | null = null;
+  let claimedJobId: string | null = null;
   try {
     const now = new Date();
     const staleBefore = new Date(now.getTime() - CLAIM_TIMEOUT_MS);
-    const candidates = await prisma.issue.findMany({
+    const candidates = await prisma.job.findMany({
       where: {
-        deletedAt: null,
+        type: "AI_ANALYZE",
+        runAfter: { lte: now },
         OR: [
-          { logs: { path: ["aiJobStatus"], equals: "PENDING" } },
-          {
-            logs: { path: ["aiJobStatus"], equals: "PROCESSING" },
-            updatedAt: { lt: staleBefore },
-          },
+          { status: "PENDING" },
+          { status: "PROCESSING", lockedAt: { lt: staleBefore } },
         ],
       },
-      include: { project: true },
       orderBy: { createdAt: "asc" },
       take: 50,
     });
 
-    const issue = candidates.find((candidate) => {
-      const logs = asRecord(candidate.logs);
-      return !logs.aiNextAttemptAt || new Date(String(logs.aiNextAttemptAt)).getTime() <= now.getTime();
-    });
-    if (!issue) return;
+    let issue: Prisma.IssueGetPayload<{ include: { project: true } }> | null = null;
+    let claimedJob: (typeof candidates)[number] | null = null;
+    for (const candidate of candidates) {
+      const issueId = asRecord(candidate.payload).issueId;
+      if (typeof issueId !== "string") {
+        await prisma.job.update({ where: { id: candidate.id }, data: { status: "FAILED", lastError: "Missing issueId in AI job payload" } });
+        continue;
+      }
+      const foundIssue = await prisma.issue.findUnique({ where: { id: issueId }, include: { project: true } });
+      if (!foundIssue) {
+        await prisma.job.update({ where: { id: candidate.id }, data: { status: "FAILED", lastError: "Issue no longer exists" } });
+        continue;
+      }
+      const claim = await prisma.job.updateMany({
+        where: { id: candidate.id, status: candidate.status, updatedAt: candidate.updatedAt },
+        data: { status: "PROCESSING", lockedAt: now, lockedBy: String(process.pid), attempts: { increment: 1 } },
+      });
+      if (claim.count === 1) {
+        claimedJob = candidate;
+        claimedJobId = candidate.id;
+        issue = foundIssue;
+        break;
+      }
+    }
+    if (!issue || !claimedJob) return;
 
     const logs = asRecord(issue.logs);
-    const status = String(logs.aiJobStatus || "PENDING");
-    const attempts = Number(logs.aiAttempts || 0) + 1;
+    const attempts = claimedJob.attempts + 1;
     const claimedLogs = { ...logs, aiJobStatus: "PROCESSING", aiAttempts: attempts, aiNextAttemptAt: null };
-    const claim = await prisma.issue.updateMany({
-      where: {
-        id: issue.id,
-        updatedAt: issue.updatedAt,
-        logs: { path: ["aiJobStatus"], equals: status },
-      },
-      data: { logs: asJson(claimedLogs) },
-    });
-    if (claim.count !== 1) return;
     claimedIssueId = issue.id;
+    await prisma.issue.update({ where: { id: issue.id }, data: { logs: asJson(claimedLogs) } });
 
     if (attempts > MAX_ATTEMPTS) {
       await prisma.issue.update({
@@ -100,6 +109,7 @@ async function processOneJob() {
           logs: asJson({ ...claimedLogs, aiJobStatus: "FAILED", aiAnalysisFailed: true }),
         },
       });
+      await prisma.job.update({ where: { id: claimedJob.id }, data: { status: "FAILED", lockedAt: null, lockedBy: null, lastError: "Maximum AI attempts exceeded" } });
       return;
     }
 
@@ -140,13 +150,13 @@ async function processOneJob() {
 
     const severityOverride = logs.severityOverride as IssueSeverity | undefined;
     const finalSeverity = severityOverride || analysis.severity;
-    const { responseSlaDeadline, resolutionSlaDeadline } = await calculateSLADeadlines(
-      issue.projectId,
-      finalSeverity,
-      issue.project.plan,
-    );
+    const slaDeadlines = issue.responseSlaDeadline && issue.resolutionSlaDeadline
+      ? { responseSlaDeadline: issue.responseSlaDeadline, resolutionSlaDeadline: issue.resolutionSlaDeadline }
+      : await calculateSLADeadlines(issue.projectId, finalSeverity, issue.project.plan);
+    const latestIssue = await prisma.issue.findUnique({ where: { id: issue.id }, select: { logs: true } });
     const updatedLogs = {
       ...claimedLogs,
+      ...asRecord(latestIssue?.logs),
       aiJobStatus: "COMPLETE",
       aiAnalysisFailed: false,
       aiFullAnalysis: analysis as unknown as Prisma.InputJsonValue,
@@ -163,11 +173,11 @@ async function processOneJob() {
         priority: analysis.priority,
         environment: analysis.environment,
         severity: finalSeverity,
-        responseSlaDeadline,
-        resolutionSlaDeadline,
+        ...slaDeadlines,
         logs: asJson(updatedLogs),
       },
     });
+    await prisma.job.update({ where: { id: claimedJob.id }, data: { status: "COMPLETE", lockedAt: null, lockedBy: null, lastError: null } });
     await emitEvent(EVENTS.INCIDENT_UPDATED, {
       issueId: updated.id,
       orgId: issue.project.orgId,
@@ -196,6 +206,7 @@ async function processOneJob() {
               logs: asJson({ ...logs, aiJobStatus: "FAILED", aiAnalysisFailed: true }),
             },
           });
+          if (claimedJobId) await prisma.job.update({ where: { id: claimedJobId }, data: { status: "FAILED", lockedAt: null, lockedBy: null, lastError: "AI analysis failed after repeated attempts" } });
         } else {
           const backoffMs = Math.min(60_000 * 2 ** (attempts - 1), 15 * 60_000);
           await prisma.issue.update({
@@ -208,6 +219,10 @@ async function processOneJob() {
                 aiLastError: "AI analysis attempt failed",
               }),
             },
+          });
+          if (claimedJobId) await prisma.job.update({
+            where: { id: claimedJobId },
+            data: { status: "PENDING", runAfter: new Date(Date.now() + backoffMs), lockedAt: null, lockedBy: null, lastError: "AI analysis attempt failed" },
           });
         }
       }

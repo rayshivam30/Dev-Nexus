@@ -25,7 +25,7 @@ COPY package.json bun.lock bunfig.toml ./
 COPY prisma ./prisma/
 
 # Install all dependencies (including devDependencies for the build stage)
-RUN bun install --frozen-lockfile
+RUN bun install
 
 # Generate the Prisma Client
 RUN bun x prisma generate
@@ -53,6 +53,9 @@ RUN bun run build
 # ── Stage 4: Runner (Production) ────────────────────────────────────────────
 FROM node:20-alpine AS runner
 
+# The dedicated background worker runs as a separate Bun process.
+COPY --from=oven/bun:1-alpine /usr/local/bin/bun /usr/local/bin/bun
+
 # Install system deps needed at runtime
 RUN apk add --no-cache libc6-compat openssl curl
 
@@ -65,6 +68,8 @@ RUN addgroup --system --gid 1001 nodejs && \
 # Copy built output from builder
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing

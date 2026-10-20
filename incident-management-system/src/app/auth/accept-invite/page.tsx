@@ -12,6 +12,7 @@ function AcceptInviteContent() {
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
+  const [existingAccount, setExistingAccount] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,6 +42,7 @@ function AcceptInviteContent() {
         if (!cancelled) {
           setEmail(data.email || "");
           setRole(data.role || "");
+          setExistingAccount(Boolean(data.existingAccount));
         }
       } catch (err) {
         if (!cancelled) {
@@ -103,19 +105,19 @@ function AcceptInviteContent() {
     e.preventDefault();
     setError("");
 
-    if (password !== confirmPassword) {
+    if (!existingAccount && password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
-    if (!password) {
+    if (!existingAccount && !password) {
       setError("Password is required.");
       return;
     }
-    if (password.length < 12) {
+    if (!existingAccount && password.length < 12) {
       setError("Password must be at least 12 characters.");
       return;
     }
-    if (password.length > 128) {
+    if (!existingAccount && password.length > 128) {
       setError("Password cannot exceed 128 characters.");
       return;
     }
@@ -124,7 +126,7 @@ function AcceptInviteContent() {
     const hasNumbers = /\d/.test(password);
     const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
 
-    if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
+    if (!existingAccount && (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar)) {
       setError("Password must contain at least one uppercase letter, lowercase letter, number, and special character.");
       return;
     }
@@ -134,7 +136,7 @@ function AcceptInviteContent() {
       const res = await fetch("/api/auth/accept-invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({ token, ...(!existingAccount ? { password } : {}) }),
       });
 
       const data = await res.json();
@@ -207,7 +209,7 @@ function AcceptInviteContent() {
           <span className="text-white/80 font-bold capitalize">
             {role.toLowerCase()}
           </span>
-          . Set your password to get started.
+          {existingAccount ? ". Accept the invitation to add this project to your account." : ". Set your password to get started."}
         </p>
       </motion.div>
 
@@ -248,6 +250,7 @@ function AcceptInviteContent() {
           </div>
         </motion.div>
 
+        {!existingAccount && <>
         {/* Password */}
         <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.23, duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="space-y-2">
           <label className="text-[11px] font-semibold text-white/30 uppercase tracking-wider ml-1">Password</label>
@@ -315,6 +318,8 @@ function AcceptInviteContent() {
             </button>
           </div>
         </motion.div>
+
+        </>}
 
         {/* Submit */}
         <motion.div

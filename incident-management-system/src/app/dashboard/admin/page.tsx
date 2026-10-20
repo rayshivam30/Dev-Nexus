@@ -62,7 +62,10 @@ export default async function AdminDashboardPage() {
     }),
     prisma.project.findMany({ where: { orgId: currentUser.orgId }, select: { id: true, name: true } }),
     prisma.team.findMany({ where: { project: { orgId: currentUser.orgId } }, select: { id: true, name: true, projectId: true } }),
-    prisma.user.findMany({ select: { id: true, email: true, teamId: true, name: true }, where: { role: 'DEVELOPER', team: { project: { orgId: currentUser.orgId } } } }),
+    prisma.teamMembership.findMany({
+      where: { role: "DEVELOPER", team: { project: { orgId: currentUser.orgId } } },
+      select: { teamId: true, user: { select: { id: true, email: true, name: true } } },
+    }).then((memberships) => memberships.map(({ teamId, user }) => ({ ...user, teamId }))),
   ]);
 
   const recentIssues: Issue[] = recentIssuesRaw.map((issue) => {

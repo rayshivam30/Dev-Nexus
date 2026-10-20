@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   }
 
   const currentUser = await getCurrentUser();
-  const statePayload = verifyToken(state);
+  const statePayload = await verifyToken(state);
   if (
     !currentUser ||
     currentUser.role !== "ADMIN" ||

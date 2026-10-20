@@ -63,6 +63,26 @@ enum EnvironmentType {
   DEVELOPMENT
 }
 
+enum JobType {
+  AI_ANALYZE
+  EMAIL
+  SLA_SWEEP
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETE
+  FAILED
+}
+
+enum RoutingMatchType {
+  TAG
+  SEVERITY
+  PATH_PREFIX
+  MESSAGE_CONTAINS
+}
+
 model Organization {
   id        String    @id @default(cuid())
   name      String
@@ -91,11 +111,6 @@ model User {
   skills         String[]
   orgId          String?
   organization   Organization? @relation(fields: [orgId], references: [id])
-  projectId      String?
-  project        Project?      @relation("ManagedBy", fields: [projectId], references: [id])
-  teamId         String?
-  team           Team?         @relation("TeamMembers", fields: [teamId], references: [id])
-  
   emailVerifiedAt DateTime?
   deletedAt       DateTime?    // Soft delete
   
@@ -107,9 +122,12 @@ model User {
   comments       IssueComment[]
   createdProjects Project[]   @relation("CreatedProjects")
   notifications  Notification[]
+  projectMemberships ProjectMembership[]
+  teamMemberships TeamMembership[]
+  auditLogs       AuditLog[]
+  onCallRotationMemberships OnCallRotationMember[]
 
   @@index([orgId])
-  @@index([teamId])
 }
 
 model VerificationToken {
@@ -158,9 +176,13 @@ model Project {
 
   teams                Team[]
   issues               Issue[]
-  managers             User[]       @relation("ManagedBy")
   apiKeys              ProjectApiKey[]
   sourceMaps           SourceMap[]
+  memberships          ProjectMembership[]
+  routingRules         RoutingRule[]
+  alertPolicies        AlertPolicy[]
+  dailyUsage           ProjectDailyUsage[]
+  onCallRotation       OnCallRotation?
 
   @@index([orgId])
 }
@@ -175,17 +197,150 @@ model Team {
   deletedAt DateTime? // Soft delete
 
   issues    Issue[]
-  members   User[]   @relation("TeamMembers")
+  memberships TeamMembership[]
+  routingRules RoutingRule[]
 
   @@index([projectId])
+}
+
+model ProjectMembership {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([projectId, role])
+}
+
+model TeamMembership {
+  id        String   @id @default(cuid())
+  userId    String
+  teamId    String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@index([teamId, role])
+}
+
+model Job {
+  id        String   @id @default(cuid())
+  type      JobType
+  payload   Json
+  status    JobStatus @default(PENDING)
+  runAfter  DateTime @default(now())
+  attempts  Int      @default(0)
+  lockedAt  DateTime?
+  lockedBy  String?
+  lastError String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, runAfter])
+  @@index([type, status, runAfter])
+}
+
+model RoutingRule {
+  id           String           @id @default(cuid())
+  projectId    String
+  targetTeamId String
+  matchType    RoutingMatchType
+  matchValue   String
+  enabled      Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  targetTeam   Team             @relation(fields: [targetTeamId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, enabled, createdAt])
+  @@index([targetTeamId])
+}
+
+model AlertPolicy {
+  id           String        @id @default(cuid())
+  projectId    String
+  name         String
+  severity     IssueSeverity
+  threshold    Int
+  windowMinutes Int
+  enabled      Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  triggers     AlertTrigger[]
+
+  @@index([projectId, enabled, severity])
+}
+
+model AlertTrigger {
+  id           String      @id @default(cuid())
+  policyId     String
+  issueId      String
+  windowStart  DateTime
+  createdAt    DateTime    @default(now())
+  policy       AlertPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  issue        Issue       @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, issueId, windowStart])
+  @@index([issueId, createdAt(sort: Desc)])
+}
+
+model ProjectDailyUsage {
+  projectId  String
+  day        DateTime @db.Date
+  eventCount Int      @default(0)
+  updatedAt  DateTime @updatedAt
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, day])
+  @@index([day])
+}
+
+model OnCallRotation {
+  id                 String   @id @default(cuid())
+  projectId          String   @unique
+  name               String
+  timezone           String   @default("UTC")
+  startsAt           DateTime
+  shiftDurationHours Int      @default(24)
+  enabled            Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  members            OnCallRotationMember[]
+}
+
+model OnCallRotationMember {
+  id         String         @id @default(cuid())
+  rotationId String
+  userId     String
+  position   Int
+  rotation   OnCallRotation @relation(fields: [rotationId], references: [id], onDelete: Cascade)
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([rotationId, userId])
+  @@unique([rotationId, position])
+  @@index([userId])
 }
 
 model Issue {
   id                  String        @id @default(cuid())
   githubDeliveryId    String?       @unique
+  fingerprint         String?
+  timesSeen           Int           @default(1)
+  lastSeenAt          DateTime      @default(now())
   title               String
   description         String
   source              IssueSource   @default(MANUAL)
+  release             String?
   severity            IssueSeverity @default(LOW)
   priority            IssuePriority? @default(MEDIUM)
   status              IssueStatus   @default(OPEN)
@@ -219,12 +374,15 @@ model Issue {
   activities          IssueActivity[]
 
   comments            IssueComment[]
+  alertTriggers       AlertTrigger[]
 
   @@index([projectId, status])
   @@index([projectId, severity])
   @@index([assignedToId])
   @@index([teamId])
   @@index([createdAt(sort: Desc)])
+  @@index([projectId, fingerprint])
+  @@index([projectId, release, createdAt(sort: Desc)])
 }
 
 model IssueActivity {
@@ -294,4 +452,21 @@ model SourceMap {
 
   @@unique([projectId, release, filename])
   @@index([projectId, release])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  resource   String
+  resourceId String?
+  changes    Json?
+  ipAddress  String?
+  userAgent  String?
+  success    Boolean
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([resource, createdAt(sort: Desc)])
 }

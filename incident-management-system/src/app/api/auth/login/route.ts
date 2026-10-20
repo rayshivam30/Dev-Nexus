@@ -125,8 +125,7 @@ export async function POST(request: Request) {
       orgId: user.orgId || undefined,
     };
 
-    const accessToken = signToken(tokenPayload, '1h');
-    const refreshToken = signRefreshToken(tokenPayload);
+    const [accessToken, refreshToken] = await Promise.all([signToken(tokenPayload, '1h'), signRefreshToken(tokenPayload)]);
 
     // Do NOT return the tokens in the JSON response body
     const response = NextResponse.json({

@@ -31,6 +31,12 @@ mock.module("next/server", () => ({
 mock.module("@/services/notification-service", () => ({
   notifyOrgStaff: mock(() => Promise.resolve()),
 }));
+mock.module("@/services/routing-service", () => ({ resolveRoutingTeam: mock(() => Promise.resolve(null)) }));
+mock.module("@/services/sourcemap-service", () => ({ resolveStackTrace: mock(() => Promise.resolve({ resolved: false })) }));
+mock.module("@/services/issue-service", () => ({ calculateSLADeadlines: mock(() => Promise.resolve({})) }));
+mock.module("@/services/on-call-service", () => ({ notifyCurrentOnCall: mock(() => Promise.resolve(null)) }));
+mock.module("@/lib/metrics", () => ({ incidentsIngestedTotal: { inc: mock(() => {}) } }));
+mock.module("@/lib/events", () => ({ EVENTS: { INCIDENT_CREATED: "INCIDENT_CREATED", INCIDENT_UPDATED: "INCIDENT_UPDATED" }, emitEvent: mock(() => Promise.resolve()) }));
 
 import { expect, test, describe, beforeEach } from "bun:test";
 import { POST } from "../src/app/api/ingest/route";
@@ -38,9 +44,9 @@ import { createHash } from "crypto";
 
 describe("API Ingest Route", () => {
   beforeEach(() => {
-    const validHashedKey = createHash("sha256").update("valid-key").digest("hex");
+    const validHashedKey = createHash("sha256").update("devnexus_sk_valid-key").digest("hex");
     prismaMock.project.findUnique.mockClear();
-    prismaMock.project.findUnique.mockResolvedValue({ id: "project-1", sdkApiKey: validHashedKey, orgId: "org-1", plan: "ADVANCED" });
+    prismaMock.project.findUnique.mockResolvedValue({ id: "project-1", sdkApiKey: validHashedKey, orgId: "org-1", plan: "ADVANCED", allowedOrigins: [], name: "Test Project" });
     prismaMock.issue.create.mockClear();
   });
 
@@ -73,7 +79,7 @@ describe("API Ingest Route", () => {
     const req = new Request("http://localhost/api/ingest", {
       method: "POST",
       headers: { 
-        "Authorization": "Bearer valid-key",
+        "Authorization": "Bearer devnexus_sk_valid-key",
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ 
@@ -96,7 +102,7 @@ describe("API Ingest Route", () => {
     const req = new Request("http://localhost/api/ingest", {
       method: "POST",
       headers: { 
-        "Authorization": "Bearer valid-key",
+        "Authorization": "Bearer devnexus_sk_valid-key",
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ 

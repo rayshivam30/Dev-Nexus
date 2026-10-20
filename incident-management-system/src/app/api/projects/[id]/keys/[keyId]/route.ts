@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { revokeProjectApiKey } from "@/services/api-key-service";
 import { logAuditEvent } from "@/lib/audit-logger";
+import { hasProjectMembership } from "@/services/membership-service";
 
 /**
  * DELETE /api/projects/[id]/keys/[keyId]
@@ -19,7 +20,7 @@ export const DELETE = withAuth(async (req, { decoded, params }) => {
     select: { orgId: true },
   });
 
-  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && decoded.projectId !== id)) {
+  if (!project || project.orgId !== decoded.orgId || (decoded.role !== "ADMIN" && !(await hasProjectMembership(decoded.userId as string, id, ["MANAGER"])))) {
     return apiError("Project not found", 404);
   }
 

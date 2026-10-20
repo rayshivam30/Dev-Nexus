@@ -1,6 +1,6 @@
 import { redis } from "@/lib/redis";
 import { logger } from "@/lib/logger";
-import jwt from "jsonwebtoken";
+import { decodeJwt } from "jose";
 
 /**
  * In-memory fallback blacklist for when Redis is unavailable.
@@ -47,9 +47,10 @@ export async function isTokenBlacklisted(token: string): Promise<boolean> {
  * for the remaining duration of its validity (TTL).
  */
 export async function blacklistToken(token: string): Promise<void> {
-  const decoded = jwt.decode(token) as { exp?: number } | null;
+  let expiry: number | undefined;
+  try { expiry = decodeJwt(token).exp; } catch { expiry = undefined; }
   const nowSeconds = Math.floor(Date.now() / 1000);
-  const remainingSeconds = decoded?.exp ? decoded.exp - nowSeconds : 0;
+  const remainingSeconds = expiry ? expiry - nowSeconds : 0;
 
   if (remainingSeconds <= 0) return; // Token already expired, nothing to blacklist
 
@@ -72,8 +73,9 @@ export async function consumeTokenOnce(token: string): Promise<boolean> {
   pruneLocalBlacklist();
   if (localBlacklist.has(token)) return false;
 
-  const decoded = jwt.decode(token) as { exp?: number } | null;
-  const remainingSeconds = (decoded?.exp ?? 0) - Math.floor(Date.now() / 1000);
+  let expiry: number | undefined;
+  try { expiry = decodeJwt(token).exp; } catch { expiry = undefined; }
+  const remainingSeconds = (expiry ?? 0) - Math.floor(Date.now() / 1000);
   if (remainingSeconds <= 0) return false;
 
   if (redis) {

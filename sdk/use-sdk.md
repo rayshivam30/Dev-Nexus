@@ -8,11 +8,17 @@ The DevNexus SDK allows you to easily report exceptions and messages from your J
 
 ### 1. Installation
 
+The SDK is not published to npm yet. For local use, clone the repository and build it from the `sdk` directory:
+
 ```bash
-npm install devnexus-sdk
+git clone https://github.com/rayshivam30/Dev-Nexus.git
+cd Dev-Nexus/sdk
+npm install
+npm run build
+npm link
 ```
 
-Or if testing locally against the SDK source:
+Then link it into your app:
 ```bash
 cd sdk && npm link
 cd your-project && npm link devnexus-sdk

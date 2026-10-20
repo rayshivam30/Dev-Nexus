@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/hash";
 import { signToken } from "@/lib/jwt";
-import { acceptInviteSchema } from "@/lib/validations";
+import { acceptInviteSchema, passwordSchema } from "@/lib/validations";
 import { checkInviteAcceptAttempts, recordInviteAcceptSuccess } from "@/lib/brute-force";
 import { logAuditEvent } from "@/lib/audit-logger";
 import { logger } from "@/lib/logger";
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
     const existingUser = await prisma.user.findUnique({
       where: { email: invite.email },
     });
-    if (existingUser) {
+    if (existingUser && (existingUser.role !== role || existingUser.status !== "ACTIVE" || existingUser.orgId !== invite.orgId)) {
       logAuditEvent({
         action: "invite_accept_email_registered",
         resource: "invite",
@@ -136,26 +136,38 @@ export async function POST(request: Request) {
         userAgent,
       });
       return NextResponse.json(
-        { error: "This email is already registered. Please log in instead." },
+        { error: "This account is inactive or does not match the invitation organization and role." },
         { status: 409 }
       );
     }
 
-    const passwordHash = await hashPassword(password);
+    if (!existingUser && !passwordSchema.safeParse(password).success) {
+      return NextResponse.json({ error: "A valid password is required for a new account" }, { status: 400 });
+    }
+
+    const passwordHash = existingUser ? null : await hashPassword(password!);
     const user = await prisma.$transaction(async (tx) => {
-      const createdUser = await tx.user.create({
+      const createdUser = existingUser ?? await tx.user.create({
         data: {
           email: invite.email,
-          passwordHash,
+          passwordHash: passwordHash!,
           role,
           status: "ACTIVE",
           orgId: invite.orgId,
-          ...(role === "MANAGER" ? { projectId: invite.projectId } : {}),
-          ...(role === "DEVELOPER" && invite.teamId
-            ? { teamId: invite.teamId }
-            : {}),
         },
       });
+      await tx.projectMembership.upsert({
+        where: { userId_projectId: { userId: createdUser.id, projectId: invite.projectId } },
+        create: { userId: createdUser.id, projectId: invite.projectId, role },
+        update: { role },
+      });
+      if (role === "DEVELOPER" && invite.teamId) {
+        await tx.teamMembership.upsert({
+          where: { userId_teamId: { userId: createdUser.id, teamId: invite.teamId } },
+          create: { userId: createdUser.id, teamId: invite.teamId, role },
+          update: { role },
+        });
+      }
       await tx.invite.update({
         where: { id: invite.id },
         data: { acceptedAt: new Date() },
@@ -177,7 +189,7 @@ export async function POST(request: Request) {
       userAgent,
     });
 
-    const sessionToken = signToken(
+    const sessionToken = await signToken(
       {
         userId: user.id,
         role: user.role,

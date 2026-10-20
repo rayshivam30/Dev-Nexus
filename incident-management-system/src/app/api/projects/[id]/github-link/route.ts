@@ -35,7 +35,7 @@ export const POST = withAuth(async (_req, { decoded, body, params }) => {
       if (decoded.role !== "ADMIN" || !decoded.userId || !decoded.orgId) {
         return apiError("Only organization admins can connect GitHub", 403);
       }
-      const state = signToken(
+      const state = await signToken(
         {
           userId: decoded.userId,
           role: decoded.role,

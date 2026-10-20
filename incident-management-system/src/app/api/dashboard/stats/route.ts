@@ -4,6 +4,7 @@ import { withAuth, apiResponse, apiError } from "@/lib/api-utils";
 import { formatTimeAgo } from "@/lib/utils";
 import { redis } from "@/lib/redis";
 import { logger } from "@/lib/logger";
+import { getUserProjectIds } from "@/services/membership-service";
 
 // ── Cache Configuration ──────────────────────────────────────────────────────
 // Dashboard stats are cached in Redis for CACHE_TTL_SECONDS.
@@ -29,10 +30,11 @@ export const GET = withAuth(async (req, { decoded }) => {
     baseWhere.assignedToId = decoded.userId;
     recentIssuesWhere.assignedToId = decoded.userId;
   } else {
-    if (decoded.role === 'MANAGER' && decoded.projectId) {
-      cacheKey = `dashboard:stats:${orgId}:manager:${decoded.projectId}`;
-      baseWhere.projectId = decoded.projectId;
-      recentIssuesWhere.projectId = decoded.projectId;
+    if (decoded.role === 'MANAGER') {
+      const projectIds = await getUserProjectIds(decoded.userId as string, ["MANAGER"]);
+      cacheKey = `dashboard:stats:${orgId}:manager:${projectIds.sort().join(",")}`;
+      baseWhere.projectId = { in: projectIds };
+      recentIssuesWhere.projectId = { in: projectIds };
     }
   }
 

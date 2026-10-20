@@ -4,6 +4,9 @@ import { mock } from "bun:test";
 const prismaMock = createPrismaMock();
 mock.module("@/lib/db", () => ({ prisma: prismaMock }));
 mock.module("../src/lib/db", () => ({ prisma: prismaMock }));
+// Tests use an in-memory blacklist and must not contact credentials loaded from a developer .env.
+mock.module("@/lib/redis", () => ({ redis: null }));
+mock.module("../src/lib/redis", () => ({ redis: null }));
 
 mock.module("@/lib/jwt", () => ({
   verifyToken: () => ({
@@ -41,7 +44,7 @@ import { getNotifications } from "../src/services/notification-service";
 import { profileUpdateSchema } from "../src/lib/validations";
 import { POST as registerPOST } from "../src/app/api/auth/register/route";
 import { POST as invitePOST } from "../src/app/api/auth/invite/route";
-import { sendMail, getEmailQueueStats, pruneStaleEmails } from "../src/lib/mailer";
+import { sendMail, getEmailQueueStats } from "../src/lib/mailer";
 import { verifyCsrf, withAuth } from "../src/lib/api-utils";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -127,43 +130,34 @@ describe("Phase 3 Security & Enhancements Tests", () => {
     });
   });
 
-  describe("Email Queue Pruning", () => {
-    test("prunes items older than 2 hours from queue", async () => {
+  describe("Durable Email Queue", () => {
+    test("persists queued email and reads queue metrics from Postgres", async () => {
       const prevUser = process.env.GMAIL_USER;
       const prevPass = process.env.GMAIL_APP_PASSWORD;
       const prevNodeEnv = process.env.NODE_ENV;
       const prevEmailSync = process.env.EMAIL_SYNC;
       try {
-        process.env.GMAIL_USER = "test@gmail.com";
-        process.env.GMAIL_APP_PASSWORD = "abcd efgh ijkl mnop";
+        delete process.env.GMAIL_USER;
+        delete process.env.GMAIL_APP_PASSWORD;
+        process.env.SMTP_HOST = "127.0.0.1";
+        process.env.SMTP_PORT = "1025";
         (process.env as Record<string, string | undefined>).NODE_ENV = "development"; // to allow queuing
         process.env.EMAIL_SYNC = "false";
-
-        // Queue multiple emails so they fail and get pushed back, or are left in queue
-        for (let i = 0; i < 6; i++) {
-          await sendMail({ to: `test${i}@example.com`, subject: "Prune Test", html: "<p>Hello</p>" });
-        }
-
-        // Wait a little bit for async sendMail process to complete and push back to queue
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        expect(getEmailQueueStats().queueLength).toBeGreaterThan(0);
-
-        // Fast-forward time by 3 hours
-        const realNow = Date.now;
-        global.Date.now = () => realNow() + 3 * 60 * 60 * 1000;
-        try {
-          // Trigger prune
-          pruneStaleEmails();
-          expect(getEmailQueueStats().queueLength).toBe(0);
-        } finally {
-          global.Date.now = realNow;
-        }
+        prismaMock.job.count.mockResolvedValueOnce(3).mockResolvedValueOnce(8);
+        const result = await sendMail({ to: "queued@example.com", subject: "Durable", html: "<p>Hello</p>" });
+        expect(result).toEqual({ queued: true });
+        expect(prismaMock.job.create).toHaveBeenCalledWith({ data: {
+          type: "EMAIL",
+          payload: { to: "queued@example.com", subject: "Durable", html: "<p>Hello</p>" },
+        } });
+        expect(await getEmailQueueStats()).toMatchObject({ queueLength: 3, dailySentCount: 8, dailyRemaining: 442 });
       } finally {
         process.env.GMAIL_USER = prevUser;
         process.env.GMAIL_APP_PASSWORD = prevPass;
         (process.env as Record<string, string | undefined>).NODE_ENV = prevNodeEnv;
         process.env.EMAIL_SYNC = prevEmailSync;
+        delete process.env.SMTP_HOST;
+        delete process.env.SMTP_PORT;
       }
     });
   });

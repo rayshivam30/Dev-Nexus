@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { IssueSource, IssueSeverity, Prisma, Project } from "@devnexus/prisma-client";
+import { IssueSource, IssueSeverity, PlanType, Prisma, Project } from "@devnexus/prisma-client";
 import { redis } from "@/lib/redis";
 import crypto from "crypto";
 import { EVENTS, emitEvent } from "@/lib/events";
@@ -11,6 +11,9 @@ import { withRequestContext, generateRequestId } from "@/lib/request-id";
 import { validateApiKey } from "@/services/api-key-service";
 import { incidentsIngestedTotal } from "@/lib/metrics";
 import { resolveStackTrace } from "@/services/sourcemap-service";
+import { calculateSLADeadlines } from "@/services/issue-service";
+import { resolveRoutingTeam } from "@/services/routing-service";
+import { notifyCurrentOnCall } from "@/services/on-call-service";
 
 /**
  * Generates a fingerprint for deduplication and historical analysis.
@@ -37,7 +40,7 @@ function getProjectCorsHeaders(req: Request, allowedOrigins: string[], allowOpti
     return null;
   }
 
-  if (allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
+  if (!allowedOrigins.includes(origin)) {
     return null;
   }
 
@@ -152,6 +155,79 @@ const MAX_STACK_CHARS   = 10_000;
 const MAX_MESSAGE_CHARS = 10_000;
 const MAX_BATCH_REPORTS = 50;
 
+const DAILY_EVENT_THRESHOLDS: Record<PlanType, number> = {
+  BASIC: 1_000,
+  ADVANCED: 10_000,
+  PRO: 100_000,
+  ENTERPRISE: 1_000_000,
+};
+
+async function recordDailyUsage(project: Project) {
+  const now = new Date();
+  const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const usage = await prisma.projectDailyUsage.upsert({
+    where: { projectId_day: { projectId: project.id, day } },
+    create: { projectId: project.id, day, eventCount: 1 },
+    update: { eventCount: { increment: 1 } },
+    select: { eventCount: true },
+  });
+  const limit = DAILY_EVENT_THRESHOLDS[project.plan];
+  const warningThreshold = Math.ceil(limit * 0.8);
+  if (usage.eventCount === warningThreshold || usage.eventCount === limit) {
+    const percent = Math.round((usage.eventCount / limit) * 100);
+    try {
+      await notifyOrgStaff(project.orgId, {
+        type: "USAGE_LIMIT",
+        title: `${project.name} used ${percent}% of its daily event allowance`,
+        message: `${usage.eventCount.toLocaleString()} of ${limit.toLocaleString()} daily events recorded. Ingest continues because this is a soft limit.`,
+        link: `/dashboard/admin/projects/${project.id}`,
+        projectId: project.id,
+      });
+    } catch (error) {
+      logger.warn({ err: error, projectId: project.id }, "Failed to notify project usage threshold");
+    }
+  }
+}
+
+async function evaluateAlertPolicies(project: Project, issue: { id: string; title: string; severity: IssueSeverity; createdAt: Date }) {
+  try {
+    const policies = await prisma.alertPolicy.findMany({
+      where: { projectId: project.id, enabled: true, severity: issue.severity },
+    });
+    for (const policy of policies) {
+      const now = new Date();
+      const intervalMs = policy.windowMinutes * 60_000;
+      const since = new Date(now.getTime() - intervalMs);
+      const createdWithinWindow = issue.createdAt >= since ? 1 : 0;
+      const occurrenceCount = await prisma.issueActivity.count({
+        where: { issueId: issue.id, action: { startsWith: "Occurrence received" }, createdAt: { gte: since } },
+      });
+      if (createdWithinWindow + occurrenceCount < policy.threshold) continue;
+
+      const windowStart = new Date(Math.floor(now.getTime() / intervalMs) * intervalMs);
+      const created = await prisma.alertTrigger.createMany({
+        data: [{ policyId: policy.id, issueId: issue.id, windowStart }],
+        skipDuplicates: true,
+      });
+      if (!created.count) continue;
+      await notifyOrgStaff(project.orgId, {
+        type: "ALERT_POLICY",
+        title: `Alert: ${policy.name}`,
+        message: `${issue.title} reached ${policy.threshold} ${issue.severity} events in ${policy.windowMinutes} minutes.`,
+        link: `/dashboard/admin/issues/${issue.id}`,
+        projectId: project.id,
+      });
+      await notifyCurrentOnCall(project.id, {
+        title: `On call: ${policy.name}`,
+        message: `${issue.title} reached ${policy.threshold} ${issue.severity} events in ${policy.windowMinutes} minutes.`,
+        link: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/admin/issues/${issue.id}`,
+      });
+    }
+  } catch (error) {
+    logger.error({ err: error, issueId: issue.id, projectId: project.id }, "Failed to evaluate alert policies");
+  }
+}
+
 async function processReport(payload: IngestReportPayload, project: Project) {
     const { message, stack, browserInfo, osInfo, severity: severityOverride, tags, source: customSource, metadata, breadcrumbs } = payload;
 
@@ -175,6 +251,8 @@ async function processReport(payload: IngestReportPayload, project: Project) {
       throw new Error("Invalid severity");
     }
 
+    await recordDailyUsage(project);
+
     const truncatedStack = stack ? String(stack).substring(0, MAX_STACK_CHARS) : undefined;
     const fingerprint = generateFingerprint(message, truncatedStack);
 
@@ -195,27 +273,70 @@ async function processReport(payload: IngestReportPayload, project: Project) {
       }
     }
 
-    // Historical context
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const similarIncidentsCount = await prisma.issue.count({
-      where: {
-        projectId: project.id,
-        logs: { path: ["fingerprint"], equals: fingerprint },
-        createdAt: { gte: oneDayAgo }
-      }
-    });
-
+    // Group identical reports into one issue while retaining a bounded sample of occurrences.
     const initialTitle = String(message).substring(0, 100);
-    const issue = await prisma.issue.create({
-      data: {
+    const slaDeadlines = await calculateSLADeadlines(
+      project.id,
+      (severityOverride as IssueSeverity) || IssueSeverity.MEDIUM,
+      project.plan,
+    );
+    const routing = await resolveRoutingTeam({
+      projectId: project.id,
+      message,
+      stack: resolvedStack,
+      tags: (tags && typeof tags === "object" ? tags : {}) as Record<string, string>,
+      severity: (severityOverride as IssueSeverity) || IssueSeverity.MEDIUM,
+    });
+    const occurrence = {
+      occurredAt: new Date().toISOString(),
+      message: String(message).substring(0, 1000),
+      stackTrace: resolvedStack?.substring(0, 10_000) ?? null,
+      release: release || null,
+    };
+    const { issue, isNew } = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${project.id}), hashtext(${fingerprint}))`;
+      const existing = await tx.issue.findFirst({ where: { projectId: project.id, fingerprint, deletedAt: null } });
+      if (existing) {
+        const priorLogs = existing.logs && typeof existing.logs === "object" && !Array.isArray(existing.logs)
+          ? existing.logs as Record<string, unknown> : {};
+        const samples = Array.isArray(priorLogs.occurrences) ? priorLogs.occurrences : [];
+        const logs = {
+          ...priorLogs,
+          occurrenceCount24h: Number(priorLogs.occurrenceCount24h || 1) + 1,
+          occurrences: [...samples, occurrence].slice(-50),
+          lastMessage: String(message).substring(0, 1000),
+          lastStackTrace: resolvedStack ?? null,
+        } as Prisma.InputJsonValue;
+        const reopened = existing.status === "RESOLVED";
+        const updated = await tx.issue.update({
+          where: { id: existing.id },
+          data: {
+            timesSeen: { increment: 1 }, lastSeenAt: new Date(), logs,
+            ...(release ? { release } : {}),
+            ...(reopened ? { status: "OPEN", resolvedAt: null } : {}),
+          },
+        });
+        await tx.issueActivity.create({ data: { issueId: existing.id, action: reopened ? "Occurrence received; issue reopened" : "Occurrence received" } });
+        return { issue: updated, isNew: false };
+      }
+      const created = await tx.issue.create({
+        data: {
         title: initialTitle,
         description: "AI Analysis Pending...",
         projectId: project.id,
+        release: release || null,
+        ...(routing ? { teamId: routing.teamId } : {}),
+        fingerprint,
+        timesSeen: 1,
+        lastSeenAt: new Date(),
+        ...slaDeadlines,
         source: (customSource as IssueSource) || IssueSource.SDK,
         severity: (severityOverride as IssueSeverity) || IssueSeverity.MEDIUM,
         logs: {
           fingerprint,
-          occurrenceCount24h: similarIncidentsCount + 1,
+          ...(routing ? { routingRuleId: routing.ruleId } : {}),
+          occurrenceCount24h: 1,
+          occurrences: [occurrence],
           browser: (browserInfo ?? null) as Prisma.InputJsonValue,
           os: (osInfo ?? null) as Prisma.InputJsonValue,
           rawMessage: message,
@@ -230,7 +351,10 @@ async function processReport(payload: IngestReportPayload, project: Project) {
           aiJobStatus: "PENDING",
           aiAttempts: 0,
         },
-      },
+        },
+      });
+      await tx.job.create({ data: { type: "AI_ANALYZE", payload: { issueId: created.id } } });
+      return { issue: created, isNew: true };
     });
 
     incidentsIngestedTotal.inc({
@@ -240,7 +364,7 @@ async function processReport(payload: IngestReportPayload, project: Project) {
     });
 
     // ── Persistent Notification ──────────────────────────────────────────
-    await notifyOrgStaff(project.orgId, {
+    if (isNew) await notifyOrgStaff(project.orgId, {
       type: 'INCIDENT_CREATED',
       title: `New Incident: ${initialTitle}`,
       message: `A new incident has been reported from ${customSource || 'SDK'}.`,
@@ -252,12 +376,15 @@ async function processReport(payload: IngestReportPayload, project: Project) {
       projectId: project.id,
     });
 
-    await emitEvent(EVENTS.INCIDENT_CREATED, { 
+    await evaluateAlertPolicies(project, issue);
+
+    await emitEvent(isNew ? EVENTS.INCIDENT_CREATED : EVENTS.INCIDENT_UPDATED, {
       issueId: issue.id, 
       orgId: project.orgId,
       projectId: project.id,
       title: issue.title,
-      severity: issue.severity
+      severity: issue.severity,
+      teamId: issue.teamId,
     });
 
     return issue.id;
@@ -274,9 +401,17 @@ export async function OPTIONS(req: Request) {
   if (requestedHeaders.some((header) => !["content-type", "authorization"].includes(header))) {
     return new NextResponse(null, { status: 403 });
   }
+  const requestedMethod = req.headers.get("access-control-request-method");
+  if (requestedMethod && requestedMethod.toUpperCase() !== "POST") {
+    return new NextResponse(null, { status: 403 });
+  }
 
+  const allowedProject = origin ? await prisma.project.findFirst({
+    where: { deletedAt: null, allowedOrigins: { has: origin } },
+    select: { id: true },
+  }) : null;
   const projectCorsHeaders = origin
-    ? getProjectCorsHeaders(req, [], true)
+    ? allowedProject ? getProjectCorsHeaders(req, [origin], true) : null
     : { "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization" };
   if (!projectCorsHeaders) {
     return new NextResponse(null, { status: 403 });

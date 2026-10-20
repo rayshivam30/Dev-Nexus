@@ -19,6 +19,7 @@ export interface Issue {
   status?: string | null;
   logs?: Record<string, unknown> | null;
   source?: string | null;
+  release?: string | null;
 
   teamName?: string | null;
   teamId?: string | null;
@@ -34,6 +35,7 @@ export interface Issue {
   project?: { id: string; name: string } | null;
   assignedTo?: { id?: string | null; email: string; name?: string | null } | null;
   createdAt?: Date | string | null;
+  timesSeen?: number | null;
 }
 
 interface RecentIssuesProps {
@@ -229,6 +231,9 @@ export function RecentIssues({ issues, onAssignClick, onStatusChange, onRowClick
                       </span>
                     )}
                     <span className="text-[10px] text-zinc-600">{issue.timeAgo}</span>
+                    {(issue.timesSeen ?? 1) > 1 && (
+                      <span className="text-[10px] text-zinc-500">Seen {issue.timesSeen} times</span>
+                    )}
                   </div>
                 </div>
               </div>

@@ -86,6 +86,9 @@ jobs:
       - name: 🏗️ Build SDK
         run: bun run build
 
+      - name: 🧪 Test SDK and React adapter
+        run: bun test sdk.test.ts react.test.tsx
+
   # ── Job 3: Docker Build & Push ───────────────────────────────────────────
   docker:
     name: 🐳 Docker Build & Push

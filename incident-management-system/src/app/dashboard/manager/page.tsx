@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/api-utils";
 import { ManagerDashboardClient } from "@/components/dashboard/manager/ManagerDashboardClient";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
+import { getUserProjectIds } from "@/services/membership-service";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +13,14 @@ export default async function ManagerDashboardPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: currentUser.userId, status: "ACTIVE" },
-    include: { project: true },
+    include: { projectMemberships: { where: { role: "MANAGER" }, include: { project: true }, orderBy: { createdAt: "asc" } } },
   });
   if (!user) redirect("/auth/login");
+  const projectIds = user.projectMemberships.map((membership) => membership.projectId);
+  const primaryProject = user.projectMemberships[0]?.project;
 
   // If manager has no project yet assigned (edge case), show a message
-  if (!user.projectId || !user.project) {
+  if (projectIds.length === 0 || !primaryProject) {
     return (
       <div className="flex h-full items-center justify-center p-20">
         <div className="max-w-md w-full p-8 text-center rounded-2xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl">
@@ -30,36 +33,36 @@ export default async function ManagerDashboardPage() {
     );
   }
 
-  const projectId = user.projectId;
+  const projectId = primaryProject.id;
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
   const [teams, recentIssuesRaw, openIssuesCount, resolvedTodayCount, developerCount] = await Promise.all([
     prisma.team.findMany({
-      where: { projectId },
+      where: { projectId: { in: projectIds } },
       include: { _count: { select: { issues: { where: { status: { not: "RESOLVED" } } } } } },
       orderBy: { createdAt: "asc" },
     }),
     prisma.issue.findMany({
-      where: { projectId },
+      where: { projectId: { in: projectIds } },
       take: 6,
       orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
       include: { team: true },
     }),
     prisma.issue.count({
-      where: { projectId, status: { in: ["OPEN", "ASSIGNED", "IN_PROGRESS"] } },
+      where: { projectId: { in: projectIds }, status: { in: ["OPEN", "ASSIGNED", "IN_PROGRESS"] } },
     }),
     prisma.issue.count({
       where: {
-        projectId,
+        projectId: { in: projectIds },
         status: "RESOLVED",
         resolvedAt: { gte: startOfToday },
       },
     }),
-    prisma.user.findMany({
-      select: { id: true, email: true, teamId: true, name: true },
-      where: { team: { projectId }, role: "DEVELOPER" },
-    }),
+    prisma.teamMembership.findMany({
+      where: { role: "DEVELOPER", team: { projectId: { in: projectIds } } },
+      select: { teamId: true, user: { select: { id: true, email: true, name: true } } },
+    }).then((memberships) => memberships.map(({ teamId, user }) => ({ ...user, teamId }))),
   ]);
 
   const now = new Date().getTime();
@@ -85,7 +88,7 @@ export default async function ManagerDashboardPage() {
   return (
     <ManagerDashboardClient
       managerEmail={user.email}
-      project={{ id: user.project.id, name: user.project.name, description: user.project.description ?? "" }}
+      project={{ id: primaryProject.id, name: primaryProject.name, description: primaryProject.description ?? "" }}
       openIssuesCount={openIssuesCount}
       resolvedTodayCount={resolvedTodayCount}
       developerCount={developerCount.length}

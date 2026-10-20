@@ -12,15 +12,22 @@ export default async function ProjectsPage() {
   }
 
   // 🔥 MAIN FIX: FILTER BY orgId
-  const projects = await prisma.project.findMany({
+  const projectsRaw = await prisma.project.findMany({
     where: {
       orgId: currentUser.orgId,
     },
     include: {
       teams: true,
-      managers: true,
+      memberships: {
+        where: { role: "MANAGER" },
+        include: { user: { select: { id: true, email: true } } },
+      },
     },
   });
+  const projects = projectsRaw.map(({ memberships, ...project }) => ({
+    ...project,
+    managers: memberships.map(({ user }) => user),
+  }));
 
   return <ProjectsClient initialProjects={projects} />;
 }

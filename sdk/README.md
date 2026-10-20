@@ -3,7 +3,6 @@
   <p><strong>The official, ultra-lightweight client for routing application errors to the DevNexus Incident Management Platform.</strong></p>
   
   <p>
-    <img src="https://img.shields.io/npm/v/devnexus-sdk.svg?style=flat-square" alt="NPM Version" />
     <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License MIT" />
     <img src="https://img.shields.io/badge/TypeScript-Ready-blue?style=flat-square&logo=typescript" alt="TypeScript Ready" />
   </p>
@@ -15,27 +14,31 @@
 
 The `devnexus-sdk` is a zero-dependency tracking script that sits quietly in your application. When a bug, unhandled exception, or Promise rejection occurs, the SDK instantly captures the stack trace, environmental context, and user breadcrumbs.
 
-It then streams this data directly into the DevNexus Platform, triggering the **Gemini AI Engine** to instantly analyze the root cause and alert your developers via Server-Sent Events.
+It sends reports to the DevNexus ingest API. The server groups matching reports into issues and queues AI analysis; analysis and live updates depend on server configuration.
 
 ## ✨ Core Features
 
 *   **⚡ Zero-Config Auto-Capture:** Automatically hooks into `window.onerror` and `unhandledrejection` to catch every bug without manual wrappers.
-*   **🧠 AI-Triggering:** Every payload sent by this SDK is structured specifically to fuel the DevNexus Gemini AI root-cause analyzer.
+*   **🧠 AI-Ready Reports:** Reports include stack, environment, tags, metadata, and breadcrumbs for server-side analysis.
 *   **🛡️ Smart Deduplication:** Identical errors happening in a rapid loop (like a broken `useEffect`) are automatically suppressed to save bandwidth.
 *   **📦 Offline Resilience:** If the user's internet drops, errors are safely queued in memory and flushed when the connection returns.
-*   **⚛️ React Native/Web Support:** Ships with a robust `DevNexusErrorBoundary` component to gracefully catch rendering errors in React apps.
+*   **⚛️ React Support:** Ships with a `DevNexusErrorBoundary` component for React web applications.
 
 ---
 
 ## 📦 Installation
 
+The SDK package is not published to npm yet. To use it from this repository, clone the project and build the SDK locally:
+
 ```bash
-npm install devnexus-sdk
-# or
-yarn add devnexus-sdk
-# or
-bun add devnexus-sdk
+git clone https://github.com/rayshivam30/Dev-Nexus.git
+cd Dev-Nexus/sdk
+npm install
+npm run build
+npm link
 ```
+
+In your application, run `npm link devnexus-sdk` to use that local build.
 
 ---
 
@@ -48,7 +51,7 @@ Initialize the client as early as possible in your application lifecycle (e.g., 
 import { DevNexus } from 'devnexus-sdk';
 
 DevNexus.init({
-  apiKey: 'dn_live_YOUR_API_KEY', // Find this in your Project Settings dashboard
+  apiKey: 'devnexus_sk_YOUR_API_KEY', // Create or rotate this in your project SDK settings
   autoCapture: true // Automatically listen to global errors
 });
 ```
@@ -104,7 +107,7 @@ You can deeply customize the SDK behavior by passing options to `DevNexus.init()
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `apiKey` | `string` | **Required** | Your unique project identifier. |
-| `baseUrl` | `string` | `https://devnexus.app/api/ingest` | Where to send payloads (Change if self-hosting DevNexus). |
+| `baseUrl` | `string` | `https://devnexus.io/api/ingest` | Where to send payloads. Set this to your deployment's `/api/ingest` URL when self-hosting. |
 | `autoCapture` | `boolean` | `true` | Enables global event listeners for uncaught exceptions. |
 | `maxRetries` | `number` | `3` | Exponential backoff retry attempts if the network fails. |
 | `flushInterval`| `number` | `5000` | How frequently (in ms) queued events are dispatched. |

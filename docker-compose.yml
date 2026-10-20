@@ -67,6 +67,11 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GMAIL_USER: ${GMAIL_USER:-}
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-25}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_VERIFY_ON_STARTUP: ${SMTP_VERIFY_ON_STARTUP:-false}
       GITHUB_APP_ID: ${GITHUB_APP_ID:-}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
@@ -76,6 +81,40 @@ services:
       NEXT_PUBLIC_GITHUB_APP_SLUG: ${NEXT_PUBLIC_GITHUB_APP_SLUG:-}
       UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:?UPSTASH_REDIS_REST_URL must be set}
       UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:?UPSTASH_REDIS_REST_TOKEN must be set}
+      METRICS_BEARER_TOKEN: ${METRICS_BEARER_TOKEN:?METRICS_BEARER_TOKEN must be set}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    networks:
+      - devnexus-network
+
+  # Durable AI, SLA, and email queues are polled by a dedicated process.
+  worker:
+    build:
+      context: ./incident-management-system
+      dockerfile: Dockerfile
+    container_name: devnexus-worker
+    restart: unless-stopped
+    command: ["bun", "run", "src/worker.ts"]
+    env_file:
+      - ./incident-management-system/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://devnexus:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/devnexus?connect_timeout=30&connection_limit=10&pool_timeout=30
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GMAIL_USER: ${GMAIL_USER:-}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-25}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:?UPSTASH_REDIS_REST_URL must be set}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:?UPSTASH_REDIS_REST_TOKEN must be set}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:?GITHUB_WEBHOOK_SECRET must be set}
       METRICS_BEARER_TOKEN: ${METRICS_BEARER_TOKEN:?METRICS_BEARER_TOKEN must be set}
     depends_on:
       postgres:

@@ -6,6 +6,7 @@ import { escapeHtml, getBaseUrl } from "@/lib/utils";
 import { withAuth } from "@/lib/api-utils";
 import { sendMail } from "@/lib/mailer";
 import { logger } from "@/lib/logger";
+import { hasProjectMembership } from "@/services/membership-service";
 
 function hashInviteToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -47,7 +48,7 @@ export const POST = withAuth(async (_request, { decoded, body }) => {
           { status: 404 }
         );
       }
-      if (decoded.role === "MANAGER" && decoded.projectId !== project.id) {
+      if (decoded.role === "MANAGER" && !(await hasProjectMembership(decoded.userId as string, project.id, ["MANAGER"]))) {
         return NextResponse.json(
           { error: "Managers can only invite to their project" },
           { status: 403 }
@@ -58,9 +59,6 @@ export const POST = withAuth(async (_request, { decoded, body }) => {
         where: {
           id: teamId,
           project: { orgId: decoded.orgId },
-          ...(decoded.role === "MANAGER"
-            ? { projectId: decoded.projectId }
-            : {}),
         },
         select: { id: true, projectId: true },
       });
@@ -70,15 +68,10 @@ export const POST = withAuth(async (_request, { decoded, body }) => {
           { status: 404 }
         );
       }
+      if (decoded.role === "MANAGER" && !(await hasProjectMembership(decoded.userId as string, team.projectId, ["MANAGER"]))) {
+        return NextResponse.json({ error: "Team not found or access denied" }, { status: 404 });
+      }
       targetProjectId = team.projectId;
-    }
-
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "This email is already registered" },
-        { status: 409 }
-      );
     }
 
     const rawToken = crypto.randomBytes(32).toString("base64url");

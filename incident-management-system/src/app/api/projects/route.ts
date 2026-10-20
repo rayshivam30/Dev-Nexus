@@ -3,14 +3,16 @@ import { createProject, deleteProject, getProjectsByOrg } from "@/services/proje
 import { PlanType } from "@devnexus/prisma-client";
 import { logAuditEvent } from "@/lib/audit-logger";
 import { logger } from "@/lib/logger";
+import { getUserProjectIds } from "@/services/membership-service";
 
 export const GET = withAuth(async (_req, { decoded }) => {
   if (!decoded.orgId) return apiError("Organization ID is missing in token", 401);
   try {
     const projects = await getProjectsByOrg(decoded.orgId);
+    const projectIds = await getUserProjectIds(decoded.userId as string, [decoded.role === "MANAGER" ? "MANAGER" : "DEVELOPER"]);
     const visibleProjects = decoded.role === "ADMIN"
       ? projects
-      : projects.filter((project) => project.id === decoded.projectId);
+      : projects.filter((project) => projectIds.includes(project.id));
     return apiResponse("Projects fetched successfully", { projects: visibleProjects });
   } catch (error) {
     logger.error({ err: error }, "Fetch projects error");

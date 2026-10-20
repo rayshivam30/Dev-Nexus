@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/api-utils";
 import { ManagerIssuesClient } from "@/components/dashboard/manager/ManagerIssuesClient";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
+import { getUserProjectIds } from "@/services/membership-service";
 
 export const dynamic = "force-dynamic";
 
@@ -11,21 +12,23 @@ export default async function ManagerIssuesPage() {
   if (!currentUser || currentUser.role !== "MANAGER") redirect("/auth/login");
 
   const user = await prisma.user.findUnique({ where: { id: currentUser.userId, status: "ACTIVE" } });
-  if (!user || !user.projectId) redirect("/dashboard/manager");
+  if (!user) redirect("/dashboard/manager");
+  const projectIds = await getUserProjectIds(user.id, ["MANAGER"]);
+  if (projectIds.length === 0) redirect("/dashboard/manager");
 
   const [issuesData, teamsData, developersData] = await Promise.all([
     prisma.issue.findMany({
-      where: { projectId: user.projectId },
+      where: { projectId: { in: projectIds } },
       orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
       include: { team: true, assignedTo: true },
     }),
     prisma.team.findMany({
-      where: { projectId: user.projectId },
+      where: { projectId: { in: projectIds } },
     }),
-    prisma.user.findMany({
-      select: { id: true, email: true, teamId: true, name: true },
-      where: { team: { projectId: user.projectId }, role: "DEVELOPER" },
-    }),
+    prisma.teamMembership.findMany({
+      where: { role: "DEVELOPER", team: { projectId: { in: projectIds } } },
+      select: { teamId: true, user: { select: { id: true, email: true, name: true } } },
+    }).then((memberships) => memberships.map(({ teamId, user }) => ({ ...user, teamId }))),
   ]);
 
   const now = new Date().getTime();

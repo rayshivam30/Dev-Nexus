@@ -47,14 +47,18 @@ export const PATCH = withAuth(async (_req, { decoded, body, params }) => {
       if (!team) return apiError("Team does not belong to this issue's project", 400);
     }
 
-    if (assignedToId) {
+    const targetAssigneeId = assignedToId ?? existingIssue.assignedToId;
+    const targetTeamId = teamId ?? existingIssue.teamId;
+    if (targetAssigneeId && (assignedToId || teamId)) {
       const developer = await prisma.user.findFirst({
         where: {
-          id: assignedToId,
+          id: targetAssigneeId,
           role: "DEVELOPER",
           status: "ACTIVE",
           orgId: existingIssue.project.orgId,
-          team: { projectId: existingIssue.projectId },
+          ...(targetTeamId
+            ? { team: { id: targetTeamId, projectId: existingIssue.projectId, memberships: { some: { userId: targetAssigneeId, role: "DEVELOPER" } } } }
+            : { projectMemberships: { some: { projectId: existingIssue.projectId, role: "DEVELOPER" } } }),
         },
         select: { id: true },
       });

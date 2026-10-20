@@ -25,14 +25,14 @@ export default async function AdminIssueDetailPage({ params }: { params: Promise
       where: { project: { orgId: currentUser.orgId } },
       select: { id: true, name: true, projectId: true }
     }),
-    prisma.user.findMany({
+    prisma.teamMembership.findMany({
       where: {
         role: "DEVELOPER",
-        orgId: currentUser.orgId,
-        status: "ACTIVE",
+        user: { orgId: currentUser.orgId, status: "ACTIVE" },
+        team: { project: { orgId: currentUser.orgId } },
       },
-      select: { id: true, name: true, email: true, teamId: true }
-    }),
+      select: { teamId: true, user: { select: { id: true, name: true, email: true } } },
+    }).then((memberships) => memberships.map(({ teamId, user }) => ({ ...user, teamId }))),
   ]);
 
   return (

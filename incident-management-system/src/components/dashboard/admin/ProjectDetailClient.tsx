@@ -11,6 +11,9 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { startGithubAppInstall } from "@/lib/github-install";
 import { Issue } from "@/components/dashboard/shared/RecentIssues";
+import { RoutingRulesPanel } from "@/components/dashboard/admin/RoutingRulesPanel";
+import { AlertPoliciesPanel } from "@/components/dashboard/admin/AlertPoliciesPanel";
+import { OnCallRotationPanel } from "@/components/dashboard/admin/OnCallRotationPanel";
 
 interface Manager {
   id: string;
@@ -39,6 +42,8 @@ interface DetailedProject {
   teams: Team[];
   _count?: { issues: number };
   plan?: string;
+  dailyEventCount?: number;
+  dailyEventLimit?: number;
   sdkApiKey?: string | null;
   hasSdkKey?: boolean;
   allowedOrigins?: string[];
@@ -596,6 +601,18 @@ export function ProjectDetailClient({ project: initialProject }: { project: Deta
               )}
             </AnimatePresence>
           </div>
+
+          <RoutingRulesPanel projectId={project.id} teams={project.teams} />
+          <AlertPoliciesPanel projectId={project.id} />
+          <OnCallRotationPanel projectId={project.id} />
+          <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <div><h2 className="text-lg font-bold">Daily event usage</h2><p className="mt-1 text-xs text-zinc-500">Soft allowance for the {project.plan} plan. Ingest continues above the allowance.</p></div>
+              <span className="text-sm font-semibold text-zinc-200">{(project.dailyEventCount || 0).toLocaleString()} / {(project.dailyEventLimit || 0).toLocaleString()}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]"><div className={`h-full rounded-full ${(project.dailyEventCount || 0) >= (project.dailyEventLimit || 1) ? "bg-rose-400" : (project.dailyEventCount || 0) >= (project.dailyEventLimit || 1) * 0.8 ? "bg-amber-400" : "bg-emerald-400"}`} style={{ width: `${Math.min(100, Math.round(((project.dailyEventCount || 0) / Math.max(1, project.dailyEventLimit || 1)) * 100))}%` }} /></div>
+            <p className="text-[11px] text-zinc-600">Usage resets at midnight UTC. Notifications are sent at 80% and 100%.</p>
+          </section>
 
           {/* SDK Integration Section */}
           {project.plan === "ADVANCED" && (

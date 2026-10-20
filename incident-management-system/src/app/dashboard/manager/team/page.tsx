@@ -11,28 +11,29 @@ export default async function ManagerTeamPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: currentUser.userId, status: "ACTIVE" },
-    include: { project: true },
+    include: { projectMemberships: { where: { role: "MANAGER" }, include: { project: true }, orderBy: { createdAt: "asc" } } },
   });
-  if (!user || !user.projectId || !user.project) redirect("/dashboard/manager");
+  const membership = user?.projectMemberships[0];
+  if (!user || !membership) redirect("/dashboard/manager");
 
   const teams = await prisma.team.findMany({
-    where: { projectId: user.projectId },
+    where: { projectId: membership.projectId },
     include: {
       _count: { select: { issues: { where: { status: { not: "RESOLVED" } } } } },
-      members: { select: { id: true, email: true, status: true } },
+      memberships: { where: { role: "DEVELOPER" }, include: { user: { select: { id: true, email: true, status: true } } } },
     },
     orderBy: { createdAt: "asc" },
   });
 
   return (
     <ManagerTeamClient
-      projectId={user.projectId}
-      projectName={user.project.name}
+      projectId={membership.projectId}
+      projectName={membership.project.name}
       teams={teams.map((t) => ({
         id: t.id,
         name: t.name,
         issueCount: t._count.issues,
-        members: t.members,
+        members: t.memberships.map(({ user: member }) => member),
       }))}
     />
   );

@@ -38,15 +38,15 @@ Follow these steps to integrate DevNexus into any project, both during developme
 
 1.  **Install via NPM**: After you publish the SDK to the NPM registry, run:
     ```bash
-    npm install @devnexus/sdk
+    npm install devnexus-sdk
     ```
 2.  **Initialize for Production**: Update your `DevNexus.init` call to use your **live domain**:
     ```javascript
-    import { DevNexus } from '@devnexus/sdk';
+    import { DevNexus } from 'devnexus-sdk';
 
     DevNexus.init({ 
       apiKey: 'YOUR_SDK_API_KEY', 
-      baseUrl: 'https://your-live-devnexus-domain.com/api/ingest',
+      baseUrl: 'https://devnexus.io/api/ingest',
       autoCapture: true 
     });
     ```

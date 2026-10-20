@@ -146,7 +146,7 @@ export function withAuth(handler: ApiHandler, allowedRoles?: string[]) {
           );
         }
 
-        const decoded = verifyToken(token);
+        const decoded = await verifyToken(token);
 
         if (!decoded) {
           return NextResponse.json(
@@ -175,7 +175,7 @@ export function withAuth(handler: ApiHandler, allowedRoles?: string[]) {
         }
 
         let body;
-        if (["POST", "PUT", "PATCH"].includes(req.method)) {
+        if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
           try {
             body = await req.json();
           } catch {
@@ -226,7 +226,7 @@ export async function getCurrentUser(): Promise<JwtPayload | null> {
   if (!token) return null;
   const isBlacklisted = await isTokenBlacklisted(token);
   if (isBlacklisted) return null;
-  const decoded = verifyToken(token);
+  const decoded = await verifyToken(token);
   if (!decoded) return null;
   const user = await getActiveSessionUser(decoded);
   return user ? sessionUserToPayload(user) : null;

@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     });
     aiQueueDepth.set(aiJobs);
 
-    const emailStats = getEmailQueueStats();
+    const emailStats = await getEmailQueueStats();
     emailQueueDepth.set(emailStats.queueLength);
   } catch {
     // Keep serving metrics when the database is temporarily unavailable.

@@ -6,7 +6,7 @@ import { logger } from "@/lib/logger";
 
 export const GET = withAuth(async () => {
   try {
-    const emailQueue = getEmailQueueStats();
+    const emailQueue = await getEmailQueueStats();
     const cacheStats = getCacheStats();
     const [pending, processing, complete, failed] = await Promise.all([
       prisma.issue.count({ where: { logs: { path: ["aiJobStatus"], equals: "PENDING" } } }),

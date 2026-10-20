@@ -48,16 +48,14 @@ describe("Security & Authorization Tests", () => {
       role: "DEVELOPER",
       status: "ACTIVE",
       orgId,
-      projectId: "project-1",
-      teamId: "team-1",
     };
 
     beforeEach(() => {
-      prismaMock.user.findFirst.mockClear();
+      prismaMock.teamMembership.findFirst.mockClear();
     });
 
     test("Developer CAN access issue if assigned to them and they belong to the issue's team", async () => {
-      prismaMock.user.findFirst.mockResolvedValue({ id: "dev-1" });
+      prismaMock.teamMembership.findFirst.mockResolvedValue({ id: "membership-1" });
 
       const issue: IssueAccessTarget = {
         projectId: "project-1",
@@ -68,11 +66,11 @@ describe("Security & Authorization Tests", () => {
 
       const allowed = await canAccessIssue(developerUser, issue);
       expect(allowed).toBe(true);
-      expect(prismaMock.user.findFirst).toHaveBeenCalled();
+      expect(prismaMock.teamMembership.findFirst).toHaveBeenCalled();
     });
 
     test("Developer CANNOT access issue if assigned to them but not in the issue's team", async () => {
-      prismaMock.user.findFirst.mockResolvedValue(null);
+      prismaMock.teamMembership.findFirst.mockResolvedValue(null);
 
       const issue: IssueAccessTarget = {
         projectId: "project-1",
@@ -104,8 +102,6 @@ describe("Security & Authorization Tests", () => {
         role: "ADMIN",
         status: "ACTIVE",
         orgId,
-        projectId: null,
-        teamId: null,
       };
 
       const issue: IssueAccessTarget = {
@@ -126,8 +122,6 @@ describe("Security & Authorization Tests", () => {
         role: "MANAGER",
         status: "ACTIVE",
         orgId,
-        projectId: "project-1",
-        teamId: null,
       };
 
       const issueInProject: IssueAccessTarget = {
@@ -144,6 +138,7 @@ describe("Security & Authorization Tests", () => {
         project: { orgId },
       };
 
+      prismaMock.projectMembership.findFirst.mockResolvedValueOnce({ id: "membership-1" }).mockResolvedValueOnce(null);
       expect(await canAccessIssue(managerUser, issueInProject)).toBe(true);
       expect(await canAccessIssue(managerUser, issueOutProject)).toBe(false);
     });

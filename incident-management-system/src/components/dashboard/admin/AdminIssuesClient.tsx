@@ -99,11 +99,15 @@ export function AdminIssuesClient({ issues }: AdminIssuesClientProps) {
                       {issue.source}
                     </span>
                   )}
+                  {issue.release && (
+                    <span className="text-[10px] font-medium bg-violet-500/10 text-violet-300 border border-violet-500/20 px-2 py-0.5 rounded-md">Release {issue.release}</span>
+                  )}
                   {issue.source && issue.source !== "MANUAL" && issue.project?.name && (
                     <span className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md">
                       Project: {issue.project.name}
                     </span>
                   )}
+                  <span className="text-[10px] text-zinc-500">Seen {issue.timesSeen ?? 1} {(issue.timesSeen ?? 1) === 1 ? "time" : "times"}</span>
                 </div>
               </div>
             </div>
