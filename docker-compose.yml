@@ -1,10 +1,10 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# DevNexus — Docker Compose (Local Development & Testing)
+# DevNexus — Docker Compose (Fully Local Development & Production Stack)
 # ─────────────────────────────────────────────────────────────────────────────
 # Usage:
-#   docker compose up -d              # Start everything
-#   docker compose up -d --build      # Rebuild & start
-#   docker compose logs -f app        # Tail app logs
+#   docker compose up -d --build      # Build & start all services locally
+#   docker compose logs -f            # Tail logs for all services
+#   docker compose logs -f worker     # Tail worker logs (emails, AI, queues)
 #   docker compose down -v            # Stop & remove volumes
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -46,11 +46,59 @@ services:
     networks:
       - devnexus-network
 
-  # ── DevNexus Application ─────────────────────────────────────────────────
+  # ── Redis (Local In-Memory Cache & Distributed Store) ─────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: devnexus-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - devnexus-network
+
+  # ── Upstash-Compatible HTTP Proxy for Local Redis ─────────────────────────
+  # Exposes an HTTP REST interface allowing @upstash/redis to run locally without cloud.
+  redis-http:
+    image: hiett/serverless-redis-http:latest
+    container_name: devnexus-redis-http
+    restart: unless-stopped
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: "devnexus_local_redis_token"
+      SRH_CONNECTION_STRING: "redis://redis:6379"
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - devnexus-network
+
+  # ── Mailpit (Local SMTP Server & Webmail UI) ──────────────────────────────
+  # Captures all outgoing emails locally. View inbox at http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: devnexus-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025" # Webmail UI
+      - "127.0.0.1:1025:1025" # SMTP port
+    networks:
+      - devnexus-network
+
+  # ── DevNexus Application ──────────────────────────────────────────────────
   app:
     build:
       context: ./incident-management-system
       dockerfile: Dockerfile
+      target: runner
       args:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
         NEXT_PUBLIC_GITHUB_APP_SLUG: ${NEXT_PUBLIC_GITHUB_APP_SLUG:-}
@@ -67,8 +115,8 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GMAIL_USER: ${GMAIL_USER:-}
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-25}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
@@ -79,22 +127,29 @@ services:
       GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:?GITHUB_WEBHOOK_SECRET must be set}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       NEXT_PUBLIC_GITHUB_APP_SLUG: ${NEXT_PUBLIC_GITHUB_APP_SLUG:-}
-      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:?UPSTASH_REDIS_REST_URL must be set}
-      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:?UPSTASH_REDIS_REST_TOKEN must be set}
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-http://redis-http:80}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-devnexus_local_redis_token}
       METRICS_BEARER_TOKEN: ${METRICS_BEARER_TOKEN:?METRICS_BEARER_TOKEN must be set}
     depends_on:
       postgres:
         condition: service_healthy
       migrations:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      redis-http:
+        condition: service_started
+      mailpit:
+        condition: service_started
     networks:
       - devnexus-network
 
-  # Durable AI, SLA, and email queues are polled by a dedicated process.
+  # ── Background Worker (AI, SLA, Email Durable Queues) ────────────────────
   worker:
     build:
       context: ./incident-management-system
       dockerfile: Dockerfile
+      target: worker
     container_name: devnexus-worker
     restart: unless-stopped
     command: ["bun", "run", "src/worker.ts"]
@@ -107,13 +162,13 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GMAIL_USER: ${GMAIL_USER:-}
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-25}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:?UPSTASH_REDIS_REST_URL must be set}
-      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:?UPSTASH_REDIS_REST_TOKEN must be set}
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-http://redis-http:80}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-devnexus_local_redis_token}
       GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:?GITHUB_WEBHOOK_SECRET must be set}
       METRICS_BEARER_TOKEN: ${METRICS_BEARER_TOKEN:?METRICS_BEARER_TOKEN must be set}
     depends_on:
@@ -121,11 +176,19 @@ services:
         condition: service_healthy
       migrations:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      redis-http:
+        condition: service_started
+      mailpit:
+        condition: service_started
     networks:
       - devnexus-network
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
     driver: local
 
 networks:

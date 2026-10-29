@@ -97,3 +97,20 @@ EXPOSE 3000
 
 # Start the server using the standalone output
 CMD ["node", "server.js"]
+
+# ── Stage 5: Worker (Dedicated Background Process) ───────────────────────────
+FROM base AS worker
+
+WORKDIR /app
+
+# Copy all node_modules from deps stage (includes prisma client, nodemailer, zod, etc.)
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/prisma ./prisma
+COPY package.json bunfig.toml tsconfig.json ./
+COPY src ./src
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+CMD ["bun", "run", "src/worker.ts"]
+

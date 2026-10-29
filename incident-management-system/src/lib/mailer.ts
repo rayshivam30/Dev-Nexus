@@ -128,8 +128,10 @@ async function processDurableEmailJobs() {
 
       try {
         await transporter.sendMail({ from: `DevNexus <${gmailUser || "no-reply@devnexus.io"}>`, ...options });
+        logger.info({ to: options.to, subject: options.subject }, "Email sent successfully");
         await prisma.job.update({ where: { id: job.id }, data: { status: "COMPLETE", lockedAt: null, lockedBy: null, lastError: null } });
       } catch (error) {
+        logger.error({ to: options.to, err: error }, "Email delivery failed");
         const attempts = job.attempts + 1;
         const failed = attempts >= 5;
         const backoffMs = Math.min(60_000 * 2 ** (attempts - 1), 15 * 60_000);
@@ -157,7 +159,7 @@ export function startEmailWorker() {
   durableEmailTimer = setInterval(() => void processDurableEmailJobs(), BATCH_INTERVAL_MS);
   durableEmailTimer.unref();
   void processDurableEmailJobs();
-  logger.info("Durable email worker started");
+  logger.info({ batchIntervalMs: BATCH_INTERVAL_MS, smtpHost: smtpHost || "gmail" }, "Durable email worker started");
 }
 
 /**
